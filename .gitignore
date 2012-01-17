@@ -15,6 +15,25 @@
 *~
 \#*\#
 
-# Executables etc.
+# Executables
 
 # Output files
+
+# Autotools
+autom4te.cache/
+/config.status
+Makefile
+/config.h
+/config.cache
+/stamp.h
+.deps
+/config.log
+# Autotools files for for source distrib but not repo
+Makefile.in
+/aclocal.m4
+/config.guess
+/config.sub
+/configure
+/depcomp
+/install-sh
+/missing
