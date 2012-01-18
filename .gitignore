@@ -16,10 +16,11 @@
 \#*\#
 
 # Executables
+src/epic
 
 # Output files
 
-# Autotools
+# Autotools files
 autom4te.cache/
 /config.status
 Makefile
@@ -28,7 +29,7 @@ Makefile
 /stamp.h
 .deps
 /config.log
-# Autotools files for for source distrib but not repo
+# Autotools files for source distrib but not repo
 Makefile.in
 /aclocal.m4
 /config.guess
@@ -37,3 +38,11 @@ Makefile.in
 /depcomp
 /install-sh
 /missing
+
+# FMDB build
+fmdb/SCOREC_Software/
+fmdb/auxillaryBuildScripts.tar
+fmdb/auxillaryBuildScripts/
+fmdb/buildFMDBSerial.env
+fmdb/buildFMDBSerial.sh
+fmdb/fmdbSerial/

@@ -1,3 +1,3 @@
-bin_PROGRAMS=a.out
-a_out_SOURCES=epic.cpp
+bin_PROGRAMS=epic
+epic_SOURCES=epic.cpp
 
