@@ -1,2 +1,9 @@
 Electrostatic Plasma Interaction Code (EPIC)
 
+
+Mesh notes:
+
+Load .vtu file in VisIt, make mesh plot, and export as MOAB VTK file
+(straight VisIt VTK export contains additional lines which crash the
+FMDB VTK reader). The variable cell_code labels the surfaces, and can
+be included in the VTK file (though FMDB doesn't load it).
