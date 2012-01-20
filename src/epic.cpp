@@ -15,6 +15,8 @@
 #include <assert.h>
 #include "iMesh.h"
 
+#include "epic.h"
+
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
 
 using namespace std;
@@ -38,8 +40,10 @@ int main(int argc, char *argv[]) {
 	CHECK("Problems getting root set");
 
 	/* load the mesh */
-	iMesh_load(mesh, root, argv[1], options, &ierr,
-			strlen(argv[1]), options_len);
+//	iMesh_load(mesh, root, argv[1], options, &ierr,
+//			strlen(argv[1]), options_len);
+	// FMDB's importVTK can't handle our tags, so use custom version
+	ierr = custom_importVTK((mMesh *)mesh, argv[1]);
 	CHECK("Load failed");
 
 	/* report the number of elements of each dimension */
