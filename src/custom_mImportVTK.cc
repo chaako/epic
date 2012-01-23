@@ -30,6 +30,7 @@ using std::vector;
  
 void importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in);
 void importLookUpTable(pMeshMdl mesh, FILE* in, int numPnts);
+void custom_importLookUpTable(pMeshMdl, FILE*, vector<pMeshEnt>, int);
 // **********************************************************
 int custom_importVTK(mMesh *mesh, const char *fName)
 // **********************************************************
@@ -43,7 +44,7 @@ int custom_importVTK(mMesh *mesh, const char *fName)
   bool point_flag=false, cell_flag=false;
   double x,y,z;
   int i, j, num_cells, num_cells2, num_pnts, num_cell_data;  
-  int edges_count=0, faces_count=0, regs_count=0; 
+  int edges_count=0, faces_count=0, regs_count=0, cells_count=0;
   int cell_type, mDim;
 
   pPart part;
@@ -70,6 +71,7 @@ int custom_importVTK(mMesh *mesh, const char *fName)
   vector<pMeshEnt> faceVec;
   vector<pMeshEnt> edgeVec;
   vector<pMeshEnt> regVec;
+  vector<pMeshEnt> cellVec;
 
   int vt1, vt2;   
   mVertex* vv;        
@@ -196,6 +198,8 @@ int custom_importVTK(mMesh *mesh, const char *fName)
 	  return SCUtil_INVALID_ENTITY_TYPE;
          }
      } // switch
+   cells_count++;
+   cellVec.push_back(ent);
    delete[] int_vids; 
 
    } // for j
@@ -226,7 +230,8 @@ int custom_importVTK(mMesh *mesh, const char *fName)
    else if(strcmp(pt_str, "CELL_DATA")==0)
     {
     if(strcmp(att_str, "SCALARS")==0)
-     importLookUpTable(mesh, in, regs_count);
+//     importLookUpTable(mesh, in, regs_count);
+     custom_importLookUpTable(mesh, in, cellVec, cells_count);
     if(strcmp(att_str, "FIELD")==0)
     {
     if(mDim==2)
@@ -239,6 +244,56 @@ int custom_importVTK(mMesh *mesh, const char *fName)
  } // point_flag  
  fclose (in);
  return SCUtil_SUCCESS;
+}
+void custom_importLookUpTable(pMeshMdl mesh, FILE* in, vector<pMeshEnt> entVec, int numPnts)
+{
+ char scalar_type[64], scalar_name[64], dummy_str[64];
+ fscanf(in, "%s %s", scalar_name, scalar_type);
+ int tag_size=1, tag_type, nIntTags=0;
+ pTag new_tag;
+ // identify tag type
+ if((strcmp(scalar_type, "int")==0) ||
+    (strcmp(scalar_type, "unsigned_int")==0) ||
+    (strcmp(scalar_type, "unsigned_short")==0) ||
+    (strcmp(scalar_type, "short")==0))
+    tag_type = SCUtil_INT;
+ else if(strcmp(scalar_type, "float")==0 || strcmp(scalar_type, "double")==0)
+    tag_type=SCUtil_DBL;
+ else if(strcmp(scalar_type, "byte")==0)
+    tag_type=SCUtil_BYTE;
+ else if(strcmp(scalar_type, "entity")==0)
+    tag_type=SCUtil_ENT;
+ else if(strcmp(scalar_type, "entity_set")==0)
+    tag_type=SCUtil_SET;
+ else
+    // data type not supported
+   return;
+ if (FMDB_Mesh_CreateTag (mesh, scalar_name, tag_type, tag_size, new_tag))
+       FMDB_Mesh_FindTag (mesh, scalar_name, new_tag);
+ if(fscanf(in,"%s",dummy_str) == EOF)
+  return;
+
+ if(strcmp(dummy_str, "LOOKUP_TABLE")==0)
+ {
+  fscanf(in, "%s", dummy_str);
+  if(strcmp(scalar_type, "int")==0 || strcmp(dummy_str, "default")==0)
+  {
+   int int_data;
+   for(int i=0; i<numPnts; i++)
+   {
+    fscanf(in, "%d", &int_data);
+    FMDB_Ent_SetIntTag (mesh, entVec[i], new_tag, int_data);
+    nIntTags++;
+   }
+  }
+  else if(strcmp(scalar_type, "float")==0)
+   {
+    float float_data;
+    for(int i=0; i<numPnts; i++)
+     fscanf(in, "%f", &float_data);
+   }
+ }
+ printf("nIntTags = %d\n", nIntTags);
 }
 void importLookUpTable(pMeshMdl mesh, FILE* in, int numPnts)
 {

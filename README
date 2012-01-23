@@ -1,9 +1,13 @@
 Electrostatic Plasma Interaction Code (EPIC)
 
+At present, need to set library path to run, e.g.:
+export LD_LIBRARY_PATH=/home/chaako/epic/fmdb/fmdbSerial//lib
 
 Mesh notes:
 
-Load .vtu file in VisIt, make mesh plot, and export as MOAB VTK file
+Load .vtu file from enGrid in VisIt, make mesh plot, export (with
+variable 'cell_code' which labels the surfaces) as MOAB VTK file
 (straight VisIt VTK export contains additional lines which crash the
-FMDB VTK reader). The variable cell_code labels the surfaces, and can
-be included in the VTK file (though FMDB doesn't load it).
+FMDB VTK reader), and change the line 'SCALARS cell_code double 1' to
+'SCALARS cell_code int' since it should be an integer tag (and the 1
+throws off the vtk reader).
