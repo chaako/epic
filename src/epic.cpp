@@ -27,6 +27,10 @@ int main(int argc, char *argv[]) {
 	int dim, num, ierr;
 	iMesh_Instance mesh;
 	iBase_EntitySetHandle root;
+	iBase_EntityHandle *ents2d = NULL, *ents3d = NULL;
+	int ents2d_alloc = 0, ents2d_size;
+	int ents3d_alloc = 0, ents3d_size;
+	iBase_TagHandle code_tag, guard_tag;
 
 	if (argc<3) {
 		printf("usage: %s meshin meshout\n", argv[0]);
@@ -52,6 +56,54 @@ int main(int argc, char *argv[]) {
 		CHECK("Failure in getNumOfType");
 		printf("Number of %d-dimensional elements = %d\n", dim, num);
 	}
+
+	// create guard_cells tag
+	iMesh_createTag(mesh, "guard_cells", 1, iBase_INTEGER, &guard_tag,
+			&ierr, 11);
+	CHECK("Failure creating guard_cells tag");
+
+	// set default guard_cells value for all 3d elements
+	iMesh_getEntities(mesh, root, iBase_REGION, iMesh_ALL_TOPOLOGIES,
+			&ents3d, &ents3d_alloc, &ents3d_size, &ierr);
+	CHECK("Couldn't get region entities");
+	for (int i = 0; i < ents3d_size; i++) {
+		iMesh_setIntData(mesh, ents3d[i], guard_tag, 0, &ierr);
+		CHECK("Failure setting default guard_cells tag");
+	}
+	if (ents3d) free(ents3d);
+	ents3d_alloc = 0;
+
+	// find and tag guard cells for surface faces
+	iMesh_getEntities(mesh, root, iBase_FACE, iMesh_ALL_TOPOLOGIES,
+			&ents2d, &ents2d_alloc, &ents2d_size, &ierr);
+	CHECK("Couldn't get face entities");
+	iMesh_getTagHandle(mesh, "cell_code", &code_tag, &ierr, 9);
+	CHECK("Failure getting cell_code handle");
+	for (int i = 0; i < ents2d_size; i++) {
+		int cell_code = 0;
+		iMesh_getIntData(mesh, ents2d[i], code_tag, &cell_code, &ierr);
+		CHECK("Failure getting cell_code value");
+		if (cell_code>1) {
+			iBase_EntityHandle *entsGuard = NULL;
+			int entsGuard_alloc = 0, entsGuard_size;
+			// TODO: perhaps remove redundant guard cell returns and
+			//       improve performance by using array version here
+			iMesh_getEnt2ndAdj(mesh, ents2d[i], iBase_VERTEX,
+					iBase_REGION, &entsGuard, &entsGuard_alloc,
+					&entsGuard_size, &ierr);
+			CHECK("Failure in getEnt2ndAdj");
+			for (int j = 0; j < entsGuard_size; j++) {
+				// TODO: what about cells adjacent to two boundaries?
+				iMesh_setIntData(mesh, entsGuard[j], guard_tag,
+						cell_code, &ierr);
+				CHECK("Failure setting guard_cells tag");
+			}
+			if (entsGuard) free(entsGuard);
+			entsGuard_alloc = 0;
+		}
+	}
+	if (ents2d) free(ents2d);
+	ents2d_alloc = 0;
 
 	/* save the mesh */
 	iMesh_save(mesh, root, argv[2], options, &ierr,
