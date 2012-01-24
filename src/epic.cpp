@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "iMesh.h"
+#include <math.h>
 
 #include "epic.h"
 
@@ -27,10 +28,12 @@ int main(int argc, char *argv[]) {
 	int dim, num, ierr;
 	iMesh_Instance mesh;
 	iBase_EntitySetHandle root;
+	iBase_EntityHandle *ents0d = NULL;
 	iBase_EntityHandle *ents2d = NULL, *ents3d = NULL;
+	int ents0d_alloc = 0, ents0d_size;
 	int ents2d_alloc = 0, ents2d_size;
 	int ents3d_alloc = 0, ents3d_size;
-	iBase_TagHandle code_tag, guard_tag;
+	iBase_TagHandle code_tag, guard_tag, potential_tag;
 
 	if (argc<3) {
 		printf("usage: %s meshin meshout\n", argv[0]);
@@ -56,6 +59,26 @@ int main(int argc, char *argv[]) {
 		CHECK("Failure in getNumOfType");
 		printf("Number of %d-dimensional elements = %d\n", dim, num);
 	}
+
+	// create potential tag
+	iMesh_createTag(mesh, "potential", 1, iBase_DOUBLE, &potential_tag,
+			&ierr, 9);
+	CHECK("Failure creating potential tag");
+
+	// set potential value for all 0d elements
+	iMesh_getEntities(mesh, root, iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
+			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
+	CHECK("Couldn't get vertex entities");
+	for (int i = 0; i < ents0d_size; i++) {
+		double potential=0., x=0., y=0., z=0.;
+		iMesh_getVtxCoord(mesh, ents0d[i], &x, &y, &z, &ierr);
+		potential = 1./sqrt(x*x+y*y+z*z);
+		iMesh_setDblData(mesh, ents0d[i], potential_tag, potential,
+				&ierr);
+		CHECK("Failure setting potential tag");
+	}
+	if (ents0d) free(ents0d);
+	ents0d_alloc = 0;
 
 	// create guard_cells tag
 	iMesh_createTag(mesh, "guard_cells", 1, iBase_INTEGER, &guard_tag,
