@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < ents0d_size; i++) {
 		double potential=0., x=0., y=0., z=0.;
 		iMesh_getVtxCoord(mesh, ents0d[i], &x, &y, &z, &ierr);
+		CHECK("Failure getting vertex coordinates");
 		potential = 1./sqrt(x*x+y*y+z*z);
 		iMesh_setDblData(mesh, ents0d[i], potential_tag, potential,
 				&ierr);
@@ -136,6 +137,83 @@ int main(int argc, char *argv[]) {
 	iMesh_dtor(mesh, &ierr);
 	CHECK("Failed to destroy interface");
 
-//	cout << "Hello World" << endl; /* prints Hello World */
+	// create a new mesh for a test orbit
+	iMesh_newMesh(options, &mesh, &ierr, options_len);
+	CHECK("Problems instantiating interface.");
+
+	// TODO: setting the geometric dimension appears not to work,
+	//       possibly because there are no 3d elements
+	dim = 3;
+	iMesh_setGeometricDimension (mesh, dim, &ierr);
+	CHECK("Error setting geometric dimension");
+	dim = 0;
+	iMesh_getGeometricDimension (mesh, &dim, &ierr);
+	CHECK("Error getting geometric dimension");
+	printf("dim = %d\n",dim);
+
+	iMesh_getRootSet(mesh, &root, &ierr);
+	CHECK("Problems getting root set");
+
+	// add vertices for orbit
+	iBase_EntityHandle verticies[4];
+	int iVertex=0;
+	// make output a text file in Point3D format for VisIt
+	const char *fName = "orbitTest.p3d";
+	FILE* outFile = fopen(fName, "w");
+	fprintf(outFile, "# x y z density\n");
+	for (double ang=0; ang<2*M_PI; ang+=0.01) {
+		iBase_EntityHandle newVertex, newEdge, newRegion;
+		int creationStatus;
+		double x,y,z;
+		x = 2.*cos(ang);
+		y = 2.*sin(ang);
+		z = sqrt(3.*3.-x*x-0.5*y*y);
+		fprintf(outFile, "%f %f %f %f\n", x, y, z, 1.);
+		iMesh_createVtx(mesh, x, y, z, &newVertex, &ierr);
+		CHECK("Failure creating new vertex");
+		iMesh_setVtxCoord(mesh, newVertex, x, y, z, &ierr);
+		CHECK("Failure setting vertex coordinates");
+		// TODO: because the geometric dimension isn't correct,
+		//       getVtxCoord doesn't return the z-coordinate,
+		//       but it is stored with set (though not create)
+		iMesh_getVtxCoord(mesh, newVertex, &x, &y, &z, &ierr);
+		CHECK("Failure getting vertex coordinates");
+		verticies[2] = verticies[3];
+		verticies[3] = verticies[0];
+		verticies[0] = verticies[1];
+		verticies[1] = newVertex;
+		if (iVertex>0) {
+			// create edges between nodes
+			iMesh_createEnt(mesh, iMesh_LINE_SEGMENT, verticies, 2,
+					&newEdge, &creationStatus, &ierr);
+			CHECK("Failure creating edge");
+		}
+		if (iVertex==3) {
+			// add a tet to change geometric dim. to 3
+			iMesh_createEnt(mesh, iMesh_TETRAHEDRON, verticies, 4,
+					&newRegion, &creationStatus, &ierr);
+			CHECK("Failure creating region");
+		}
+		iVertex++;
+	}
+	fclose(outFile);
+	iMesh_getGeometricDimension (mesh, &dim, &ierr);
+	CHECK("Error getting geometric dimension");
+	printf("dim = %d\n",dim);
+
+	// save the test orbit mesh
+	iMesh_save(mesh, root, "orbitTest.sms", options, &ierr,
+			13, options_len);
+	CHECK("Save failed");
+	iMesh_save(mesh, root, "orbitTest.vtk", options, &ierr,
+			13, options_len);
+	CHECK("Save failed");
+	iMesh_save(mesh, root, "orbitTest.nc", options, &ierr,
+			12, options_len);
+	CHECK("Save failed");
+
+	iMesh_dtor(mesh, &ierr);
+	CHECK("Failed to destroy interface");
+
 	return 0;
 }
