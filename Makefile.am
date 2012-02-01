@@ -1,1 +1,1 @@
-SUBDIRS = fmdb src
+SUBDIRS = eigen fmdb src

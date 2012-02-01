@@ -8,13 +8,15 @@
  ============================================================================
  */
 
-//#include <iostream>
+#include <iostream>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
 #include "iMesh.h"
 #include <math.h>
+
+#include "Eigen/Dense"
 
 #include "epic.h"
 
@@ -214,6 +216,14 @@ int main(int argc, char *argv[]) {
 
 	iMesh_dtor(mesh, &ierr);
 	CHECK("Failed to destroy interface");
+
+	Eigen::Vector3d v(1,2,3);
+	Eigen::Vector3d w(0,1,2);
+
+	std::cout << "Dot product: " << v.dot(w) << endl;
+	double dp = v.adjoint()*w; // automatic conversion of the inner product to a scalar
+	std::cout << "Dot product via a matrix product: " << dp << endl;
+	std::cout << "Cross product:\n" << v.cross(w) << endl;
 
 	return 0;
 }

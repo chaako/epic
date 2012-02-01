@@ -9,6 +9,6 @@ AM_INIT_AUTOMAKE()
 
 AC_PROG_CXX
 
-AC_CONFIG_FILES(Makefile src/Makefile fmdb/Makefile)
+AC_CONFIG_FILES(Makefile src/Makefile fmdb/Makefile eigen/Makefile)
 AC_OUTPUT
 
