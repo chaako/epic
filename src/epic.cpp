@@ -35,7 +35,8 @@ int main(int argc, char *argv[]) {
 	int ents0d_alloc = 0, ents0d_size;
 	int ents2d_alloc = 0, ents2d_size;
 	int ents3d_alloc = 0, ents3d_size;
-	iBase_TagHandle code_tag, guard_tag, potential_tag;
+	iBase_TagHandle code_tag, guard_tag, potential_tag, eField_tag;
+	iBase_TagHandle eFieldX_tag, eFieldY_tag, eFieldZ_tag;
 
 	if (argc<3) {
 		printf("usage: %s meshin meshout\n", argv[0]);
@@ -79,6 +80,55 @@ int main(int argc, char *argv[]) {
 		iMesh_setDblData(mesh, ents0d[i], potential_tag, potential,
 				&ierr);
 		CHECK("Failure setting potential tag");
+	}
+
+	// create eField tag
+//	iMesh_createTag(mesh, "eField", sizeof(Eigen::Vector3d), iBase_BYTES,
+//			&eField_tag, &ierr, 6);
+//	CHECK("Failure creating eField tag");
+	iMesh_createTag(mesh, "eFieldX", 1, iBase_DOUBLE,
+			&eFieldX_tag, &ierr, 7);
+	CHECK("Failure creating eField tag");
+	iMesh_createTag(mesh, "eFieldY", 1, iBase_DOUBLE,
+			&eFieldY_tag, &ierr, 7);
+	CHECK("Failure creating eField tag");
+	iMesh_createTag(mesh, "eFieldZ", 1, iBase_DOUBLE,
+			&eFieldZ_tag, &ierr, 7);
+	CHECK("Failure creating eField tag");
+
+	// Calculate electric field for all 0d elements
+	// TODO: add handling of boundaries with non-zero E
+	for (int i = 0; i < ents0d_size; i++) {
+		vector<iBase_EntityHandle> superCellFaces =
+				getSuperCellFaces(mesh, ents0d[i]);
+		Eigen::Vector3d eField(0,0,0);
+
+		double x=0,y=0,z=0;
+		iMesh_getVtxCoord(mesh, ents0d[i], &x, &y, &z, &ierr);
+		CHECK("Failure getting vertex coordinates");
+		Eigen::Vector3d point(x,y,z);
+		double volume=0;
+
+		for (int j=0; j<superCellFaces.size(); j++)  {
+			Eigen::Vector3d surfaceVector =
+					getSurfaceVector(mesh, point, superCellFaces[j]);
+			double potential = getAverageDblData(mesh, superCellFaces[j],
+					potential_tag);
+			volume += getVolumeBetweenPointAndFace(mesh, point,
+					superCellFaces[j]);
+			eField -= potential*surfaceVector;
+		}
+		eField /= volume;
+
+//		iMesh_setData(mesh, ents0d[i], eField_tag, &eField,
+//				sizeof(Eigen::Vector3d), &ierr);
+//		CHECK("Failure setting eField tag");
+		iMesh_setDblData(mesh, ents0d[i], eFieldX_tag, (double)eField[0], &ierr);
+		CHECK("Failure setting eFieldX tag");
+		iMesh_setDblData(mesh, ents0d[i], eFieldY_tag, (double)eField[1], &ierr);
+		CHECK("Failure setting eFieldY tag");
+		iMesh_setDblData(mesh, ents0d[i], eFieldZ_tag, (double)eField[2], &ierr);
+		CHECK("Failure setting eFieldZ tag");
 	}
 	if (ents0d) free(ents0d);
 	ents0d_alloc = 0;
@@ -157,7 +207,7 @@ int main(int argc, char *argv[]) {
 	CHECK("Problems getting root set");
 
 	// add vertices for orbit
-	iBase_EntityHandle verticies[4];
+	iBase_EntityHandle vertices[4];
 	int iVertex=0;
 	// make output a text file in Point3D format for VisIt
 	const char *fName = "orbitTest.p3d";
@@ -180,19 +230,19 @@ int main(int argc, char *argv[]) {
 		//       but it is stored with set (though not create)
 		iMesh_getVtxCoord(mesh, newVertex, &x, &y, &z, &ierr);
 		CHECK("Failure getting vertex coordinates");
-		verticies[2] = verticies[3];
-		verticies[3] = verticies[0];
-		verticies[0] = verticies[1];
-		verticies[1] = newVertex;
+		vertices[2] = vertices[3];
+		vertices[3] = vertices[0];
+		vertices[0] = vertices[1];
+		vertices[1] = newVertex;
 		if (iVertex>0) {
 			// create edges between nodes
-			iMesh_createEnt(mesh, iMesh_LINE_SEGMENT, verticies, 2,
+			iMesh_createEnt(mesh, iMesh_LINE_SEGMENT, vertices, 2,
 					&newEdge, &creationStatus, &ierr);
 			CHECK("Failure creating edge");
 		}
 		if (iVertex==3) {
 			// add a tet to change geometric dim. to 3
-			iMesh_createEnt(mesh, iMesh_TETRAHEDRON, verticies, 4,
+			iMesh_createEnt(mesh, iMesh_TETRAHEDRON, vertices, 4,
 					&newRegion, &creationStatus, &ierr);
 			CHECK("Failure creating region");
 		}
@@ -224,6 +274,140 @@ int main(int argc, char *argv[]) {
 	double dp = v.adjoint()*w; // automatic conversion of the inner product to a scalar
 	std::cout << "Dot product via a matrix product: " << dp << endl;
 	std::cout << "Cross product:\n" << v.cross(w) << endl;
+	std::cout << "Element:\n" << (double)v[1] << endl;
 
 	return 0;
+}
+
+Eigen::Vector3d getSurfaceVector(iMesh_Instance mesh, Eigen::Vector3d point,
+		iBase_EntityHandle face) {
+	int ierr;
+	iBase_EntityHandle *vertices = NULL;
+	int vertices_alloc = 0, vertices_size;
+	std::vector<Eigen::Vector3d> vertexVectors, edgeVectors;
+	Eigen::Vector3d surfaceVector, referenceVector;
+
+	iMesh_getEntAdj(mesh, face, iBase_VERTEX,  &vertices, &vertices_alloc,
+			&vertices_size, &ierr);
+	CHECK("Getting vertices adjacent to face failed");
+	for (int i=0; i<vertices_size; i++) {
+		double x=0., y=0., z=0.;
+		iMesh_getVtxCoord(mesh, vertices[i], &x, &y, &z, &ierr);
+		CHECK("Failure getting vertex coordinates");
+		Eigen::Vector3d vertexVector(x,y,z);
+		vertexVectors.push_back(vertexVector);
+	}
+	if(vertices) free (vertices);
+	vertices_alloc = 0;
+
+	assert(3 == vertexVectors.size());
+	edgeVectors.push_back(vertexVectors[1]-vertexVectors[0]);
+	edgeVectors.push_back(vertexVectors[2]-vertexVectors[1]);
+
+	surfaceVector = edgeVectors[0].cross(edgeVectors[1]);
+	referenceVector = vertexVectors[0] - point;
+
+	if (referenceVector.dot(surfaceVector) < 0 )
+		surfaceVector *= -1;
+	return surfaceVector;
+}
+
+vector<iBase_EntityHandle> getSuperCellFaces(iMesh_Instance mesh,
+		iBase_EntityHandle vertex) {
+	int ierr;
+	iBase_EntityHandle *faces = NULL;
+	int faces_alloc = 0, faces_size;
+	std::vector<iBase_EntityHandle> superCellFaces;
+
+	iMesh_getEnt2ndAdj(mesh, vertex, iBase_REGION,
+			iBase_FACE, &faces, &faces_alloc,
+			&faces_size, &ierr);
+	CHECK("Failure in getEnt2ndAdj");
+	for (int i = 0; i < faces_size; i++) {
+		iBase_EntityHandle *vertices = NULL;
+		int vertices_alloc = 0, vertices_size;
+		bool onSuperCellSurface = true;
+
+		iMesh_getEntAdj(mesh, faces[i], iBase_VERTEX,  &vertices, &vertices_alloc,
+				&vertices_size, &ierr);
+		CHECK("Getting vertices adjacent to face failed");
+
+		for (int j=0; j<vertices_size; j++) {
+			if (vertices[j]==vertex)
+				onSuperCellSurface = false;
+			// TODO: if vertex is on boundary, should probably include
+			//       the corresponding faces to enclose volume
+		}
+
+		if (onSuperCellSurface) {
+			superCellFaces.push_back(faces[i]);
+		}
+
+		if(vertices) free (vertices);
+		vertices_alloc = 0;
+	}
+	if (faces) free(faces);
+	faces_alloc = 0;
+
+	return superCellFaces;
+}
+
+double getAverageDblData(iMesh_Instance mesh, iBase_EntityHandle entity,
+		iBase_TagHandle dblData_tag) {
+	// TODO: write this as a template?
+	int ierr;
+	iBase_EntityHandle *vertices = NULL;
+	int vertices_alloc = 0, vertices_size;
+	double averageDblData=0.;
+
+	iMesh_getEntAdj(mesh, entity, iBase_VERTEX,  &vertices, &vertices_alloc,
+			&vertices_size, &ierr);
+	CHECK("Getting vertices adjacent to entity failed");
+
+	for (int i=0; i<vertices_size; i++) {
+		double dblData = 0;
+
+		iMesh_getDblData(mesh, vertices[i], dblData_tag, &dblData, &ierr);
+		CHECK("Failure getting potential tag");
+
+		averageDblData += dblData;
+	}
+	averageDblData /= (double)vertices_size;
+
+	if(vertices) free (vertices);
+	vertices_alloc = 0;
+
+	return averageDblData;
+}
+
+double getVolumeBetweenPointAndFace(iMesh_Instance mesh, Eigen::Vector3d point,
+		iBase_EntityHandle face) {
+	int ierr;
+	iBase_EntityHandle *vertices = NULL;
+	int vertices_alloc = 0, vertices_size;
+	std::vector<Eigen::Vector3d> vertexVectors, edgeVectors;
+
+	vertexVectors.push_back(point);
+
+	iMesh_getEntAdj(mesh, face, iBase_VERTEX,  &vertices, &vertices_alloc,
+			&vertices_size, &ierr);
+	CHECK("Getting vertices adjacent to face failed");
+
+	for (int i=0; i<vertices_size; i++) {
+		double x=0., y=0., z=0.;
+		iMesh_getVtxCoord(mesh, vertices[i], &x, &y, &z, &ierr);
+		CHECK("Failure getting vertex coordinates");
+		Eigen::Vector3d vertexVector(x,y,z);
+		vertexVectors.push_back(vertexVector);
+	}
+	if(vertices) free (vertices);
+	vertices_alloc = 0;
+
+	assert(4 == vertexVectors.size());
+	edgeVectors.push_back(vertexVectors[1]-vertexVectors[0]);
+	edgeVectors.push_back(vertexVectors[2]-vertexVectors[1]);
+	edgeVectors.push_back(vertexVectors[3]-vertexVectors[2]);
+	return fabs(
+			vertexVectors[3].dot( vertexVectors[1].cross(vertexVectors[2]) )
+			)/6.;
 }
