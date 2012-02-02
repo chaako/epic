@@ -97,7 +97,6 @@ int main(int argc, char *argv[]) {
 	CHECK("Failure creating eField tag");
 
 	// Calculate electric field for all 0d elements
-	// TODO: add handling of boundaries with non-zero E
 	for (int i = 0; i < ents0d_size; i++) {
 		vector<iBase_EntityHandle> superCellFaces =
 				getSuperCellFaces(mesh, ents0d[i]);
@@ -287,6 +286,15 @@ Eigen::Vector3d getSurfaceVector(iMesh_Instance mesh, Eigen::Vector3d point,
 	std::vector<Eigen::Vector3d> vertexVectors, edgeVectors;
 	Eigen::Vector3d surfaceVector, referenceVector;
 
+	iBase_TagHandle code_tag;
+	int cell_code = 0;
+
+	iMesh_getTagHandle(mesh, "cell_code", &code_tag, &ierr, 9);
+	CHECK("Failure getting cell_code handle");
+
+	iMesh_getIntData(mesh, face, code_tag, &cell_code, &ierr);
+	CHECK("Failure getting cell_code value");
+
 	iMesh_getEntAdj(mesh, face, iBase_VERTEX,  &vertices, &vertices_alloc,
 			&vertices_size, &ierr);
 	CHECK("Getting vertices adjacent to face failed");
@@ -307,7 +315,7 @@ Eigen::Vector3d getSurfaceVector(iMesh_Instance mesh, Eigen::Vector3d point,
 	surfaceVector = edgeVectors[0].cross(edgeVectors[1]);
 	referenceVector = vertexVectors[0] - point;
 
-	if (referenceVector.dot(surfaceVector) < 0 )
+	if (cell_code<=1 && referenceVector.dot(surfaceVector)<0 )
 		surfaceVector *= -1;
 	return surfaceVector;
 }
@@ -318,6 +326,10 @@ vector<iBase_EntityHandle> getSuperCellFaces(iMesh_Instance mesh,
 	iBase_EntityHandle *faces = NULL;
 	int faces_alloc = 0, faces_size;
 	std::vector<iBase_EntityHandle> superCellFaces;
+	iBase_TagHandle code_tag;
+
+	iMesh_getTagHandle(mesh, "cell_code", &code_tag, &ierr, 9);
+	CHECK("Failure getting cell_code handle");
 
 	iMesh_getEnt2ndAdj(mesh, vertex, iBase_REGION,
 			iBase_FACE, &faces, &faces_alloc,
@@ -327,16 +339,18 @@ vector<iBase_EntityHandle> getSuperCellFaces(iMesh_Instance mesh,
 		iBase_EntityHandle *vertices = NULL;
 		int vertices_alloc = 0, vertices_size;
 		bool onSuperCellSurface = true;
+		int cell_code = 0;
+
+		iMesh_getIntData(mesh, faces[i], code_tag, &cell_code, &ierr);
+		CHECK("Failure getting cell_code value");
 
 		iMesh_getEntAdj(mesh, faces[i], iBase_VERTEX,  &vertices, &vertices_alloc,
 				&vertices_size, &ierr);
 		CHECK("Getting vertices adjacent to face failed");
 
 		for (int j=0; j<vertices_size; j++) {
-			if (vertices[j]==vertex)
+			if (cell_code<=1 && vertex==vertices[j])
 				onSuperCellSurface = false;
-			// TODO: if vertex is on boundary, should probably include
-			//       the corresponding faces to enclose volume
 		}
 
 		if (onSuperCellSurface) {
