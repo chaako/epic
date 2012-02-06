@@ -22,5 +22,12 @@ std::vector<iBase_EntityHandle> getSuperCellFaces(iMesh_Instance mesh,
 		iBase_EntityHandle vertex);
 double getAverageDblData(iMesh_Instance mesh, iBase_EntityHandle entity,
 		iBase_TagHandle dblData_tag);
-double getVolumeBetweenPointAndFace(iMesh_Instance mesh, Eigen::Vector3d point,
+double getTetVolume(iMesh_Instance mesh, Eigen::Vector3d point,
 		iBase_EntityHandle face);
+double getTetVolume(std::vector<Eigen::Vector3d> vertexVectors);
+std::vector<Eigen::Vector3d> getVertexVectors(iMesh_Instance mesh,
+		iBase_EntityHandle entity);
+bool checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,
+		iBase_EntityHandle element);
+bool checkIfInTet(Eigen::Vector3d currentPosition,
+		std::vector<Eigen::Vector3d> vertexVectors);

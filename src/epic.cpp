@@ -76,16 +76,16 @@ int main(int argc, char *argv[]) {
 		double potential=0., x=0., y=0., z=0.;
 		iMesh_getVtxCoord(mesh, ents0d[i], &x, &y, &z, &ierr);
 		CHECK("Failure getting vertex coordinates");
-		potential = 1./sqrt(x*x+y*y+z*z);
+		potential = -1./sqrt(x*x+y*y+z*z);
 		iMesh_setDblData(mesh, ents0d[i], potential_tag, potential,
 				&ierr);
 		CHECK("Failure setting potential tag");
 	}
 
 	// create eField tag
-//	iMesh_createTag(mesh, "eField", sizeof(Eigen::Vector3d), iBase_BYTES,
-//			&eField_tag, &ierr, 6);
-//	CHECK("Failure creating eField tag");
+	iMesh_createTag(mesh, "eField", sizeof(Eigen::Vector3d), iBase_BYTES,
+			&eField_tag, &ierr, 6);
+	CHECK("Failure creating eField tag");
 	iMesh_createTag(mesh, "eFieldX", 1, iBase_DOUBLE,
 			&eFieldX_tag, &ierr, 7);
 	CHECK("Failure creating eField tag");
@@ -113,15 +113,14 @@ int main(int argc, char *argv[]) {
 					getSurfaceVector(mesh, point, superCellFaces[j]);
 			double potential = getAverageDblData(mesh, superCellFaces[j],
 					potential_tag);
-			volume += getVolumeBetweenPointAndFace(mesh, point,
-					superCellFaces[j]);
+			volume += getTetVolume(mesh, point, superCellFaces[j]);
 			eField -= potential*surfaceVector;
 		}
 		eField /= volume;
 
-//		iMesh_setData(mesh, ents0d[i], eField_tag, &eField,
-//				sizeof(Eigen::Vector3d), &ierr);
-//		CHECK("Failure setting eField tag");
+		iMesh_setData(mesh, ents0d[i], eField_tag, &eField,
+				sizeof(Eigen::Vector3d), &ierr);
+		CHECK("Failure setting eField tag");
 		iMesh_setDblData(mesh, ents0d[i], eFieldX_tag, (double)eField[0], &ierr);
 		CHECK("Failure setting eFieldX tag");
 		iMesh_setDblData(mesh, ents0d[i], eFieldY_tag, (double)eField[1], &ierr);
@@ -129,8 +128,143 @@ int main(int argc, char *argv[]) {
 		iMesh_setDblData(mesh, ents0d[i], eFieldZ_tag, (double)eField[2], &ierr);
 		CHECK("Failure setting eFieldZ tag");
 	}
+
+	// start an orbit at a random node
+	{
+		srand(999);
+		int iSelectedNode = rand() % ents0d_size;
+		double x, y, z;
+		double eFieldX, eFieldY, eFieldZ;
+		iMesh_getVtxCoord(mesh, ents0d[iSelectedNode], &x, &y, &z, &ierr);
+		CHECK("Failure getting vertex coordinates");
+		iBase_EntityHandle currentTet=NULL;
+		Eigen::Vector3d currentPosition(x,y,z);
+		Eigen::Vector3d currentVelocity, zHat(0.,0.,1.);
+		double potential;
+		iMesh_getDblData(mesh, ents0d[iSelectedNode], potential_tag, &potential,
+				&ierr);
+		CHECK("Failure getting potential tag");
+		currentVelocity = currentPosition.cross(zHat);
+		currentVelocity /= currentVelocity.norm();
+		currentVelocity *= potential*2;
+		Eigen::Vector3d eField(0.,0.,0.);
+		int eField_alloc = sizeof(Eigen::Vector3d);
+		int eField_size = sizeof(Eigen::Vector3d);
+		vector<Eigen::Vector3d> eFields, vertexVectors;
+		// TODO: initialize these in some better way
+		int nVertices=4;
+		eFields.reserve(nVertices);
+		vertexVectors.reserve(nVertices);
+		eFields.push_back(eField);
+		eFields.push_back(eField);
+		eFields.push_back(eField);
+		eFields.push_back(eField);
+		vertexVectors.push_back(eField);
+		vertexVectors.push_back(eField);
+		vertexVectors.push_back(eField);
+		vertexVectors.push_back(eField);
+		// make output a text file in Point3D format for VisIt
+		const char *fName = "integratedOrbitTest.p3d";
+		FILE* outFile = fopen(fName, "w");
+		fprintf(outFile, "# x y z density\n");
+		double dt=0.01, tMax=100;
+		bool inNewTet = true;
+		for (double t=0; t<tMax; t+=dt) {
+			if (inNewTet) {
+				// determine which tet currentPosition is in
+				iBase_EntityHandle *entities = NULL;
+				int entities_alloc = 0, entities_size;
+
+				if (currentTet) {
+					iMesh_getEnt2ndAdj(mesh, currentTet, iBase_VERTEX,
+							iBase_REGION, &entities, &entities_alloc,
+							&entities_size, &ierr);
+					CHECK("Getting regions adjacent to entity failed");
+				} else {
+					iMesh_getEntAdj(mesh, ents0d[iSelectedNode],
+							iBase_REGION, &entities, &entities_alloc,
+							&entities_size, &ierr);
+					CHECK("Getting regions adjacent to entity failed");
+				}
+				for (int i=0; i<entities_size; i++) {
+					if (checkIfInTet(currentPosition, mesh, entities[i])) {
+						currentTet = entities[i];
+						inNewTet = false;
+						break;
+					}
+				}
+//				assert(inNewTet == false);
+				if(entities) free (entities);
+				entities_alloc = 0;
+
+				if (inNewTet==true) {
+					std::cout << "Failed to identify current tet: currentPosition ="
+							<< currentPosition << endl;
+					break;
+				}
+
+				// get coordinates and field at vertices
+				// TODO: unify with getVertexVectors
+				iBase_EntityHandle *vertices = NULL;
+				int vertices_alloc = 0, vertices_size;
+
+				iMesh_getEntAdj(mesh, currentTet, iBase_VERTEX,  &vertices, &vertices_alloc,
+						&vertices_size, &ierr);
+				CHECK("Getting vertices adjacent to entity failed");
+
+				assert(vertices_size==vertexVectors.size() && vertices_size==eFields.size());
+				for (int i=0; i<vertices_size; i++) {
+					iMesh_getVtxCoord(mesh, vertices[i], &x, &y, &z, &ierr);
+					CHECK("Failure getting vertex coordinates");
+					vertexVectors[i] << x, y, z;
+
+					iMesh_getDblData(mesh, vertices[i], eFieldX_tag, &eFieldX, &ierr);
+					CHECK("Failure getting double data");
+					iMesh_getDblData(mesh, vertices[i], eFieldY_tag, &eFieldY, &ierr);
+					CHECK("Failure getting double data");
+					iMesh_getDblData(mesh, vertices[i], eFieldZ_tag, &eFieldZ, &ierr);
+					CHECK("Failure getting double data");
+					eField << eFieldX, eFieldY, eFieldZ;
+
+//					iMesh_getData(mesh, vertices[i], eField_tag, &eField,
+//							&eField_alloc, &eField_size, &ierr);
+//					CHECK("Failure getting eField tag");
+					eFields[i] = eField;
+				}
+				if(vertices) free (vertices);
+				vertices_alloc = 0;
+			}
+
+			assert(vertexVectors.size()==nVertices);
+			std::vector<double> volumes;
+			double totalVolume=0.;
+			for (int i=0; i<vertexVectors.size(); i++) {
+				Eigen::Vector3d tmpVertex = vertexVectors[i];
+				vertexVectors[i] = currentPosition;
+				double volume = getTetVolume(vertexVectors);
+				totalVolume += volume;
+				volumes.push_back(volume);
+				vertexVectors[i] = tmpVertex;
+			}
+			Eigen::Vector3d currentAcceleration(0.,0.,0.);
+			for (int i=0; i<volumes.size(); i++) {
+				currentAcceleration += eFields[i]*volumes[i]/totalVolume;
+			}
+			currentPosition += dt*currentVelocity;
+			currentVelocity += dt*currentAcceleration;
+			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
+					currentPosition[2], 1.);
+
+			inNewTet = !checkIfInTet(currentPosition, vertexVectors);
+		}
+		fclose(outFile);
+	}
+
 	if (ents0d) free(ents0d);
 	ents0d_alloc = 0;
+	// destroy eField tag since VisIt doesn't understand
+	iMesh_destroyTag (mesh, eField_tag, 1, &ierr);
+	CHECK("Failed to destroy eField tag");
 
 	// create guard_cells tag
 	iMesh_createTag(mesh, "guard_cells", 1, iBase_INTEGER, &guard_tag,
@@ -281,8 +415,6 @@ int main(int argc, char *argv[]) {
 Eigen::Vector3d getSurfaceVector(iMesh_Instance mesh, Eigen::Vector3d point,
 		iBase_EntityHandle face) {
 	int ierr;
-	iBase_EntityHandle *vertices = NULL;
-	int vertices_alloc = 0, vertices_size;
 	std::vector<Eigen::Vector3d> vertexVectors, edgeVectors;
 	Eigen::Vector3d surfaceVector, referenceVector;
 
@@ -295,27 +427,17 @@ Eigen::Vector3d getSurfaceVector(iMesh_Instance mesh, Eigen::Vector3d point,
 	iMesh_getIntData(mesh, face, code_tag, &cell_code, &ierr);
 	CHECK("Failure getting cell_code value");
 
-	iMesh_getEntAdj(mesh, face, iBase_VERTEX,  &vertices, &vertices_alloc,
-			&vertices_size, &ierr);
-	CHECK("Getting vertices adjacent to face failed");
-	for (int i=0; i<vertices_size; i++) {
-		double x=0., y=0., z=0.;
-		iMesh_getVtxCoord(mesh, vertices[i], &x, &y, &z, &ierr);
-		CHECK("Failure getting vertex coordinates");
-		Eigen::Vector3d vertexVector(x,y,z);
-		vertexVectors.push_back(vertexVector);
-	}
-	if(vertices) free (vertices);
-	vertices_alloc = 0;
+	vertexVectors = getVertexVectors(mesh, face);
 
 	assert(3 == vertexVectors.size());
 	edgeVectors.push_back(vertexVectors[1]-vertexVectors[0]);
-	edgeVectors.push_back(vertexVectors[2]-vertexVectors[1]);
+	edgeVectors.push_back(vertexVectors[2]-vertexVectors[0]);
 
 	surfaceVector = edgeVectors[0].cross(edgeVectors[1]);
 	referenceVector = vertexVectors[0] - point;
 
-	if (cell_code<=1 && referenceVector.dot(surfaceVector)<0 )
+	// TODO: need a way to check orientation for boundary faces
+	if (cell_code<=1 && referenceVector.dot(surfaceVector)<0)
 		surfaceVector *= -1;
 	return surfaceVector;
 }
@@ -382,7 +504,7 @@ double getAverageDblData(iMesh_Instance mesh, iBase_EntityHandle entity,
 		double dblData = 0;
 
 		iMesh_getDblData(mesh, vertices[i], dblData_tag, &dblData, &ierr);
-		CHECK("Failure getting potential tag");
+		CHECK("Failure getting double data");
 
 		averageDblData += dblData;
 	}
@@ -394,21 +516,96 @@ double getAverageDblData(iMesh_Instance mesh, iBase_EntityHandle entity,
 	return averageDblData;
 }
 
-double getVolumeBetweenPointAndFace(iMesh_Instance mesh, Eigen::Vector3d point,
+double getTetVolume(iMesh_Instance mesh, Eigen::Vector3d point,
 		iBase_EntityHandle face) {
+	std::vector<Eigen::Vector3d> vertexVectors = getVertexVectors(mesh, face);
+	vertexVectors.push_back(point);
+
+	return getTetVolume(vertexVectors);
+}
+
+double getTetVolume(std::vector<Eigen::Vector3d> vertexVectors) {
+	std::vector<Eigen::Vector3d> edgeVectors;
+
+	int nVertices=4;
+	assert(vertexVectors.size() == nVertices);
+	edgeVectors.reserve(nVertices);
+
+	edgeVectors.push_back(vertexVectors[1]-vertexVectors[0]);
+	edgeVectors.push_back(vertexVectors[2]-vertexVectors[0]);
+	edgeVectors.push_back(vertexVectors[3]-vertexVectors[0]);
+
+	return fabs(
+			edgeVectors[2].dot( edgeVectors[0].cross(edgeVectors[1]) )
+			)/6.;
+}
+
+bool checkIfInTet(Eigen::Vector3d currentPosition,
+		std::vector<Eigen::Vector3d> vertexVectors) {
+	std::vector<Eigen::Vector3d> edgeVectors, relativePositions;
+
+	int nVertices=4;
+	assert(vertexVectors.size() == nVertices);
+
+	// TODO: remove redundant checks below
+	// TODO: avoid redundant storage of relativePositions
+	int nEdges=9;
+	edgeVectors.reserve(nVertices);
+	relativePositions.reserve(nVertices);
+
+	edgeVectors.push_back(vertexVectors[1]-vertexVectors[0]);
+	edgeVectors.push_back(vertexVectors[2]-vertexVectors[0]);
+	edgeVectors.push_back(vertexVectors[3]-vertexVectors[0]);
+	relativePositions.push_back(currentPosition-vertexVectors[0]);
+	relativePositions.push_back(currentPosition-vertexVectors[0]);
+	relativePositions.push_back(currentPosition-vertexVectors[0]);
+
+	edgeVectors.push_back(vertexVectors[2]-vertexVectors[1]);
+	edgeVectors.push_back(vertexVectors[3]-vertexVectors[1]);
+	edgeVectors.push_back(vertexVectors[0]-vertexVectors[1]);
+	relativePositions.push_back(currentPosition-vertexVectors[1]);
+	relativePositions.push_back(currentPosition-vertexVectors[1]);
+	relativePositions.push_back(currentPosition-vertexVectors[1]);
+
+	edgeVectors.push_back(vertexVectors[3]-vertexVectors[2]);
+	edgeVectors.push_back(vertexVectors[0]-vertexVectors[2]);
+	edgeVectors.push_back(vertexVectors[1]-vertexVectors[2]);
+	relativePositions.push_back(currentPosition-vertexVectors[2]);
+	relativePositions.push_back(currentPosition-vertexVectors[2]);
+	relativePositions.push_back(currentPosition-vertexVectors[2]);
+
+	bool inTet = true;
+	assert(relativePositions.size() == edgeVectors.size());
+	for (int i=0; i<edgeVectors.size(); i++) {
+		double projection = relativePositions[i].dot(edgeVectors[i]);
+		if (projection<0 || projection>edgeVectors[i].norm())
+				inTet = false;
+	}
+	return inTet;
+}
+
+bool checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,
+		iBase_EntityHandle element) {
+	std::vector<Eigen::Vector3d> vertexVectors = getVertexVectors(mesh,
+			element);
+
+	return checkIfInTet(currentPosition, vertexVectors);
+}
+
+std::vector<Eigen::Vector3d> getVertexVectors(iMesh_Instance mesh,
+		iBase_EntityHandle entity) {
 	int ierr;
 	iBase_EntityHandle *vertices = NULL;
 	int vertices_alloc = 0, vertices_size;
-	std::vector<Eigen::Vector3d> vertexVectors, edgeVectors;
+	std::vector<Eigen::Vector3d> vertexVectors;
 
-	vertexVectors.push_back(point);
-
-	iMesh_getEntAdj(mesh, face, iBase_VERTEX,  &vertices, &vertices_alloc,
+	iMesh_getEntAdj(mesh, entity, iBase_VERTEX, &vertices, &vertices_alloc,
 			&vertices_size, &ierr);
-	CHECK("Getting vertices adjacent to face failed");
+	CHECK("Getting vertices adjacent to entity failed");
 
+	vertexVectors.reserve(vertices_size);
 	for (int i=0; i<vertices_size; i++) {
-		double x=0., y=0., z=0.;
+		double x, y, z;
 		iMesh_getVtxCoord(mesh, vertices[i], &x, &y, &z, &ierr);
 		CHECK("Failure getting vertex coordinates");
 		Eigen::Vector3d vertexVector(x,y,z);
@@ -417,11 +614,5 @@ double getVolumeBetweenPointAndFace(iMesh_Instance mesh, Eigen::Vector3d point,
 	if(vertices) free (vertices);
 	vertices_alloc = 0;
 
-	assert(4 == vertexVectors.size());
-	edgeVectors.push_back(vertexVectors[1]-vertexVectors[0]);
-	edgeVectors.push_back(vertexVectors[2]-vertexVectors[1]);
-	edgeVectors.push_back(vertexVectors[3]-vertexVectors[2]);
-	return fabs(
-			vertexVectors[3].dot( vertexVectors[1].cross(vertexVectors[2]) )
-			)/6.;
+	return vertexVectors;
 }
