@@ -182,10 +182,14 @@ int main(int argc, char *argv[]) {
 		FILE* outFile = fopen(fName, "w");
 		fprintf(outFile, "# x y z density\n");
 		double dt=0.01, tMax=100;
+		currentPosition -= currentVelocity*dt/2.;
 		bool inNewTet = true;
 		int nSteps=0, nNewTet=0;
+		std::cout << "Initial radius=" << currentPosition.norm() << endl;
 		for (double t=0; t<tMax; t+=dt) {
 			nSteps++;
+			currentPosition += dt*currentVelocity;
+			inNewTet = !checkIfInTet(currentPosition, vertexVectors);
 			if (inNewTet) {
 				nNewTet++;
 				// determine which tet currentPosition is in
@@ -267,16 +271,14 @@ int main(int argc, char *argv[]) {
 //			currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
 			double eFieldR = currentAcceleration.dot(currentPosition)/
 					currentPosition.norm();
-			currentPosition += dt*currentVelocity;
 			currentVelocity += dt*currentAcceleration;
 			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
 					currentPosition[2], eFieldR);
 //			fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
 //					currentPosition[2], nNewTet);
-
-			inNewTet = !checkIfInTet(currentPosition, vertexVectors);
 		}
 		fclose(outFile);
+		std::cout << "Final radius=" << currentPosition.norm() << endl;
 	}
 
 	if (ents0d) free(ents0d);
@@ -419,15 +421,6 @@ int main(int argc, char *argv[]) {
 	iMesh_dtor(mesh, &ierr);
 	CHECK("Failed to destroy interface");
 
-	Eigen::Vector3d v(1,2,3);
-	Eigen::Vector3d w(0,1,2);
-
-	std::cout << "Dot product: " << v.dot(w) << endl;
-	double dp = v.adjoint()*w; // automatic conversion of the inner product to a scalar
-	std::cout << "Dot product via a matrix product: " << dp << endl;
-	std::cout << "Cross product:\n" << v.cross(w) << endl;
-	std::cout << "Element:\n" << (double)v[1] << endl;
-
 	return 0;
 }
 
@@ -562,6 +555,8 @@ double getTetVolume(std::vector<Eigen::Vector3d> vertexVectors) {
 bool checkIfInTet(Eigen::Vector3d currentPosition,
 		std::vector<Eigen::Vector3d> vertexVectors) {
 	double tetVolume = getTetVolume(vertexVectors);
+	if (tetVolume<VOLUME_TOLERANCE)
+		return false;
 	std::vector<double> subVolumes = getTetSubVolumes(currentPosition,
 			vertexVectors);
 	double sumSubVolumes =
