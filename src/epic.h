@@ -11,6 +11,7 @@
 
 #define VOLUME_TOLERANCE 1.e-8
 
+#include <numeric>
 #include <vector>
 
 
@@ -32,3 +33,8 @@ bool checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,
 		iBase_EntityHandle element);
 bool checkIfInTet(Eigen::Vector3d currentPosition,
 		std::vector<Eigen::Vector3d> vertexVectors);
+std::vector<double> getTetSubVolumes(Eigen::Vector3d point,
+		std::vector<Eigen::Vector3d> vertexVectors);
+std::vector<double> getVertexWeights(Eigen::Vector3d point,
+		std::vector<Eigen::Vector3d> vertexVectors);
+

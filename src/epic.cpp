@@ -257,29 +257,22 @@ int main(int argc, char *argv[]) {
 			}
 
 			assert(vertexVectors.size()==nVertices);
-			std::vector<double> volumes;
-			double totalVolume=0.;
-			for (int i=0; i<vertexVectors.size(); i++) {
-				Eigen::Vector3d tmpVertex = vertexVectors[i];
-				vertexVectors[i] = currentPosition;
-				double volume = getTetVolume(vertexVectors);
-				totalVolume += volume;
-				volumes.push_back(volume);
-				vertexVectors[i] = tmpVertex;
-			}
+			std::vector<double> vertexWeights = getVertexWeights(currentPosition,
+					vertexVectors);
 			Eigen::Vector3d currentAcceleration(0.,0.,0.);
-			for (int i=0; i<volumes.size(); i++) {
-				currentAcceleration += eFields[i]*volumes[i]/totalVolume;
+			assert(eFields.size()==vertexWeights.size());
+			for (int i=0; i<vertexWeights.size(); i++) {
+				currentAcceleration += eFields[i]*vertexWeights[i];
 			}
 //			currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
 			double eFieldR = currentAcceleration.dot(currentPosition)/
 					currentPosition.norm();
 			currentPosition += dt*currentVelocity;
 			currentVelocity += dt*currentAcceleration;
-//			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
-//					currentPosition[2], eFieldR);
-			fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
-					currentPosition[2], nNewTet);
+			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
+					currentPosition[2], eFieldR);
+//			fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
+//					currentPosition[2], nNewTet);
 
 			inNewTet = !checkIfInTet(currentPosition, vertexVectors);
 		}
@@ -459,7 +452,7 @@ Eigen::Vector3d getSurfaceVector(iMesh_Instance mesh, Eigen::Vector3d point,
 	edgeVectors.push_back(vertexVectors[1]-vertexVectors[0]);
 	edgeVectors.push_back(vertexVectors[2]-vertexVectors[0]);
 
-	surfaceVector = edgeVectors[0].cross(edgeVectors[1]);
+	surfaceVector = edgeVectors[0].cross(edgeVectors[1])/2.;
 	referenceVector = vertexVectors[0] - point;
 
 	// TODO: need a way to check orientation for boundary faces
@@ -568,20 +561,27 @@ double getTetVolume(std::vector<Eigen::Vector3d> vertexVectors) {
 
 bool checkIfInTet(Eigen::Vector3d currentPosition,
 		std::vector<Eigen::Vector3d> vertexVectors) {
+	double tetVolume = getTetVolume(vertexVectors);
+	std::vector<double> subVolumes = getTetSubVolumes(currentPosition,
+			vertexVectors);
+	double sumSubVolumes =
+			std::accumulate(subVolumes.begin(),subVolumes.end(),0.);
+	return (fabs(sumSubVolumes-tetVolume)<VOLUME_TOLERANCE);
+}
+
+std::vector<double> getTetSubVolumes(Eigen::Vector3d point,
+		std::vector<Eigen::Vector3d> vertexVectors) {
 	int nVertices=4;
 	assert(vertexVectors.size()==nVertices);
-	double tetVolume = getTetVolume(vertexVectors);
-	std::vector<double> volumes;
-	double totalVolume=0.;
+	std::vector<double> subVolumes;
 	for (int i=0; i<vertexVectors.size(); i++) {
 		Eigen::Vector3d tmpVertex = vertexVectors[i];
-		vertexVectors[i] = currentPosition;
+		vertexVectors[i] = point;
 		double volume = getTetVolume(vertexVectors);
-		totalVolume += volume;
-		volumes.push_back(volume);
+		subVolumes.push_back(volume);
 		vertexVectors[i] = tmpVertex;
 	}
-	return (fabs(totalVolume-tetVolume)<VOLUME_TOLERANCE);
+	return subVolumes;
 }
 
 bool checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,
@@ -615,4 +615,15 @@ std::vector<Eigen::Vector3d> getVertexVectors(iMesh_Instance mesh,
 	vertices_alloc = 0;
 
 	return vertexVectors;
+}
+
+std::vector<double> getVertexWeights(Eigen::Vector3d point,
+		std::vector<Eigen::Vector3d> vertexVectors) {
+	std::vector<double> subVolumes = getTetSubVolumes(point,
+			vertexVectors);
+	double totalVolume = getTetVolume(vertexVectors);
+	for(int i=0; i<subVolumes.size(); i++)
+	    subVolumes[i] /= totalVolume;
+
+	return subVolumes;
 }
