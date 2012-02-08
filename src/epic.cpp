@@ -130,6 +130,20 @@ int main(int argc, char *argv[]) {
 	}
 
 	// start an orbit at a random node
+	iBase_TagHandle visited_tag;
+	iMesh_createTag(mesh, "visited", 1, iBase_INTEGER,
+			&visited_tag, &ierr, 7);
+	CHECK("Failure creating visited tag");
+	// set default guard_cells value for all 3d elements
+	iMesh_getEntities(mesh, root, iBase_REGION, iMesh_ALL_TOPOLOGIES,
+			&ents3d, &ents3d_alloc, &ents3d_size, &ierr);
+	CHECK("Couldn't get region entities");
+	for (int i = 0; i < ents3d_size; i++) {
+		iMesh_setIntData(mesh, ents3d[i], visited_tag, 0, &ierr);
+		CHECK("Failure setting default visited tag");
+	}
+	if (ents3d) free(ents3d);
+	ents3d_alloc = 0;
 	{
 		srand(999);
 		int iSelectedNode = rand() % ents0d_size;
@@ -146,7 +160,7 @@ int main(int argc, char *argv[]) {
 		CHECK("Failure getting potential tag");
 		currentVelocity = currentPosition.cross(zHat);
 		currentVelocity /= currentVelocity.norm();
-		currentVelocity *= potential*2;
+		currentVelocity *= sqrt(-potential);
 		Eigen::Vector3d eField(0.,0.,0.);
 		int eField_alloc = sizeof(Eigen::Vector3d);
 		int eField_size = sizeof(Eigen::Vector3d);
@@ -169,8 +183,11 @@ int main(int argc, char *argv[]) {
 		fprintf(outFile, "# x y z density\n");
 		double dt=0.01, tMax=100;
 		bool inNewTet = true;
+		int nSteps=0, nNewTet=0;
 		for (double t=0; t<tMax; t+=dt) {
+			nSteps++;
 			if (inNewTet) {
+				nNewTet++;
 				// determine which tet currentPosition is in
 				iBase_EntityHandle *entities = NULL;
 				int entities_alloc = 0, entities_size;
@@ -200,8 +217,12 @@ int main(int argc, char *argv[]) {
 				if (inNewTet==true) {
 					std::cout << "Failed to identify current tet: currentPosition ="
 							<< currentPosition << endl;
+					std::cout << "nSteps=" << nSteps << ", nNewTet=" << nNewTet << endl;
 					break;
 				}
+
+				iMesh_setIntData(mesh, currentTet, visited_tag, 1, &ierr);
+				CHECK("Failure setting visited tag");
 
 				// get coordinates and field at vertices
 				// TODO: unify with getVertexVectors
@@ -250,10 +271,15 @@ int main(int argc, char *argv[]) {
 			for (int i=0; i<volumes.size(); i++) {
 				currentAcceleration += eFields[i]*volumes[i]/totalVolume;
 			}
+//			currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
+			double eFieldR = currentAcceleration.dot(currentPosition)/
+					currentPosition.norm();
 			currentPosition += dt*currentVelocity;
 			currentVelocity += dt*currentAcceleration;
-			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
-					currentPosition[2], 1.);
+//			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
+//					currentPosition[2], eFieldR);
+			fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
+					currentPosition[2], nNewTet);
 
 			inNewTet = !checkIfInTet(currentPosition, vertexVectors);
 		}
@@ -542,46 +568,20 @@ double getTetVolume(std::vector<Eigen::Vector3d> vertexVectors) {
 
 bool checkIfInTet(Eigen::Vector3d currentPosition,
 		std::vector<Eigen::Vector3d> vertexVectors) {
-	std::vector<Eigen::Vector3d> edgeVectors, relativePositions;
-
 	int nVertices=4;
-	assert(vertexVectors.size() == nVertices);
-
-	// TODO: remove redundant checks below
-	// TODO: avoid redundant storage of relativePositions
-	int nEdges=9;
-	edgeVectors.reserve(nVertices);
-	relativePositions.reserve(nVertices);
-
-	edgeVectors.push_back(vertexVectors[1]-vertexVectors[0]);
-	edgeVectors.push_back(vertexVectors[2]-vertexVectors[0]);
-	edgeVectors.push_back(vertexVectors[3]-vertexVectors[0]);
-	relativePositions.push_back(currentPosition-vertexVectors[0]);
-	relativePositions.push_back(currentPosition-vertexVectors[0]);
-	relativePositions.push_back(currentPosition-vertexVectors[0]);
-
-	edgeVectors.push_back(vertexVectors[2]-vertexVectors[1]);
-	edgeVectors.push_back(vertexVectors[3]-vertexVectors[1]);
-	edgeVectors.push_back(vertexVectors[0]-vertexVectors[1]);
-	relativePositions.push_back(currentPosition-vertexVectors[1]);
-	relativePositions.push_back(currentPosition-vertexVectors[1]);
-	relativePositions.push_back(currentPosition-vertexVectors[1]);
-
-	edgeVectors.push_back(vertexVectors[3]-vertexVectors[2]);
-	edgeVectors.push_back(vertexVectors[0]-vertexVectors[2]);
-	edgeVectors.push_back(vertexVectors[1]-vertexVectors[2]);
-	relativePositions.push_back(currentPosition-vertexVectors[2]);
-	relativePositions.push_back(currentPosition-vertexVectors[2]);
-	relativePositions.push_back(currentPosition-vertexVectors[2]);
-
-	bool inTet = true;
-	assert(relativePositions.size() == edgeVectors.size());
-	for (int i=0; i<edgeVectors.size(); i++) {
-		double projection = relativePositions[i].dot(edgeVectors[i]);
-		if (projection<0 || projection>edgeVectors[i].norm())
-				inTet = false;
+	assert(vertexVectors.size()==nVertices);
+	double tetVolume = getTetVolume(vertexVectors);
+	std::vector<double> volumes;
+	double totalVolume=0.;
+	for (int i=0; i<vertexVectors.size(); i++) {
+		Eigen::Vector3d tmpVertex = vertexVectors[i];
+		vertexVectors[i] = currentPosition;
+		double volume = getTetVolume(vertexVectors);
+		totalVolume += volume;
+		volumes.push_back(volume);
+		vertexVectors[i] = tmpVertex;
 	}
-	return inTet;
+	return (fabs(totalVolume-tetVolume)<VOLUME_TOLERANCE);
 }
 
 bool checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,

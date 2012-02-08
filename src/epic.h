@@ -7,8 +7,9 @@
 
 #ifndef EPIC_H_
 #define EPIC_H_
-
 #endif /* EPIC_H_ */
+
+#define VOLUME_TOLERANCE 1.e-8
 
 #include <vector>
 
