@@ -130,6 +130,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// start an orbit at a random node
+	{
 	iBase_TagHandle visited_tag;
 	iMesh_createTag(mesh, "visited", 1, iBase_INTEGER,
 			&visited_tag, &ierr, 7);
@@ -144,8 +145,13 @@ int main(int argc, char *argv[]) {
 	}
 	if (ents3d) free(ents3d);
 	ents3d_alloc = 0;
-	{
-		srand(999);
+	srand(999);
+	const char *fName = "integratedOrbitTest.p3d";
+	FILE* outFile = fopen(fName, "w");
+	fprintf(outFile, "# x y z density\n");
+	int nOrbits=0;
+	for (double multiplier=0.5; multiplier<3; multiplier*=2.) {
+		nOrbits++;
 		int iSelectedNode = rand() % ents0d_size;
 		double x, y, z;
 		double eFieldX, eFieldY, eFieldZ;
@@ -161,6 +167,7 @@ int main(int argc, char *argv[]) {
 		currentVelocity = currentPosition.cross(zHat);
 		currentVelocity /= currentVelocity.norm();
 		currentVelocity *= sqrt(-potential);
+		currentVelocity *= multiplier;
 		Eigen::Vector3d eField(0.,0.,0.);
 		int eField_alloc = sizeof(Eigen::Vector3d);
 		int eField_size = sizeof(Eigen::Vector3d);
@@ -178,9 +185,6 @@ int main(int argc, char *argv[]) {
 		vertexVectors.push_back(eField);
 		vertexVectors.push_back(eField);
 		// make output a text file in Point3D format for VisIt
-		const char *fName = "integratedOrbitTest.p3d";
-		FILE* outFile = fopen(fName, "w");
-		fprintf(outFile, "# x y z density\n");
 		double dt=0.01, tMax=100;
 		currentPosition -= currentVelocity*dt/2.;
 		bool inNewTet = true;
@@ -225,7 +229,7 @@ int main(int argc, char *argv[]) {
 					break;
 				}
 
-				iMesh_setIntData(mesh, currentTet, visited_tag, 1, &ierr);
+				iMesh_setIntData(mesh, currentTet, visited_tag, nOrbits, &ierr);
 				CHECK("Failure setting visited tag");
 
 				// get coordinates and field at vertices
@@ -268,7 +272,7 @@ int main(int argc, char *argv[]) {
 			for (int i=0; i<vertexWeights.size(); i++) {
 				currentAcceleration += eFields[i]*vertexWeights[i];
 			}
-//			currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
+			currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
 			double eFieldR = currentAcceleration.dot(currentPosition)/
 					currentPosition.norm();
 			currentVelocity += dt*currentAcceleration;
@@ -277,8 +281,9 @@ int main(int argc, char *argv[]) {
 //			fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
 //					currentPosition[2], nNewTet);
 		}
-		fclose(outFile);
 		std::cout << "Final radius=" << currentPosition.norm() << endl;
+	}
+	fclose(outFile);
 	}
 
 	if (ents0d) free(ents0d);
