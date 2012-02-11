@@ -7,13 +7,27 @@
 
 #ifndef EPIC_H_
 #define EPIC_H_
-#endif /* EPIC_H_ */
 
 #define VOLUME_TOLERANCE 1.e-8
+
+#include <iostream>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+#include "iMesh.h"
+#include <math.h>
+
+#include "Eigen/Dense"
 
 #include <numeric>
 #include <vector>
 
+#include "Mesh.h"
+#include "Field.h"
+#include "Orbit.h"
+
+#define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
 
 class mMesh;
 int custom_importVTK(mMesh *, const char *);
@@ -38,3 +52,6 @@ std::vector<double> getTetSubVolumes(Eigen::Vector3d point,
 std::vector<double> getVertexWeights(Eigen::Vector3d point,
 		std::vector<Eigen::Vector3d> vertexVectors);
 
+
+
+#endif /* EPIC_H_ */

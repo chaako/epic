@@ -8,23 +8,20 @@
  ============================================================================
  */
 
-#include <iostream>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
-#include "iMesh.h"
-#include <math.h>
-
-#include "Eigen/Dense"
-
 #include "epic.h"
-
-#define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
 
 using namespace std;
 
 int main(int argc, char *argv[]) {
+
+	Mesh mesh2(argv[1]);
+
+	PotentialField potential(&mesh2,std::string("potential"));
+	ElectricField eField(&mesh2,std::string("eField"));
+	DensityField density(&mesh2,std::string("density"));
+	mesh2.printElementNumbers();
+	return 0;
+
 	char *options = NULL;
 	int options_len = 0;
 	int dim, num, ierr;
@@ -627,3 +624,5 @@ std::vector<double> getVertexWeights(Eigen::Vector3d point,
 
 	return subVolumes;
 }
+
+
