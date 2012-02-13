@@ -14,14 +14,6 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 
-	Mesh mesh2(argv[1]);
-
-	PotentialField potential(&mesh2,std::string("potential"));
-	ElectricField eField(&mesh2,std::string("eField"));
-	DensityField density(&mesh2,std::string("density"));
-	mesh2.printElementNumbers();
-	return 0;
-
 	char *options = NULL;
 	int options_len = 0;
 	int dim, num, ierr;
@@ -39,6 +31,16 @@ int main(int argc, char *argv[]) {
 		printf("usage: %s meshin meshout\n", argv[0]);
 		exit(1);
 	}
+
+	Mesh mesh2(argv[1]);
+
+	PotentialField potential(&mesh2,std::string("potential"));
+	ElectricField eField(&mesh2,std::string("eField"));
+	DensityField density(&mesh2,std::string("density"));
+	mesh2.printElementNumbers();
+
+	mesh2.save(argv[2]);
+	return 0;
 
 	/* create the Mesh instance */
 	iMesh_newMesh(options, &mesh, &ierr, options_len);

@@ -8,6 +8,8 @@
 #ifndef ORBIT_H_
 #define ORBIT_H_
 
+class ElectricField;
+
 class Orbit {
 public:
 	Orbit(Eigen::Vector3d initialPosition, Eigen::Vector3d initialVelocity);

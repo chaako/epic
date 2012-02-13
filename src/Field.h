@@ -8,19 +8,21 @@
 #ifndef FIELD_H_
 #define FIELD_H_
 
-class Mesh;
+#include "iMesh.h"
+#include "Eigen/Dense"
+#include "Mesh.h"
 
 template <class T>
 class Field {
 public:
 	Field(Mesh *inputMesh_ptr, std::string inputName,
 			iBase_TagHandle inputTag=0);
-	~Field() {}
+	virtual ~Field() {}
 
-//	virtual T getField(Eigen::Vector3d position);
-//	virtual T getField(iBase_EntityHandle node);
+	T getField(Eigen::Vector3d position);
+	T getField(iBase_EntityHandle node);
 
-//	virtual void calcField();
+	virtual void calcField() {}
 
 	Mesh *mesh_ptr;
 	std::string name;
@@ -28,59 +30,33 @@ public:
 
 };
 
-class ScalarField : public Field<double> {
-public:
-	ScalarField(Mesh *inputMesh_ptr, std::string inputName,
-			iBase_TagHandle inputTag=0);
-	~ScalarField() {}
-
-//	double getField(Eigen::Vector3d position);
-//	double getField(iBase_EntityHandle node);
-
-//	virtual void calcField();
-
-};
-
-class VectorField : public Field<Eigen::Vector3d> {
-public:
-	VectorField(Mesh *inputMesh_ptr, std::string inputName,
-			iBase_TagHandle inputTag=0);
-	~VectorField() {}
-
-//	Eigen::Vector3d getField(Eigen::Vector3d position);
-//	Eigen::Vector3d getField(iBase_EntityHandle node);
-
-//	virtual void calcField();
-
-};
-
-class ElectricField : public VectorField {
+class ElectricField : public Field<Eigen::Vector3d> {
 public:
 	ElectricField(Mesh *inputMesh_ptr, std::string inputName,
 			iBase_TagHandle inputTag=0);
-	~ElectricField() {}
+	virtual ~ElectricField() {}
 
-//	virtual void calcField();
+	virtual void calcField();
 
 };
 
-class DensityField : public ScalarField {
+class DensityField : public Field<double> {
 public:
 	DensityField(Mesh *inputMesh_ptr, std::string inputName,
 			iBase_TagHandle inputTag=0);
-	~DensityField() {}
+	virtual ~DensityField() {}
 
-//	virtual void calcField();
+	virtual void calcField();
 
 };
 
-class PotentialField : public ScalarField {
+class PotentialField : public Field<double> {
 public:
 	PotentialField(Mesh *inputMesh_ptr, std::string inputName,
 			iBase_TagHandle inputTag=0);
-//	virtual ~Field();
+	virtual ~PotentialField() {}
 
-//	virtual void calcField();
+	virtual void calcField();
 
 };
 

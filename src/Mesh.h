@@ -14,6 +14,7 @@ public:
 	virtual ~Mesh();
 
 	void printElementNumbers();
+	void save(std::string outputMeshFile);
 
 	iMesh_Instance meshInstance;
 	iBase_EntitySetHandle rootEntitySet;

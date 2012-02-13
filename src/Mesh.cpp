@@ -6,7 +6,7 @@
  */
 
 #include "epic.h"
-//#include "Mesh.h"
+#include "Mesh.h"
 
 Mesh::Mesh(std::string inputMeshFile) {
 	char *options = NULL;
@@ -38,7 +38,6 @@ Mesh::~Mesh() {
 	CHECK("Failed to destroy interface");
 }
 
-
 void Mesh::printElementNumbers() {
 	int dim, num;
 	int ierr;
@@ -48,4 +47,14 @@ void Mesh::printElementNumbers() {
 		CHECK("Failure in getNumOfType");
 		printf("Number of %d-dimensional elements = %d\n", dim, num);
 	}
+}
+
+void Mesh::save(std::string outputMeshFile) {
+	char *options = NULL;
+	int options_len = 0;
+	int ierr;
+	/* save the mesh */
+	iMesh_save(meshInstance, rootEntitySet, outputMeshFile.c_str(),
+			options, &ierr, outputMeshFile.length(), options_len);
+	CHECK("Save failed");
 }
