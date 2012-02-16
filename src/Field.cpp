@@ -18,26 +18,21 @@ Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 	} else {
 		// no tag specified, so create
 		int ierr;
+		int size, type;
+		// TODO: is_same is in std from C++0x, so perhaps switch to
+		//       avoid boost dependency
+		if (boost::is_same<T,double>::value) {
+			size = 1;
+			type = iBase_DOUBLE;
+		} else if (boost::is_same<T,int>::value) {
+			size = 1;
+			type = iBase_INTEGER;
+		} else {
+			size = (int)sizeof(T);
+			type = iBase_BYTES;
+		}
 		iMesh_createTag(mesh_ptr->meshInstance, name.c_str(),
-				(int)sizeof(T),	iBase_BYTES, &tag, &ierr,
-				(int)name.length());
-		CHECK("Failure creating tag");
-	}
-}
-
-template <>
-Field<double>::Field(Mesh *inputMesh_ptr, std::string inputName,
-		iBase_TagHandle inputTag) {
-	mesh_ptr = inputMesh_ptr;
-	name = inputName;
-	if (inputTag) {
-		tag = inputTag;
-	} else {
-		// no tag specified, so create
-		int ierr;
-		iMesh_createTag(mesh_ptr->meshInstance, name.c_str(),
-				1,	iBase_DOUBLE, &tag, &ierr,
-				(int)name.length());
+				size, type, &tag, &ierr, (int)name.length());
 		CHECK("Failure creating tag");
 	}
 }
