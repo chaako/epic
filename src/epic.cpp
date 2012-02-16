@@ -33,11 +33,14 @@ int main(int argc, char *argv[]) {
 	}
 
 	Mesh mesh2(argv[1]);
+	mesh2.printElementNumbers();
 
 	PotentialField potential(&mesh2,std::string("potential"));
 	ElectricField eField(&mesh2,std::string("eField"));
 	DensityField density(&mesh2,std::string("density"));
-	mesh2.printElementNumbers();
+
+	potential.calcField();
+	eField.calcField();
 
 	mesh2.save(argv[2]);
 	return 0;

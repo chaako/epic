@@ -53,6 +53,50 @@ void Mesh::save(std::string outputMeshFile) {
 	char *options = NULL;
 	int options_len = 0;
 	int ierr;
+	// destroy eField tag since VisIt doesn't understand
+	iBase_EntityHandle *ents0d = NULL;
+	int ents0d_alloc = 0, ents0d_size;
+	iBase_TagHandle eField_tag;
+	std::string tagName = "eField";
+	iMesh_getTagHandle(meshInstance, tagName.c_str(),
+			&eField_tag, &ierr, tagName.length());
+	CHECK("Failed to get eField tag");
+	iBase_TagHandle eFieldX_tag, eFieldY_tag, eFieldZ_tag;
+	iMesh_createTag(meshInstance, "eFieldX", 1, iBase_DOUBLE,
+			&eFieldX_tag, &ierr, 7);
+	CHECK("Failure creating eField tag");
+	iMesh_createTag(meshInstance, "eFieldY", 1, iBase_DOUBLE,
+			&eFieldY_tag, &ierr, 7);
+	CHECK("Failure creating eField tag");
+	iMesh_createTag(meshInstance, "eFieldZ", 1, iBase_DOUBLE,
+			&eFieldZ_tag, &ierr, 7);
+	CHECK("Failure creating eField tag");
+	iMesh_getEntities(meshInstance, rootEntitySet,
+			iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
+			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
+	CHECK("Couldn't get vertex entities");
+	for (int i = 0; i < ents0d_size; i++) {
+		std::vector<iBase_EntityHandle> superCellFaces =
+				getSuperCellFaces(meshInstance, ents0d[i]);
+		Eigen::Vector3d eField(0.,0.,0.);
+		Eigen::Vector3d *eField_ptr = &eField;
+		int eField_alloc = sizeof(Eigen::Vector3d);
+		int eField_size = sizeof(Eigen::Vector3d);
+		iMesh_getData(meshInstance, ents0d[i], eField_tag, &eField_ptr,
+				&eField_alloc, &eField_size, &ierr);
+		CHECK("Failure getting eField tag");
+		iMesh_setDblData(meshInstance, ents0d[i], eFieldX_tag,
+				(double)eField[0], &ierr);
+		CHECK("Failure setting eFieldX tag");
+		iMesh_setDblData(meshInstance, ents0d[i], eFieldY_tag,
+				(double)eField[1], &ierr);
+		CHECK("Failure setting eFieldY tag");
+		iMesh_setDblData(meshInstance, ents0d[i], eFieldZ_tag,
+				(double)eField[2], &ierr);
+		CHECK("Failure setting eFieldZ tag");
+	}
+	iMesh_destroyTag(meshInstance, eField_tag, 1, &ierr);
+	CHECK("Failed to destroy eField tag");
 	/* save the mesh */
 	iMesh_save(meshInstance, rootEntitySet, outputMeshFile.c_str(),
 			options, &ierr, outputMeshFile.length(), options_len);
