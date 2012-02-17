@@ -102,3 +102,83 @@ void Mesh::save(std::string outputMeshFile) {
 			options, &ierr, outputMeshFile.length(), options_len);
 	CHECK("Save failed");
 }
+
+Eigen::Vector3d Mesh::getCoordinates(iBase_EntityHandle node) {
+	Eigen::Vector3d coordinates(0.,0.,0.);
+	double x,y,z;
+	int ierr;
+	iMesh_getVtxCoord(meshInstance, node, &x, &y, &z, &ierr);
+	CHECK("Failure getting vertex coordinates");
+	coordinates << x, y, z;
+	return coordinates;
+}
+
+iBase_EntityHandle Mesh::findTet(Eigen::Vector3d position,
+		iBase_EntityHandle adjacentTet, bool *tetFound, bool isTet) {
+	iBase_EntityHandle tet;
+	iBase_EntityHandle *entities = NULL;
+	int entities_alloc = 0, entities_size;
+	int ierr;
+
+	if (isTet) {
+	iMesh_getEnt2ndAdj(meshInstance, adjacentTet, iBase_VERTEX,
+			iBase_REGION, &entities, &entities_alloc,
+			&entities_size, &ierr);
+	CHECK("Getting regions adjacent to entity failed");
+
+	} else {
+		iMesh_getEntAdj(meshInstance, adjacentTet,
+				iBase_REGION, &entities, &entities_alloc,
+				&entities_size, &ierr);
+		CHECK("Getting regions adjacent to entity failed");
+	}
+	for (int i=0; i<entities_size; i++) {
+		if (checkIfInTet(position, meshInstance, entities[i])) {
+			tet = entities[i];
+			// TODO: could throw error if tetFound is false rather than pass
+			*tetFound = true;
+			break;
+		}
+	}
+	if(entities) free (entities);
+	entities_alloc = 0;
+
+	return tet;
+}
+
+std::vector<iBase_EntityHandle> Mesh::getVertices(
+		iBase_EntityHandle element) {
+	int ierr;
+	iBase_EntityHandle *vertices = NULL;
+	int vertices_alloc = 0, vertices_size;
+	int nVertices=4;
+	std::vector<iBase_EntityHandle> vertexHandles(nVertices);
+
+	iMesh_getEntAdj(meshInstance, element, iBase_VERTEX,
+			&vertices, &vertices_alloc, &vertices_size, &ierr);
+	CHECK("Getting vertices adjacent to entity failed");
+
+	for (int i=0; i<vertices_size; i++) {
+		vertexHandles[i] = vertices[i];
+	}
+	if(vertices) free (vertices);
+	vertices_alloc = 0;
+
+	return vertexHandles;
+}
+
+iBase_EntityHandle Mesh::getRandomVertex() {
+	iBase_EntityHandle *ents0d = NULL;
+	int ents0d_alloc = 0, ents0d_size;
+	int ierr;
+
+	iMesh_getEntities(meshInstance, rootEntitySet, iBase_VERTEX,
+			iMesh_ALL_TOPOLOGIES,
+			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
+	CHECK("Couldn't get vertex entities");
+
+	srand(999);
+	int iSelectedNode = rand() % ents0d_size;
+
+	return ents0d[iSelectedNode];
+}

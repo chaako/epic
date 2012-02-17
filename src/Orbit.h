@@ -12,9 +12,15 @@ class ElectricField;
 
 class Orbit {
 public:
-	Orbit(Eigen::Vector3d initialPosition, Eigen::Vector3d initialVelocity);
-	virtual ~Orbit();
-	void integrate(ElectricField eField);
+//	Orbit(Eigen::Vector3d inputPosition, Eigen::Vector3d inputVelocity,
+//			iBase_EntityHandle inputNode=NULL);
+	Orbit(Mesh *inputMesh, iBase_EntityHandle inputNode,
+			Eigen::Vector3d inputVelocity);
+	~Orbit();
+	void integrate(ElectricField& electricField, FILE *outFile=NULL);
+	Mesh *mesh_ptr;
+	iBase_EntityHandle initialNode;
+	iBase_EntityHandle currentElement;
 	Eigen::Vector3d initialPosition;
 	Eigen::Vector3d initialVelocity;
 	Eigen::Vector3d finalPosition;

@@ -42,6 +42,25 @@ int main(int argc, char *argv[]) {
 	potential.calcField();
 	eField.calcField();
 
+	{
+	const char *fName = "integratedOrbits.p3d";
+	FILE* outFile = fopen(fName, "w");
+	fprintf(outFile, "# x y z density\n");
+
+	iBase_EntityHandle node = mesh2.getRandomVertex();
+	for (double vx=-1.; vx<=1.; vx+=0.4) {
+		for (double vy=-1.; vy<=1.; vy+=0.4) {
+			for (double vz=-1.; vz<=1.; vz+=0.4) {
+				Eigen::Vector3d velocity(vx,vy,vz);
+				Orbit orbit(&mesh2,node,velocity);
+				orbit.integrate(eField, outFile);
+			}
+		}
+	}
+
+	fclose(outFile);
+	}
+
 	mesh2.save(argv[2]);
 	return 0;
 

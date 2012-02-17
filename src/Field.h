@@ -60,6 +60,21 @@ public:
 
 };
 
+
+// It would seem template function definitions need to be in the same file
+template <class T>
+T Field<T>::getField(iBase_EntityHandle node) {
+	T field;
+	T *field_ptr=&field;
+	int field_alloc = sizeof(T);
+	int field_size = sizeof(T);
+	int ierr;
+	iMesh_getData(mesh_ptr->meshInstance, node, tag, &field_ptr,
+			&field_alloc, &field_size, &ierr);
+//	CHECK("Failure getting eField tag");
+	return field;
+ }
+
 #endif /* FIELD_H_ */
 
 
