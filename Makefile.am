@@ -1,1 +1,1 @@
-SUBDIRS = eigen fmdb src
+SUBDIRS = cuba cubature eigen fmdb src

@@ -3,6 +3,11 @@ Electrostatic Plasma Interaction Code (EPIC)
 At present, need to set library path to run, e.g.:
 export LD_LIBRARY_PATH=/home/chaako/epic/fmdb/fmdbSerial//lib
 
+For now, using the Vegas algorithm from the Cuba library appears to
+require extracting the object file from the archive with 'ar x
+../cuba/Cuba-3.0/libcuba.a Vegas.o' from the src directory.
+
+
 Mesh notes:
 
 Load .vtu file from enGrid in VisIt, make mesh plot, export (with
@@ -11,3 +16,4 @@ variable 'cell_code' which labels the surfaces) as MOAB VTK file
 FMDB VTK reader), and change the line 'SCALARS cell_code double 1' to
 'SCALARS cell_code int' since it should be an integer tag (and the 1
 throws off the vtk reader).
+

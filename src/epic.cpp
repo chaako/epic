@@ -41,22 +41,41 @@ int main(int argc, char *argv[]) {
 
 	potential.calcField();
 	eField.calcField();
+	density.calcField(eField);
 
 	{
 	const char *fName = "integratedOrbits.p3d";
 	FILE* outFile = fopen(fName, "w");
 	fprintf(outFile, "# x y z density\n");
 
-	iBase_EntityHandle node = mesh2.getRandomVertex();
-	for (double vx=-1.; vx<=1.; vx+=0.4) {
-		for (double vy=-1.; vy<=1.; vy+=0.4) {
-			for (double vz=-1.; vz<=1.; vz+=0.4) {
-				Eigen::Vector3d velocity(vx,vy,vz);
-				Orbit orbit(&mesh2,node,velocity);
-				orbit.integrate(eField, outFile);
-			}
-		}
-	}
+//	iBase_EntityHandle node = mesh2.getRandomVertex();
+//	IntegrandContainer integrandContainer;
+//	integrandContainer.mesh_ptr = &mesh2;
+//	integrandContainer.node = node;
+//	integrandContainer.electricField_ptr = &eField;
+//	int vdim=3;
+//	double xmin[vdim], xmax[vdim];
+//	for (int i=0; i<vdim; i++) {
+//		xmin[i] = -1.;
+//		xmax[i] = 1.;
+//	}
+//	double density=0.;
+//	double error=0.;
+//	adapt_integrate(1, &valueFromBoundary, (void*)&integrandContainer,
+//			vdim, xmin, xmax, 100, 1.e-2, 1.e-2, &density, &error);
+//	std::cout << "error = " << error << std::endl;
+//	std::cout << "density = " << density << std::endl;
+
+//	int neval;
+//	int fail;
+//	double prob;
+//	Vegas(3, 1, &valueFromBoundaryCuba, (void*)&integrandContainer,
+//	  1.e-8, 1.e-8, 0, 999,  100, 100, 10, 10, 10, 0, NULL,
+//	  &neval, &fail, &density, &error, &prob);
+//	std::cout << "error = " << error << std::endl;
+//	std::cout << "density = " << density << std::endl;
+//	std::cout << "neval = " << neval << std::endl;
+//	std::cout << "fail = " << fail << std::endl;
 
 	fclose(outFile);
 	}
@@ -650,3 +669,39 @@ std::vector<double> getVertexWeights(Eigen::Vector3d point,
 }
 
 
+int valueFromBoundaryCuba(const int *ndim, const double x[],
+  const int *ncomp, double f[], void *integrandContainer_ptr) {
+	assert(*ndim==3);
+	assert(*ncomp==1);
+	double y[3];
+	for (int i=0; i<*ndim; i++) {
+		y[i] = 2.*x[i]-1;
+	}
+	valueFromBoundary((unsigned)*ndim, y, integrandContainer_ptr, *ncomp, f);
+	*f *= pow(2.,(double)*ndim);
+
+	return 0;
+}
+
+void valueFromBoundary(unsigned ndim, const double *x,
+		void *integrandContainer_ptr, unsigned fdim, double *fval) {
+	assert(ndim==3);
+	assert(fdim==1);
+	Eigen::Vector3d velocity;
+	for (int i=0; i<ndim; i++) {
+		velocity[i] = x[i]/(1.-pow(x[i],2.));
+	}
+	Mesh *mesh_ptr = ((IntegrandContainer*)integrandContainer_ptr)->mesh_ptr;
+	iBase_EntityHandle node =
+			((IntegrandContainer*)integrandContainer_ptr)->node;
+	ElectricField *electricField_ptr =
+			((IntegrandContainer*)integrandContainer_ptr)->electricField_ptr;
+	Orbit orbit(mesh_ptr,node,velocity);
+	orbit.integrate(*electricField_ptr);
+	*fval = 1./pow(2.*M_PI,3./2.);
+	for (int i=0; i<ndim; i++) {
+		double t = x[i];
+		*fval *= (1+pow(t,2.))/pow(1.-pow(t,2.),2.);
+	}
+	*fval *= exp(-pow(orbit.finalVelocity.norm(),2.)/2.);
+}

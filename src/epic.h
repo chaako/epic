@@ -19,6 +19,8 @@
 #include <math.h>
 
 #include "Eigen/Dense"
+#include "cubature.h"
+#include "cuba.h"
 
 #include <numeric>
 #include <vector>
@@ -26,6 +28,7 @@
 #include <boost/type_traits.hpp>
 
 #include "Mesh.h"
+#include "IntegrandContainer.h"
 #include "Field.h"
 #include "Orbit.h"
 
@@ -53,7 +56,10 @@ std::vector<double> getTetSubVolumes(Eigen::Vector3d point,
 		std::vector<Eigen::Vector3d> vertexVectors);
 std::vector<double> getVertexWeights(Eigen::Vector3d point,
 		std::vector<Eigen::Vector3d> vertexVectors);
-
+int valueFromBoundaryCuba(const int *ndim, const double x[],
+  const int *ncomp, double f[], void *integrandContainer_ptr);
+void valueFromBoundary(unsigned ndim, const double *x,
+		void *integrandContainer_ptr, unsigned fdim, double *fval);
 
 
 #endif /* EPIC_H_ */

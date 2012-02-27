@@ -172,7 +172,43 @@ DensityField::DensityField(Mesh *inputMesh_ptr, std::string inputName,
 		: Field(inputMesh_ptr, inputName, inputTag) {
 }
 
-void DensityField::calcField() {
+void DensityField::calcField() {}
 
+void DensityField::calcField(ElectricField electricField) {
+	int ierr;
+	iBase_EntityHandle *ents0d = NULL;
+	int ents0d_alloc = 0, ents0d_size;
+	// set potential value for all 0d elements
+	iMesh_getEntities(mesh_ptr->meshInstance, mesh_ptr->rootEntitySet,
+			iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
+			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
+	CHECK("Couldn't get vertex entities");
+	for (int i = 0; i < ents0d_size; i++) {
+		double density=0.;
+		Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(ents0d[i]);
+		Eigen::Vector3d xzPosition = nodePosition;
+		xzPosition[1] = 0;
+		double r = xzPosition.norm();
+//		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
+		IntegrandContainer integrandContainer;
+		integrandContainer.mesh_ptr = mesh_ptr;
+		integrandContainer.node = ents0d[i];
+		integrandContainer.electricField_ptr = &electricField;
+		int vdim=3;
+		double xmin[vdim], xmax[vdim];
+		for (int j=0; j<vdim; j++) {
+			xmin[j] = -1.;
+			xmax[j] = 1.;
+		}
+		double error=0.;
+		adapt_integrate(1, &valueFromBoundary, (void*)&integrandContainer,
+				vdim, xmin, xmax, 100, 1.e-5, 1.e-5, &density, &error);
+		std::cout << "density[" << i << "] = " << density << ", error ="
+				<< error << std::endl;
+//		}
+		iMesh_setDblData(mesh_ptr->meshInstance, ents0d[i], tag, density,
+				&ierr);
+		CHECK("Failure setting potential tag");
+	}
 }
 

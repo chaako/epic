@@ -47,6 +47,7 @@ public:
 	virtual ~DensityField() {}
 
 	virtual void calcField();
+	void calcField(ElectricField electricField);
 
 };
 

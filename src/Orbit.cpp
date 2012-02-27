@@ -38,7 +38,7 @@ void Orbit::integrate(ElectricField& electricField, FILE *outFile) {
 	currentPosition -= currentVelocity*dt/2.;
 	bool inNewTet = true;
 	int nSteps=0, nNewTet=0;
-	std::cout << "Initial radius=" << currentPosition.norm() << std::endl;
+//	std::cout << "Initial radius=" << currentPosition.norm() << std::endl;
 	bool isTet=false;
 	for (double t=0; t<tMax; t+=dt) {
 		nSteps++;
@@ -82,5 +82,8 @@ void Orbit::integrate(ElectricField& electricField, FILE *outFile) {
 					currentPosition[2], eFieldR);
 		}
 	}
-	std::cout << "Final radius=" << currentPosition.norm() << std::endl;
+//	std::cout << "Final radius=" << currentPosition.norm() << std::endl;
+	finalPosition = currentPosition;
+	// TODO: correct for time-step offset?
+	finalVelocity = currentVelocity;
 }
