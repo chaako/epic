@@ -582,15 +582,15 @@ double getTetVolume(iMesh_Instance mesh, Eigen::Vector3d point,
 }
 
 double getTetVolume(std::vector<Eigen::Vector3d> vertexVectors) {
-	std::vector<Eigen::Vector3d> edgeVectors;
+	int nEdges=3;
+	std::vector<Eigen::Vector3d> edgeVectors(nEdges);
 
 	int nVertices=4;
 	assert(vertexVectors.size() == nVertices);
-	edgeVectors.reserve(nVertices);
 
-	edgeVectors.push_back(vertexVectors[1]-vertexVectors[0]);
-	edgeVectors.push_back(vertexVectors[2]-vertexVectors[0]);
-	edgeVectors.push_back(vertexVectors[3]-vertexVectors[0]);
+	edgeVectors[0] = vertexVectors[1]-vertexVectors[0];
+	edgeVectors[1] = vertexVectors[2]-vertexVectors[0];
+	edgeVectors[2] = vertexVectors[3]-vertexVectors[0];
 
 	return fabs(
 			edgeVectors[2].dot( edgeVectors[0].cross(edgeVectors[1]) )
@@ -613,12 +613,12 @@ std::vector<double> getTetSubVolumes(Eigen::Vector3d point,
 		std::vector<Eigen::Vector3d> vertexVectors) {
 	int nVertices=4;
 	assert(vertexVectors.size()==nVertices);
-	std::vector<double> subVolumes;
+	std::vector<double> subVolumes(nVertices);
 	for (int i=0; i<vertexVectors.size(); i++) {
 		Eigen::Vector3d tmpVertex = vertexVectors[i];
 		vertexVectors[i] = point;
 		double volume = getTetVolume(vertexVectors);
-		subVolumes.push_back(volume);
+		subVolumes[i] = volume;
 		vertexVectors[i] = tmpVertex;
 	}
 	return subVolumes;
@@ -705,3 +705,5 @@ void valueFromBoundary(unsigned ndim, const double *x,
 	}
 	*fval *= exp(-pow(orbit.finalVelocity.norm(),2.)/2.);
 }
+
+clock_t extern_findTet=0;

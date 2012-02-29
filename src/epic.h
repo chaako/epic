@@ -10,6 +10,7 @@
 
 #define VOLUME_TOLERANCE 1.e-8
 
+#include <map>
 #include <iostream>
 #include <stdio.h>
 #include <string.h>
@@ -26,6 +27,9 @@
 #include <vector>
 //#include <type_traits>
 #include <boost/type_traits.hpp>
+//#include <sys/time.h>
+#include <time.h>
+//#include <boost/timer/timer.hpp>
 
 #include "Mesh.h"
 #include "IntegrandContainer.h"
@@ -60,6 +64,10 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
   const int *ncomp, double f[], void *integrandContainer_ptr);
 void valueFromBoundary(unsigned ndim, const double *x,
 		void *integrandContainer_ptr, unsigned fdim, double *fval);
+
+
+// External timing variables
+extern clock_t extern_findTet;
 
 
 #endif /* EPIC_H_ */

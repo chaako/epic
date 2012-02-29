@@ -30,6 +30,19 @@ Mesh::Mesh(std::string inputMeshFile) {
 	// FMDB's importVTK can't handle our tags, so use custom version
 	ierr = custom_importVTK((mMesh *)mesh, inputMeshFile.c_str());
 	CHECK("Load failed");
+
+	// store adjacency info for fast access
+	adjacentTetsMap = getAdjacentsMap(iBase_REGION, iBase_REGION,
+			iBase_VERTEX);
+	adjacentVertsMap = getAdjacentsMap(iBase_REGION, iBase_VERTEX);
+
+	// store vertex coordinates for fast access
+	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >::iterator iter;
+	for (iter=adjacentVertsMap.begin(); iter!=adjacentVertsMap.end(); ++iter) {
+		vertexVectorsMap[iter->first] = Mesh::getVertexVectors(iter->first, false);
+		assert(vertexVectorsMap[iter->first].size()==4);
+	}
+
 }
 
 Mesh::~Mesh() {
@@ -103,7 +116,46 @@ void Mesh::save(std::string outputMeshFile) {
 	CHECK("Save failed");
 }
 
-Eigen::Vector3d Mesh::getCoordinates(iBase_EntityHandle node) {
+std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
+Mesh::getAdjacentsMap(int keyEntityType, int valueEntityType,
+		int bridgeEntityType) {
+	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentsMap;
+	iBase_EntityHandle *ents3d = NULL;
+	int ents3d_alloc = 0, ents3d_size;
+	int ierr;
+	iMesh_getEntities(meshInstance, rootEntitySet, keyEntityType,
+			iMesh_ALL_TOPOLOGIES,
+			&ents3d, &ents3d_alloc, &ents3d_size, &ierr);
+	CHECK("Couldn't get entities");
+	for(int i=0; i<ents3d_size; i++) {
+		iBase_EntityHandle *entities = NULL;
+		int entities_alloc = 0, entities_size;
+		if (bridgeEntityType>=0) {
+			iMesh_getEnt2ndAdj(meshInstance, ents3d[i], bridgeEntityType,
+					valueEntityType, &entities, &entities_alloc,
+					&entities_size, &ierr);
+			CHECK("Getting second adjacency failed");
+		} else {
+			iMesh_getEntAdj(meshInstance, ents3d[i],
+					valueEntityType, &entities, &entities_alloc,
+					&entities_size, &ierr);
+			CHECK("Getting adjacency failed");
+		}
+		std::vector<iBase_EntityHandle> handles;
+		for (int j=0; j<entities_size; j++) {
+			handles.push_back(entities[j]);
+		}
+		adjacentsMap[ents3d[i]] = handles;
+		if(entities) free (entities);
+		entities_alloc = 0;
+	}
+	if(ents3d_alloc) free (ents3d);
+	ents3d_alloc = 0;
+
+	return adjacentsMap;
+}
+
+Eigen::Vector3d Mesh::getCoordinates(iBase_EntityHandle node, bool useMap) {
 	Eigen::Vector3d coordinates(0.,0.,0.);
 	double x,y,z;
 	int ierr;
@@ -117,15 +169,16 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d position,
 		iBase_EntityHandle adjacentTet, bool *tetFound, bool isTet) {
 	iBase_EntityHandle tet;
 	iBase_EntityHandle *entities = NULL;
-	int entities_alloc = 0, entities_size;
+	int entities_alloc=0, entities_size=0;
 	int ierr;
+	std::vector<iBase_EntityHandle> ents;
 
 	if (isTet) {
-	iMesh_getEnt2ndAdj(meshInstance, adjacentTet, iBase_VERTEX,
-			iBase_REGION, &entities, &entities_alloc,
-			&entities_size, &ierr);
-	CHECK("Getting regions adjacent to entity failed");
-
+//	iMesh_getEnt2ndAdj(meshInstance, adjacentTet, iBase_VERTEX,
+//			iBase_REGION, &entities, &entities_alloc,
+//			&entities_size, &ierr);
+//	CHECK("Getting regions adjacent to entity failed");
+		ents = adjacentTetsMap[adjacentTet];
 	} else {
 		iMesh_getEntAdj(meshInstance, adjacentTet,
 				iBase_REGION, &entities, &entities_alloc,
@@ -133,15 +186,18 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d position,
 		CHECK("Getting regions adjacent to entity failed");
 	}
 	for (int i=0; i<entities_size; i++) {
-		if (checkIfInTet(position, meshInstance, entities[i])) {
-			tet = entities[i];
+		ents.push_back(entities[i]);
+	}
+	if(entities) free (entities);
+	entities_alloc = 0;
+	for (int i=0; i<ents.size(); i++) {
+		if (Mesh::checkIfInTet(position, meshInstance, ents[i])) {
+			tet = ents[i];
 			// TODO: could throw error if tetFound is false rather than pass
 			*tetFound = true;
 			break;
 		}
 	}
-	if(entities) free (entities);
-	entities_alloc = 0;
 
 	return tet;
 }
@@ -180,5 +236,52 @@ iBase_EntityHandle Mesh::getRandomVertex() {
 	srand(999);
 	int iSelectedNode = rand() % ents0d_size;
 
+	if(ents0d_alloc) free (ents0d);
+	ents0d_alloc = 0;
+
 	return ents0d[iSelectedNode];
 }
+
+std::vector<Eigen::Vector3d> Mesh::getVertexVectors(iBase_EntityHandle entity,
+		bool useMap) {
+	int ierr;
+	int nVerts = 4;
+	std::vector<Eigen::Vector3d> vertexVectors(nVerts);
+	std::vector<iBase_EntityHandle> vertices = adjacentVertsMap[entity];
+	assert(vertexVectors.size()==vertices.size());
+	if (useMap) {
+		vertexVectors = vertexVectorsMap[entity];
+	} else {
+		for (int i=0; i<vertices.size(); i++) {
+	//		double x, y, z;
+	//		iMesh_getVtxCoord(mesh, vertices[i], &x, &y, &z, &ierr);
+	//		CHECK("Failure getting vertex coordinates");
+			vertexVectors[i] = Mesh::getCoordinates(vertices[i]);
+
+	//		Eigen::Vector3d vertexVector(x,y,z);
+	//		vertexVectors[i] = vertexVector;
+		}
+	}
+
+	return vertexVectors;
+}
+
+bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,
+		iBase_EntityHandle element) {
+	std::vector<Eigen::Vector3d> vertexVectors = Mesh::getVertexVectors(element);
+
+	return Mesh::checkIfInTet(currentPosition, vertexVectors);
+}
+
+bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition,
+		std::vector<Eigen::Vector3d> vertexVectors) {
+	double tetVolume = getTetVolume(vertexVectors);
+	if (tetVolume<VOLUME_TOLERANCE)
+		return false;
+	std::vector<double> subVolumes = getTetSubVolumes(currentPosition,
+			vertexVectors);
+	double sumSubVolumes =
+			std::accumulate(subVolumes.begin(),subVolumes.end(),0.);
+	return (fabs(sumSubVolumes-tetVolume)<VOLUME_TOLERANCE);
+}
+

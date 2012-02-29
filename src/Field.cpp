@@ -178,6 +178,7 @@ void DensityField::calcField(ElectricField electricField) {
 	int ierr;
 	iBase_EntityHandle *ents0d = NULL;
 	int ents0d_alloc = 0, ents0d_size;
+	clock_t startClock = clock(); // timing
 	// set potential value for all 0d elements
 	iMesh_getEntities(mesh_ptr->meshInstance, mesh_ptr->rootEntitySet,
 			iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
@@ -210,5 +211,10 @@ void DensityField::calcField(ElectricField electricField) {
 				&ierr);
 		CHECK("Failure setting potential tag");
 	}
+	clock_t endClock = clock(); // timing
+	std::cout << "calcField total (s)= "
+			<< (double)(endClock-startClock)/(double)CLOCKS_PER_SEC << std::endl; // timing
+	std::cout << "findTet total (s)= "
+			<< (double)extern_findTet/(double)CLOCKS_PER_SEC << std::endl; // timing
 }
 
