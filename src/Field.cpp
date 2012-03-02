@@ -190,7 +190,7 @@ void DensityField::calcField(ElectricField electricField) {
 		Eigen::Vector3d xzPosition = nodePosition;
 		xzPosition[1] = 0;
 		double r = xzPosition.norm();
-//		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
+		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
 		IntegrandContainer integrandContainer;
 		integrandContainer.mesh_ptr = mesh_ptr;
 		integrandContainer.node = ents0d[i];
@@ -202,11 +202,12 @@ void DensityField::calcField(ElectricField electricField) {
 			xmax[j] = 1.;
 		}
 		double error=0.;
+		// TODO: should make number of orbits adaptive
 		adapt_integrate(1, &valueFromBoundary, (void*)&integrandContainer,
 				vdim, xmin, xmax, 100, 1.e-5, 1.e-5, &density, &error);
 		std::cout << "density[" << i << "] = " << density << ", error ="
 				<< error << std::endl;
-//		}
+		}
 		iMesh_setDblData(mesh_ptr->meshInstance, ents0d[i], tag, density,
 				&ierr);
 		CHECK("Failure setting potential tag");
@@ -216,5 +217,7 @@ void DensityField::calcField(ElectricField electricField) {
 			<< (double)(endClock-startClock)/(double)CLOCKS_PER_SEC << std::endl; // timing
 	std::cout << "findTet total (s)= "
 			<< (double)extern_findTet/(double)CLOCKS_PER_SEC << std::endl; // timing
+//	std::cout << "checkIfInNewTet (s)= "
+//			<< (double)extern_checkIfInNewTet/(double)CLOCKS_PER_SEC << std::endl; // timing
 }
 

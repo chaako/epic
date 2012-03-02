@@ -30,6 +30,7 @@
 //#include <sys/time.h>
 #include <time.h>
 //#include <boost/timer/timer.hpp>
+#include <algorithm>
 
 #include "Mesh.h"
 #include "IntegrandContainer.h"
@@ -67,7 +68,7 @@ void valueFromBoundary(unsigned ndim, const double *x,
 
 
 // External timing variables
-extern clock_t extern_findTet;
+extern clock_t extern_findTet, extern_checkIfInNewTet;
 
 
 #endif /* EPIC_H_ */

@@ -31,7 +31,8 @@ void Orbit::integrate(ElectricField& electricField, FILE *outFile) {
 	int nVertices=4;
 	std::vector<Eigen::Vector3d> eFields(nVertices), vertexVectors(nVertices);
 	std::vector<iBase_EntityHandle> vertices(nVertices);
-	double dt=0.01, tMax=100;
+	// TODO: need some clever way to set tMax and/or detect trapped orbits
+	double dt=std::min(0.01,0.01/initialVelocity.norm()), tMax=20;
 	Eigen::Vector3d currentPosition = initialPosition;
 	Eigen::Vector3d currentVelocity = initialVelocity;
 	// For second order leap-frog, offset position from velocity in time
@@ -40,10 +41,16 @@ void Orbit::integrate(ElectricField& electricField, FILE *outFile) {
 	int nSteps=0, nNewTet=0;
 //	std::cout << "Initial radius=" << currentPosition.norm() << std::endl;
 	bool isTet=false;
+	bool firstStep=true;
 	for (double t=0; t<tMax; t+=dt) {
 		nSteps++;
 		currentPosition += dt*currentVelocity;
-		inNewTet = !checkIfInTet(currentPosition, vertexVectors);
+//		clock_t startClock = clock(); // timing
+		if (!firstStep)
+			inNewTet = !checkIfInTet(currentPosition, vertexVectors);
+		firstStep=false;
+//		clock_t endClock = clock(); // timing
+//		extern_checkIfInNewTet += endClock-startClock; // timing
 		if (inNewTet) {
 			nNewTet++;
 			bool foundTet=false;
@@ -67,6 +74,8 @@ void Orbit::integrate(ElectricField& electricField, FILE *outFile) {
 				eFields[i] = electricField.getField(vertices[i]);
 			}
 		}
+//		if (t>=tMax-dt)
+//			std::cout << "orbit reached tMax" << std::endl;
 
 		assert(vertexVectors.size()==nVertices);
 		std::vector<double> vertexWeights = getVertexWeights(currentPosition,

@@ -698,12 +698,19 @@ void valueFromBoundary(unsigned ndim, const double *x,
 			((IntegrandContainer*)integrandContainer_ptr)->electricField_ptr;
 	Orbit orbit(mesh_ptr,node,velocity);
 	orbit.integrate(*electricField_ptr);
-	*fval = 1./pow(2.*M_PI,3./2.);
-	for (int i=0; i<ndim; i++) {
-		double t = x[i];
-		*fval *= (1+pow(t,2.))/pow(1.-pow(t,2.),2.);
+	*fval = 0.;
+	// TODO: shouldn't hard-code domain here
+	if (orbit.finalPosition.norm()>4.9) {
+		*fval = 1./pow(2.*M_PI,3./2.);
+		for (int i=0; i<ndim; i++) {
+			double t = x[i];
+			*fval *= (1+pow(t,2.))/pow(1.-pow(t,2.),2.);
+		}
+		*fval *= exp(-pow(orbit.finalVelocity.norm(),2.)/2.);
+	} else if (orbit.finalPosition.norm()>1.) {
+//		std::cout << "orbit terminated with final position in domain:" <<
+//				std::endl << orbit.finalPosition << std::endl;
 	}
-	*fval *= exp(-pow(orbit.finalVelocity.norm(),2.)/2.);
 }
 
-clock_t extern_findTet=0;
+clock_t extern_findTet=0, extern_checkIfInNewTet=0;
