@@ -711,6 +711,10 @@ void valueFromBoundary(unsigned ndim, const double *x,
 //		std::cout << "orbit terminated with final position in domain:" <<
 //				std::endl << orbit.finalPosition << std::endl;
 	}
+	if (((IntegrandContainer*)integrandContainer_ptr)->outFile) {
+		fprintf(((IntegrandContainer*)integrandContainer_ptr)->outFile,
+				"%f %f %f %f\n", x[0], x[1], x[2], *fval);
+	}
 }
 
 clock_t extern_findTet=0, extern_checkIfInNewTet=0;

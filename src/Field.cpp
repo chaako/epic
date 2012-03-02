@@ -195,6 +195,11 @@ void DensityField::calcField(ElectricField electricField) {
 		integrandContainer.mesh_ptr = mesh_ptr;
 		integrandContainer.node = ents0d[i];
 		integrandContainer.electricField_ptr = &electricField;
+		std::stringstream fileNameStream;
+		fileNameStream << "distributionFunction_r" << nodePosition.norm()
+				<< "_vert" << i << ".p3d";
+		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
+		fprintf(integrandContainer.outFile, "x y z f\n");
 		int vdim=3;
 		double xmin[vdim], xmax[vdim];
 		for (int j=0; j<vdim; j++) {
@@ -207,6 +212,7 @@ void DensityField::calcField(ElectricField electricField) {
 				vdim, xmin, xmax, 100, 1.e-5, 1.e-5, &density, &error);
 		std::cout << "density[" << i << "] = " << density << ", error ="
 				<< error << std::endl;
+		fclose(integrandContainer.outFile);
 		}
 		iMesh_setDblData(mesh_ptr->meshInstance, ents0d[i], tag, density,
 				&ierr);
