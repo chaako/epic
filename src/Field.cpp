@@ -174,7 +174,8 @@ DensityField::DensityField(Mesh *inputMesh_ptr, std::string inputName,
 
 void DensityField::calcField() {}
 
-void DensityField::calcField(ElectricField electricField) {
+void DensityField::calcField(ElectricField electricField,
+		PotentialField potentialField) {
 	int ierr;
 	iBase_EntityHandle *ents0d = NULL;
 	int ents0d_alloc = 0, ents0d_size;
@@ -195,8 +196,9 @@ void DensityField::calcField(ElectricField electricField) {
 		integrandContainer.mesh_ptr = mesh_ptr;
 		integrandContainer.node = ents0d[i];
 		integrandContainer.electricField_ptr = &electricField;
+		integrandContainer.potentialField_ptr = &potentialField;
 		std::stringstream fileNameStream;
-		fileNameStream << "distributionFunction_r" << nodePosition.norm()
+		fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
 				<< "_vert" << i << ".p3d";
 		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
 		fprintf(integrandContainer.outFile, "x y z f\n");
@@ -208,8 +210,11 @@ void DensityField::calcField(ElectricField electricField) {
 		}
 		double error=0.;
 		// TODO: should make number of orbits adaptive
+		int numberOfOrbits=100;
+//		if (i==381 || i==2543 || i==2540 || i==1052)
+//			numberOfOrbits = 10000;
 		adapt_integrate(1, &valueFromBoundary, (void*)&integrandContainer,
-				vdim, xmin, xmax, 100, 1.e-5, 1.e-5, &density, &error);
+				vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, &error);
 		std::cout << "density[" << i << "] = " << density << ", error ="
 				<< error << std::endl;
 		fclose(integrandContainer.outFile);

@@ -26,15 +26,25 @@ Orbit::~Orbit() {
 	// TODO Auto-generated destructor stub
 }
 
-void Orbit::integrate(ElectricField& electricField, FILE *outFile) {
+void Orbit::integrate(ElectricField& electricField,
+		PotentialField& potentialField, FILE *outFile) {
 	Eigen::Vector3d eField = electricField.getField(initialNode);
 	int nVertices=4;
 	std::vector<Eigen::Vector3d> eFields(nVertices), vertexVectors(nVertices);
 	std::vector<iBase_EntityHandle> vertices(nVertices);
 	// TODO: need some clever way to set tMax and/or detect trapped orbits
-	double dt=std::min(0.01,0.01/initialVelocity.norm()), tMax=20;
+	double dt=std::min(0.01,0.01/initialVelocity.norm()), tMax=100;
 	Eigen::Vector3d currentPosition = initialPosition;
 	Eigen::Vector3d currentVelocity = initialVelocity;
+	// Don't integrate orbit if doesn't have enough energy to escape potential
+	// TODO: this should be refined
+	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
+			fabs(potentialField.getField(initialNode))) {
+		negativeEnergy = true;
+		tMax = 0.;
+	} else {
+		negativeEnergy = false;
+	}
 	// For second order leap-frog, offset position from velocity in time
 	currentPosition -= currentVelocity*dt/2.;
 	bool inNewTet = true;

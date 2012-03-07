@@ -17,7 +17,8 @@ public:
 	Orbit(Mesh *inputMesh, iBase_EntityHandle inputNode,
 			Eigen::Vector3d inputVelocity);
 	~Orbit();
-	void integrate(ElectricField& electricField, FILE *outFile=NULL);
+	void integrate(ElectricField& electricField,
+			PotentialField& potentialField, FILE *outFile=NULL);
 	Mesh *mesh_ptr;
 	iBase_EntityHandle initialNode;
 	iBase_EntityHandle currentElement;
@@ -25,6 +26,7 @@ public:
 	Eigen::Vector3d initialVelocity;
 	Eigen::Vector3d finalPosition;
 	Eigen::Vector3d finalVelocity;
+	bool negativeEnergy;
 };
 
 #endif /* ORBIT_H_ */

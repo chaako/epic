@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 
 	potential.calcField();
 	eField.calcField();
-	density.calcField(eField);
+	density.calcField(eField, potential);
 
 	{
 	const char *fName = "integratedOrbits.p3d";
@@ -696,8 +696,10 @@ void valueFromBoundary(unsigned ndim, const double *x,
 			((IntegrandContainer*)integrandContainer_ptr)->node;
 	ElectricField *electricField_ptr =
 			((IntegrandContainer*)integrandContainer_ptr)->electricField_ptr;
+	PotentialField *potentialField_ptr =
+			((IntegrandContainer*)integrandContainer_ptr)->potentialField_ptr;
 	Orbit orbit(mesh_ptr,node,velocity);
-	orbit.integrate(*electricField_ptr);
+	orbit.integrate(*electricField_ptr, *potentialField_ptr);
 	*fval = 0.;
 	// TODO: shouldn't hard-code domain here
 	if (orbit.finalPosition.norm()>4.9) {
