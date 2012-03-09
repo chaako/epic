@@ -708,7 +708,7 @@ void valueFromBoundary(unsigned ndim, const double *x,
 	orbit.integrate(*electricField_ptr, *potentialField_ptr);
 	*fval = 0.;
 	// TODO: shouldn't hard-code domain here
-	if (orbit.finalPosition.norm()>4.9) {
+	if (orbit.finalPosition.norm()>4.9 && !orbit.negativeEnergy) {
 		*fval = 1./pow(2.*M_PI,3./2.);
 		*fval *= exp(-pow(orbit.finalVelocity.norm(),2.)/2.);
 		*fval /= exp(-pow(v,2.)/2.);
