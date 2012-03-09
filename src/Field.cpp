@@ -215,8 +215,9 @@ void DensityField::calcField(ElectricField electricField,
 //			numberOfOrbits = 10000;
 		adapt_integrate(1, &valueFromBoundary, (void*)&integrandContainer,
 				vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, &error);
-		std::cout << "density[" << i << "] = " << density << ", error ="
-				<< error << std::endl;
+//		std::cout << "density[" << i << "] = " << density << ", error ="
+//				<< error << ", r = " << nodePosition.norm() << std::endl;
+		std::cout << nodePosition.norm() << " " << density << std::endl;
 		fclose(integrandContainer.outFile);
 		}
 		iMesh_setDblData(mesh_ptr->meshInstance, ents0d[i], tag, density,

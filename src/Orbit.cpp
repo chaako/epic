@@ -38,7 +38,8 @@ void Orbit::integrate(ElectricField& electricField,
 	Eigen::Vector3d currentVelocity = initialVelocity;
 	// Don't integrate orbit if doesn't have enough energy to escape potential
 	// TODO: this should be refined
-	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
+//	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
+	if (0.5*pow(initialVelocity.norm(),2.) <
 			fabs(potentialField.getField(initialNode))) {
 		negativeEnergy = true;
 		tMax = 0.;

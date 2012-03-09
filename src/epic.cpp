@@ -688,9 +688,15 @@ void valueFromBoundary(unsigned ndim, const double *x,
 	assert(ndim==3);
 	assert(fdim==1);
 	Eigen::Vector3d velocity;
-	for (int i=0; i<ndim; i++) {
-		velocity[i] = x[i]/(1.-pow(x[i],2.));
-	}
+//	for (int i=0; i<ndim; i++) {
+//		velocity[i] = x[i]/(1.-pow(x[i],2.));
+//	}
+	double v = sqrt(-4.*log((1.+x[0])/2.));
+	double theta = acos(x[1]);
+	double phi = (1.+x[2])*M_PI;
+	velocity[0] = v*cos(phi)*sin(theta);
+	velocity[1] = v*sin(phi)*sin(theta);
+	velocity[2] = v*cos(theta);
 	Mesh *mesh_ptr = ((IntegrandContainer*)integrandContainer_ptr)->mesh_ptr;
 	iBase_EntityHandle node =
 			((IntegrandContainer*)integrandContainer_ptr)->node;
@@ -704,11 +710,15 @@ void valueFromBoundary(unsigned ndim, const double *x,
 	// TODO: shouldn't hard-code domain here
 	if (orbit.finalPosition.norm()>4.9) {
 		*fval = 1./pow(2.*M_PI,3./2.);
-		for (int i=0; i<ndim; i++) {
-			double t = x[i];
-			*fval *= (1+pow(t,2.))/pow(1.-pow(t,2.),2.);
-		}
 		*fval *= exp(-pow(orbit.finalVelocity.norm(),2.)/2.);
+		*fval /= exp(-pow(v,2.)/2.);
+		*fval *= M_PI;
+		*fval *= (1.+x[0])*sqrt(-log((1.+x[0])/2.));
+//		for (int i=0; i<ndim; i++) {
+//			double t = x[i];
+//			*fval *= (1+pow(t,2.))/pow(1.-pow(t,2.),2.);
+//		}
+
 	} else if (orbit.finalPosition.norm()>1.) {
 //		std::cout << "orbit terminated with final position in domain:" <<
 //				std::endl << orbit.finalPosition << std::endl;
