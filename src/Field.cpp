@@ -160,6 +160,7 @@ void PotentialField::calcField() {
 				&ierr);
 		CHECK("Failure getting vertex coordinates");
 		potential = -1./sqrt(x*x+y*y+z*z);
+//		potential *= -1.; // Do electrons
 		iMesh_setDblData(mesh_ptr->meshInstance, ents0d[i], tag, potential,
 				&ierr);
 		CHECK("Failure setting potential tag");
@@ -217,6 +218,11 @@ void DensityField::calcField(ElectricField electricField,
 				vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, &error);
 //		std::cout << "density[" << i << "] = " << density << ", error ="
 //				<< error << ", r = " << nodePosition.norm() << std::endl;
+//		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499) {
+//			std::cout << "potential[" << i << "] = " << potentialField.getField(ents0d[i]) << std::endl;
+//			std::cout << "eField[" << i << "] = " << std::endl;
+//			std::cout << electricField.getField(ents0d[i]) << std::endl;
+//		}
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
 			std::cout << nodePosition.norm() << " " << density << " " << error << std::endl;
 		fclose(integrandContainer.outFile);

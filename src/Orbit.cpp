@@ -39,8 +39,8 @@ void Orbit::integrate(ElectricField& electricField,
 	// Don't integrate orbit if doesn't have enough energy to escape potential
 	// TODO: this should be refined
 //	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
-	if (0.5*pow(initialVelocity.norm(),2.) <
-			fabs(potentialField.getField(initialNode))) {
+	if ((0.5*pow(initialVelocity.norm(),2.) +
+			potentialField.getField(initialNode)) < 0.) {
 		negativeEnergy = true;
 		tMax = 0.;
 	} else {
@@ -96,7 +96,7 @@ void Orbit::integrate(ElectricField& electricField,
 		for (int i=0; i<vertexWeights.size(); i++) {
 			currentAcceleration += eFields[i]*vertexWeights[i];
 		}
-		currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
+//		currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
 		double eFieldR = currentAcceleration.dot(currentPosition)/
 				currentPosition.norm();
 		currentVelocity += dt*currentAcceleration;
