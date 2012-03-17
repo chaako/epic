@@ -39,58 +39,6 @@ Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 	}
 }
 
-
-template <class T>
-T Field<T>::getField(Eigen::Vector3d position) {
-	T field;
-	return field;
-}
-
-
-//template <>
-//double Field<double>::getField(Eigen::Vector3d position) {
-//	double field;
-//
-//	return field;
-//}
-//
-//template <>
-//double Field<double>::getField(iBase_EntityHandle node) {
-//	double field;
-//
-//	return field;
-//}
-//
-//
-//template <>
-//int Field<int>::getField(Eigen::Vector3d position) {
-//	int field;
-//
-//	return field;
-//}
-//
-//template <>
-//int Field<int>::getField(iBase_EntityHandle node) {
-//	int field;
-//
-//	return field;
-//}
-//
-//
-//template <>
-//Eigen::Vector3d Field<Eigen::Vector3d>::getField(Eigen::Vector3d position) {
-//	Eigen::Vector3d field;
-//
-//	return field;
-//}
-//
-//template <>
-//Eigen::Vector3d Field<Eigen::Vector3d>::getField(iBase_EntityHandle node) {
-//	Eigen::Vector3d field;
-//
-//	return field;
-//}
-
 ElectricField::ElectricField(Mesh *inputMesh_ptr, std::string inputName,
 		iBase_TagHandle inputTag)
 		: Field(inputMesh_ptr, inputName, inputTag) {
@@ -137,6 +85,8 @@ void ElectricField::calcField() {
 				sizeof(Eigen::Vector3d), &ierr);
 		CHECK("Failure setting eField tag");
 	}
+	if (ents0d) free(ents0d);
+	ents0d_alloc = 0;
 }
 
 
@@ -160,13 +110,39 @@ void PotentialField::calcField() {
 				&ierr);
 		CHECK("Failure getting vertex coordinates");
 		potential = -1./sqrt(x*x+y*y+z*z);
-//		potential *= -1.; // Do electrons
 		iMesh_setDblData(mesh_ptr->meshInstance, ents0d[i], tag, potential,
 				&ierr);
 		CHECK("Failure setting potential tag");
 	}
+	if (ents0d) free(ents0d);
+	ents0d_alloc = 0;
 }
 
+void PotentialField::calcField(DensityField ionDensity,
+		DensityField electronDensity) {
+	assert(ionDensity.mesh_ptr == mesh_ptr);
+	assert(electronDensity.mesh_ptr == mesh_ptr);
+	std::vector<iBase_EntityHandle> vertexHandles = mesh_ptr->getVertices();
+	for (int i=0; i<vertexHandles.size(); i++) {
+		int ierr;
+
+		Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(vertexHandles[i]);
+		Eigen::Vector3d xzPosition = nodePosition;
+		xzPosition[1] = 0;
+		double r = xzPosition.norm();
+		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
+
+		double potential = this->getField(vertexHandles[i]);
+		potential -= log(ionDensity.getField(vertexHandles[i])/
+				electronDensity.getField(vertexHandles[i]));
+		this->setField(vertexHandles[i], potential);
+
+//		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
+			std::cout << "potential[" << i << "] = " << potential <<
+					", 1/r= " << 1./nodePosition.norm() << std::endl;
+		}
+	}
+}
 
 DensityField::DensityField(Mesh *inputMesh_ptr, std::string inputName,
 		iBase_TagHandle inputTag)
@@ -193,7 +169,8 @@ void DensityField::calcField(DensityField ionDensity,
 				&ierr);
 		CHECK("Failure setting potential tag");
 	}
-
+	if (ents0d) free(ents0d);
+	ents0d_alloc = 0;
 }
 
 void DensityField::calcField(ElectricField electricField,
@@ -260,5 +237,7 @@ void DensityField::calcField(ElectricField electricField,
 			<< (double)extern_findTet/(double)CLOCKS_PER_SEC << std::endl; // timing
 //	std::cout << "checkIfInNewTet (s)= "
 //			<< (double)extern_checkIfInNewTet/(double)CLOCKS_PER_SEC << std::endl; // timing
+	if (ents0d) free(ents0d);
+	ents0d_alloc = 0;
 }
 

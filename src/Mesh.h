@@ -22,6 +22,7 @@ public:
 	iBase_EntityHandle findTet(Eigen::Vector3d position,
 			iBase_EntityHandle adjacentTet, bool *tetFound, bool isTet=true);
 	std::vector<iBase_EntityHandle> getVertices(iBase_EntityHandle element);
+	std::vector<iBase_EntityHandle> getVertices();
 	iBase_EntityHandle getRandomVertex();
 
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >

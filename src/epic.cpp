@@ -41,7 +41,9 @@ int main(int argc, char *argv[]) {
 	DensityField ionDensity(&mesh2,std::string("ionDensity"));
 	DensityField electronDensity(&mesh2,std::string("electronDensity"));
 
+	std::cout << "Calculating potential..." << std::endl;
 	potential.calcField();
+	std::cout << "Calculating electric field..." << std::endl;
 	eField.calcField();
 	std::cout << "Calculating ion charge-density..." << std::endl;
 	ionDensity.calcField(eField, potential,1.);
@@ -49,6 +51,8 @@ int main(int argc, char *argv[]) {
 	electronDensity.calcField(eField, potential,-1.);
 	std::cout << "Calculating charge density..." << std::endl;
 	density.calcField(ionDensity,electronDensity);
+	std::cout << "Calculating updated potential..." << std::endl;
+	potential.calcField(ionDensity,electronDensity);
 
 	{
 	const char *fName = "integratedOrbits.p3d";

@@ -12,6 +12,8 @@
 #include "Eigen/Dense"
 #include "Mesh.h"
 
+#define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
+
 template <class T>
 class Field {
 public:
@@ -21,6 +23,8 @@ public:
 
 	T getField(Eigen::Vector3d position);
 	T getField(iBase_EntityHandle node);
+
+	void setField(iBase_EntityHandle node, T field);
 
 	virtual void calcField() {}
 
@@ -61,11 +65,18 @@ public:
 	virtual ~PotentialField() {}
 
 	virtual void calcField();
+	void calcField(DensityField ionDensity, DensityField electronDensity);
 
 };
 
 
 // It would seem template function definitions need to be in the same file
+template <class T>
+T Field<T>::getField(Eigen::Vector3d position) {
+	T field;
+	return field;
+}
+
 template <class T>
 T Field<T>::getField(iBase_EntityHandle node) {
 	T field;
@@ -75,9 +86,17 @@ T Field<T>::getField(iBase_EntityHandle node) {
 	int ierr;
 	iMesh_getData(mesh_ptr->meshInstance, node, tag, &field_ptr,
 			&field_alloc, &field_size, &ierr);
-//	CHECK("Failure getting eField tag");
+	CHECK("Failure getting field");
 	return field;
- }
+}
+
+template <class T>
+void Field<T>::setField(iBase_EntityHandle node, T field) {
+	int ierr;
+	int field_size = sizeof(T);
+	iMesh_setData(mesh_ptr->meshInstance, node, tag, &field,
+			field_size, &ierr);
+}
 
 #endif /* FIELD_H_ */
 

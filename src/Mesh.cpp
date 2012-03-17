@@ -202,6 +202,23 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d position,
 	return tet;
 }
 
+std::vector<iBase_EntityHandle> Mesh::getVertices() {
+	int ierr;
+	iBase_EntityHandle *ents0d = NULL;
+	int ents0d_alloc = 0, ents0d_size;
+	iMesh_getEntities(meshInstance, rootEntitySet,
+			iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
+			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
+	CHECK("Couldn't get vertex entities");
+	std::vector<iBase_EntityHandle> vertices(ents0d_size);
+	for (int i = 0; i < ents0d_size; i++) {
+		vertices[i] = ents0d[i];
+	}
+	if (ents0d) free(ents0d);
+	ents0d_alloc = 0;
+	return vertices;
+}
+
 std::vector<iBase_EntityHandle> Mesh::getVertices(
 		iBase_EntityHandle element) {
 	int ierr;
