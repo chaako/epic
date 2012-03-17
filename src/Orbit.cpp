@@ -13,13 +13,14 @@
 //}
 
 Orbit::Orbit(Mesh *inputMesh_ptr, iBase_EntityHandle inputNode,
-		Eigen::Vector3d inputVelocity) {
+		Eigen::Vector3d inputVelocity, double inputCharge) {
 	mesh_ptr = inputMesh_ptr;
 	initialNode = inputNode;
 	// TODO: perhaps find a random adjacent tet rather than give node
 	currentElement = inputNode;
 	initialPosition = inputMesh_ptr->getCoordinates(inputNode);
 	initialVelocity = inputVelocity;
+	charge = inputCharge;
 }
 
 Orbit::~Orbit() {
@@ -40,7 +41,7 @@ void Orbit::integrate(ElectricField& electricField,
 	// TODO: this should be refined
 //	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
 	if ((0.5*pow(initialVelocity.norm(),2.) +
-			potentialField.getField(initialNode)) < 0.) {
+			charge*potentialField.getField(initialNode)) < 0.) {
 		negativeEnergy = true;
 		tMax = 0.;
 	} else {
@@ -94,7 +95,7 @@ void Orbit::integrate(ElectricField& electricField,
 		Eigen::Vector3d currentAcceleration(0.,0.,0.);
 		assert(eFields.size()==vertexWeights.size());
 		for (int i=0; i<vertexWeights.size(); i++) {
-			currentAcceleration += eFields[i]*vertexWeights[i];
+			currentAcceleration += charge*eFields[i]*vertexWeights[i];
 		}
 //		currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
 		double eFieldR = currentAcceleration.dot(currentPosition)/

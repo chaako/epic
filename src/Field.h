@@ -41,14 +41,16 @@ public:
 };
 
 class DensityField : public Field<double> {
+	// Charge density
 public:
 	DensityField(Mesh *inputMesh_ptr, std::string inputName,
 			iBase_TagHandle inputTag=0);
 	virtual ~DensityField() {}
 
 	virtual void calcField();
+	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField electricField,
-			PotentialField potentialField);
+			PotentialField potentialField, double charge=1.);
 
 };
 

@@ -175,8 +175,29 @@ DensityField::DensityField(Mesh *inputMesh_ptr, std::string inputName,
 
 void DensityField::calcField() {}
 
+void DensityField::calcField(DensityField ionDensity,
+		DensityField electronDensity) {
+	int ierr;
+	iBase_EntityHandle *ents0d = NULL;
+	int ents0d_alloc = 0, ents0d_size;
+	clock_t startClock = clock(); // timing
+	// set potential value for all 0d elements
+	iMesh_getEntities(mesh_ptr->meshInstance, mesh_ptr->rootEntitySet,
+			iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
+			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
+	CHECK("Couldn't get vertex entities");
+	for (int i = 0; i < ents0d_size; i++) {
+		double density = ionDensity.getField(ents0d[i]) -
+				electronDensity.getField(ents0d[i]);
+		iMesh_setDblData(mesh_ptr->meshInstance, ents0d[i], tag, density,
+				&ierr);
+		CHECK("Failure setting potential tag");
+	}
+
+}
+
 void DensityField::calcField(ElectricField electricField,
-		PotentialField potentialField) {
+		PotentialField potentialField, double charge) {
 	int ierr;
 	iBase_EntityHandle *ents0d = NULL;
 	int ents0d_alloc = 0, ents0d_size;
@@ -202,6 +223,7 @@ void DensityField::calcField(ElectricField electricField,
 		fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
 				<< "_vert" << i << ".p3d";
 		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
+		integrandContainer.charge = charge;
 		fprintf(integrandContainer.outFile, "x y z f\n");
 		int vdim=3;
 		double xmin[vdim], xmax[vdim];

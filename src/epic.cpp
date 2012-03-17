@@ -38,10 +38,17 @@ int main(int argc, char *argv[]) {
 	PotentialField potential(&mesh2,std::string("potential"));
 	ElectricField eField(&mesh2,std::string("eField"));
 	DensityField density(&mesh2,std::string("density"));
+	DensityField ionDensity(&mesh2,std::string("ionDensity"));
+	DensityField electronDensity(&mesh2,std::string("electronDensity"));
 
 	potential.calcField();
 	eField.calcField();
-	density.calcField(eField, potential);
+	std::cout << "Calculating ion charge-density..." << std::endl;
+	ionDensity.calcField(eField, potential,1.);
+	std::cout << "Calculating electron density..." << std::endl;
+	electronDensity.calcField(eField, potential,-1.);
+	std::cout << "Calculating charge density..." << std::endl;
+	density.calcField(ionDensity,electronDensity);
 
 	{
 	const char *fName = "integratedOrbits.p3d";
@@ -704,7 +711,8 @@ void valueFromBoundary(unsigned ndim, const double *x,
 			((IntegrandContainer*)integrandContainer_ptr)->electricField_ptr;
 	PotentialField *potentialField_ptr =
 			((IntegrandContainer*)integrandContainer_ptr)->potentialField_ptr;
-	Orbit orbit(mesh_ptr,node,velocity);
+	double charge = ((IntegrandContainer*)integrandContainer_ptr)->charge;
+	Orbit orbit(mesh_ptr,node,velocity,charge);
 	orbit.integrate(*electricField_ptr, *potentialField_ptr);
 	*fval = 0.;
 	// TODO: shouldn't hard-code domain here
