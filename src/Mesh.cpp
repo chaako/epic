@@ -202,42 +202,46 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d position,
 	return tet;
 }
 
-std::vector<iBase_EntityHandle> Mesh::getVertices() {
+std::vector<iBase_EntityHandle> Mesh::getElements(int dimension) {
 	int ierr;
-	iBase_EntityHandle *ents0d = NULL;
-	int ents0d_alloc = 0, ents0d_size;
+	iBase_EntityHandle *ents = NULL;
+	int ents_alloc = 0, ents_size;
 	iMesh_getEntities(meshInstance, rootEntitySet,
-			iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
-			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
+			dimension, iMesh_ALL_TOPOLOGIES,
+			&ents, &ents_alloc, &ents_size, &ierr);
 	CHECK("Couldn't get vertex entities");
-	std::vector<iBase_EntityHandle> vertices(ents0d_size);
-	for (int i = 0; i < ents0d_size; i++) {
-		vertices[i] = ents0d[i];
+	std::vector<iBase_EntityHandle> elements(ents_size);
+	for (int i = 0; i < ents_size; i++) {
+		elements[i] = ents[i];
 	}
-	if (ents0d) free(ents0d);
-	ents0d_alloc = 0;
-	return vertices;
+	if (ents) free(ents);
+	ents_alloc = 0;
+	return elements;
 }
 
 std::vector<iBase_EntityHandle> Mesh::getVertices(
 		iBase_EntityHandle element) {
-	int ierr;
-	iBase_EntityHandle *vertices = NULL;
-	int vertices_alloc = 0, vertices_size;
-	int nVertices=4;
-	std::vector<iBase_EntityHandle> vertexHandles(nVertices);
+	return this->getAdjacentElements(element, iBase_VERTEX);
+}
 
-	iMesh_getEntAdj(meshInstance, element, iBase_VERTEX,
-			&vertices, &vertices_alloc, &vertices_size, &ierr);
+std::vector<iBase_EntityHandle> Mesh::getAdjacentElements(
+		iBase_EntityHandle element, int dimension) {
+	int ierr;
+	iBase_EntityHandle *elements = NULL;
+	int elements_alloc = 0, elements_size;
+
+	iMesh_getEntAdj(meshInstance, element, dimension,
+			&elements, &elements_alloc, &elements_size, &ierr);
 	CHECK("Getting vertices adjacent to entity failed");
 
-	for (int i=0; i<vertices_size; i++) {
-		vertexHandles[i] = vertices[i];
+	std::vector<iBase_EntityHandle> elementHandles(elements_size);
+	for (int i=0; i<elements_size; i++) {
+		elementHandles[i] = elements[i];
 	}
-	if(vertices) free (vertices);
-	vertices_alloc = 0;
+	if(elements) free (elements);
+	elements_alloc = 0;
 
-	return vertexHandles;
+	return elementHandles;
 }
 
 iBase_EntityHandle Mesh::getRandomVertex() {
@@ -262,21 +266,23 @@ iBase_EntityHandle Mesh::getRandomVertex() {
 std::vector<Eigen::Vector3d> Mesh::getVertexVectors(iBase_EntityHandle entity,
 		bool useMap) {
 	int ierr;
-	int nVerts = 4;
+	int dimension;
+	iMesh_getEntType(meshInstance, entity, &dimension, &ierr);
+	CHECK("Failure getting entity type");
+	int nVerts = dimension + 1;
 	std::vector<Eigen::Vector3d> vertexVectors(nVerts);
-	std::vector<iBase_EntityHandle> vertices = adjacentVertsMap[entity];
+	std::vector<iBase_EntityHandle> vertices(nVerts);
+	if (dimension == 3) {
+		vertices = adjacentVertsMap[entity];
+	} else {
+		vertices = this->getAdjacentElements(entity, iBase_VERTEX);
+	}
 	assert(vertexVectors.size()==vertices.size());
-	if (useMap) {
+	if (useMap && dimension==3) {
 		vertexVectors = vertexVectorsMap[entity];
 	} else {
 		for (int i=0; i<vertices.size(); i++) {
-	//		double x, y, z;
-	//		iMesh_getVtxCoord(mesh, vertices[i], &x, &y, &z, &ierr);
-	//		CHECK("Failure getting vertex coordinates");
 			vertexVectors[i] = Mesh::getCoordinates(vertices[i]);
-
-	//		Eigen::Vector3d vertexVector(x,y,z);
-	//		vertexVectors[i] = vertexVector;
 		}
 	}
 
@@ -300,5 +306,58 @@ bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition,
 	double sumSubVolumes =
 			std::accumulate(subVolumes.begin(),subVolumes.end(),0.);
 	return (fabs(sumSubVolumes-tetVolume)<VOLUME_TOLERANCE);
+}
+
+bool Mesh::checkIfIntersectsTriangle(Eigen::Vector3d previousPosition,
+		Eigen::Vector3d currentPosition,
+		std::vector<Eigen::Vector3d> vertexVectors) {
+	std::vector<Eigen::Vector3d> ray(2);
+	ray[0] = previousPosition;
+	ray[1] = currentPosition;
+	Eigen::Vector3d intersectionPoint;
+	int intersectionStatus =
+			intersect_RayTriangle(ray, vertexVectors, &intersectionPoint);
+	if (intersectionStatus == 1) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+//std::vector<Eigen::Vector3d> Mesh::getEdgeVectors(
+//		std::vector<Eigen::Vector3d> vertexVectors) {
+//	int nVerts = vertexVectors.size();
+//	int nEdges=nVerts-1;
+//	std::vector<Eigen::Vector3d> edgeVectors(nEdges);
+//	switch (nVerts) {
+//	case 4:
+//		edgeVectors[2] = vertexVectors[3]-vertexVectors[0];
+//	case 3:
+//		edgeVectors[1] = vertexVectors[2]-vertexVectors[0];
+//	case 2:
+//		edgeVectors[0] = vertexVectors[1]-vertexVectors[0];
+//		break;
+//	}
+//
+//	return edgeVectors;
+//}
+
+
+iBase_EntityHandle Mesh::findFaceCrossed(iBase_EntityHandle previousElement,
+		Eigen::Vector3d previousPosition, Eigen::Vector3d currentPosition) {
+	iBase_EntityHandle faceCrossed=NULL;
+	std::vector<iBase_EntityHandle> adjacentFaces =
+			getAdjacentElements(previousElement,iBase_FACE);
+
+	for (int i=0; i<adjacentFaces.size(); i++) {
+		std::vector<Eigen::Vector3d> vertexVectors =
+				this->getVertexVectors(adjacentFaces[i]);
+		bool intersectsTriangle = this->checkIfIntersectsTriangle(previousPosition,
+				currentPosition, vertexVectors);
+		if (intersectsTriangle)
+			faceCrossed = adjacentFaces[i];
+	}
+
+	return faceCrossed;
 }
 

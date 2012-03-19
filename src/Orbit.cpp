@@ -56,6 +56,7 @@ void Orbit::integrate(ElectricField& electricField,
 	bool firstStep=true;
 	for (double t=0; t<tMax; t+=dt) {
 		nSteps++;
+		Eigen::Vector3d previousPosition = currentPosition;
 		currentPosition += dt*currentVelocity;
 //		clock_t startClock = clock(); // timing
 		if (!firstStep)
@@ -69,13 +70,17 @@ void Orbit::integrate(ElectricField& electricField,
 //			if  (vertexVectors.size()==nVertices)
 //				isTet = true;
 			clock_t startClock = clock(); // timing
+			iBase_EntityHandle previousElement = currentElement;
 			currentElement = mesh_ptr->findTet(currentPosition,
 					currentElement, &foundTet, isTet);
 			clock_t endClock = clock(); // timing
 			extern_findTet += endClock-startClock; // timing
 			// TODO: should handle failure to find tet in some way
-			if (foundTet==false)
+			if (foundTet==false) {
+				iBase_EntityHandle faceCrossed = mesh_ptr->findFaceCrossed(
+						previousElement, previousPosition, currentPosition);
 				break;
+			}
 			isTet=true;
 
 			vertices = mesh_ptr->getVertices(currentElement);

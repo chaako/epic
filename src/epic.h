@@ -67,6 +67,10 @@ void valueFromBoundary(unsigned ndim, const double *x,
 		void *integrandContainer_ptr, unsigned fdim, double *fval);
 
 
+int intersect_RayTriangle(std::vector<Eigen::Vector3d> R,
+		std::vector<Eigen::Vector3d> T, Eigen::Vector3d* I);
+
+
 // External timing variables
 extern clock_t extern_findTet, extern_checkIfInNewTet;
 

@@ -122,7 +122,8 @@ void PotentialField::calcField(DensityField ionDensity,
 		DensityField electronDensity) {
 	assert(ionDensity.mesh_ptr == mesh_ptr);
 	assert(electronDensity.mesh_ptr == mesh_ptr);
-	std::vector<iBase_EntityHandle> vertexHandles = mesh_ptr->getVertices();
+	std::vector<iBase_EntityHandle> vertexHandles =
+			mesh_ptr->getElements(iBase_VERTEX);
 	for (int i=0; i<vertexHandles.size(); i++) {
 		int ierr;
 
