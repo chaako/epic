@@ -71,8 +71,8 @@ void Orbit::integrate(ElectricField& electricField,
 //				isTet = true;
 			clock_t startClock = clock(); // timing
 			iBase_EntityHandle previousElement = currentElement;
-			currentElement = mesh_ptr->findTet(currentPosition,
-					currentElement, &foundTet, isTet);
+			currentElement = mesh_ptr->findTet(previousPosition,
+					currentPosition, previousElement, &foundTet, isTet);
 			clock_t endClock = clock(); // timing
 			extern_findTet += endClock-startClock; // timing
 			// TODO: should handle failure to find tet in some way

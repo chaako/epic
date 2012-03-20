@@ -165,31 +165,48 @@ Eigen::Vector3d Mesh::getCoordinates(iBase_EntityHandle node, bool useMap) {
 	return coordinates;
 }
 
-iBase_EntityHandle Mesh::findTet(Eigen::Vector3d position,
+iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
+		Eigen::Vector3d position,
 		iBase_EntityHandle adjacentTet, bool *tetFound, bool isTet) {
 	iBase_EntityHandle tet;
 	iBase_EntityHandle *entities = NULL;
 	int entities_alloc=0, entities_size=0;
 	int ierr;
 	std::vector<iBase_EntityHandle> ents;
+	std::vector<iBase_EntityHandle> faces;
 
 	if (isTet) {
+		iBase_EntityHandle faceCrossed = this->findFaceCrossed(
+				adjacentTet, oldPosition, position);
+		if (faceCrossed) {
+			ents = this->getAdjacentElements(faceCrossed, iBase_REGION);
+			for (int i=0; i<ents.size(); i++) {
+				if (this->checkIfInTet(position, meshInstance, ents[i])) {
+					tet = ents[i];
+					// TODO: could throw error if tetFound is false rather than pass
+					*tetFound = true;
+					return tet;
+				}
+			}
+		}
 //	iMesh_getEnt2ndAdj(meshInstance, adjacentTet, iBase_VERTEX,
 //			iBase_REGION, &entities, &entities_alloc,
 //			&entities_size, &ierr);
 //	CHECK("Getting regions adjacent to entity failed");
 		ents = adjacentTetsMap[adjacentTet];
 	} else {
-		iMesh_getEntAdj(meshInstance, adjacentTet,
-				iBase_REGION, &entities, &entities_alloc,
-				&entities_size, &ierr);
-		CHECK("Getting regions adjacent to entity failed");
-	}
-	for (int i=0; i<entities_size; i++) {
-		ents.push_back(entities[i]);
+		ents = this->getAdjacentElements(adjacentTet, iBase_REGION);
+//		iMesh_getEntAdj(meshInstance, adjacentTet,
+//				iBase_REGION, &entities, &entities_alloc,
+//				&entities_size, &ierr);
+//		CHECK("Getting regions adjacent to entity failed");
+//		for (int i=0; i<entities_size; i++) {
+//			ents.push_back(entities[i]);
+//		}
 	}
 	if(entities) free (entities);
 	entities_alloc = 0;
+
 	for (int i=0; i<ents.size(); i++) {
 		if (Mesh::checkIfInTet(position, meshInstance, ents[i])) {
 			tet = ents[i];

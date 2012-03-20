@@ -19,7 +19,7 @@ public:
 	void save(std::string outputMeshFile);
 
 	Eigen::Vector3d getCoordinates(iBase_EntityHandle node, bool useMap=false);
-	iBase_EntityHandle findTet(Eigen::Vector3d position,
+	iBase_EntityHandle findTet(Eigen::Vector3d oldPosition, Eigen::Vector3d position,
 			iBase_EntityHandle adjacentTet, bool *tetFound, bool isTet=true);
 	std::vector<iBase_EntityHandle> getVertices(iBase_EntityHandle element);
 	std::vector<iBase_EntityHandle> getAdjacentElements(iBase_EntityHandle element,
