@@ -34,7 +34,9 @@ Mesh::Mesh(std::string inputMeshFile) {
 	// store adjacency info for fast access
 	adjacentTetsMap = getAdjacentsMap(iBase_REGION, iBase_REGION,
 			iBase_VERTEX);
+	adjacentFacesMap = getAdjacentsMap(iBase_REGION, iBase_FACE);
 	adjacentVertsMap = getAdjacentsMap(iBase_REGION, iBase_VERTEX);
+	adjacentTetsToFaceMap = getAdjacentsMap(iBase_FACE, iBase_REGION);
 
 	// store vertex coordinates for fast access
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >::iterator iter;
@@ -42,7 +44,6 @@ Mesh::Mesh(std::string inputMeshFile) {
 		vertexVectorsMap[iter->first] = Mesh::getVertexVectors(iter->first, false);
 		assert(vertexVectorsMap[iter->first].size()==4);
 	}
-
 }
 
 Mesh::~Mesh() {
@@ -179,11 +180,11 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
 		iBase_EntityHandle faceCrossed = this->findFaceCrossed(
 				adjacentTet, oldPosition, position);
 		if (faceCrossed) {
-			ents = this->getAdjacentElements(faceCrossed, iBase_REGION);
+			ents = adjacentTetsToFaceMap[faceCrossed];
+//			ents = this->getAdjacentElements(faceCrossed, iBase_REGION);
 			for (int i=0; i<ents.size(); i++) {
 				if (this->checkIfInTet(position, meshInstance, ents[i])) {
 					tet = ents[i];
-					// TODO: could throw error if tetFound is false rather than pass
 					*tetFound = true;
 					return tet;
 				}
@@ -364,11 +365,13 @@ iBase_EntityHandle Mesh::findFaceCrossed(iBase_EntityHandle previousElement,
 		Eigen::Vector3d previousPosition, Eigen::Vector3d currentPosition) {
 	iBase_EntityHandle faceCrossed=NULL;
 	std::vector<iBase_EntityHandle> adjacentFaces =
-			getAdjacentElements(previousElement,iBase_FACE);
+			adjacentFacesMap[previousElement];
+//	std::vector<iBase_EntityHandle> adjacentFaces =
+//			getAdjacentElements(previousElement,iBase_FACE);
 
 	for (int i=0; i<adjacentFaces.size(); i++) {
 		std::vector<Eigen::Vector3d> vertexVectors =
-				this->getVertexVectors(adjacentFaces[i]);
+				this->getVertexVectors(adjacentFaces[i], true);
 		bool intersectsTriangle = this->checkIfIntersectsTriangle(previousPosition,
 				currentPosition, vertexVectors);
 		if (intersectsTriangle)

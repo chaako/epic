@@ -49,8 +49,10 @@ public:
 //	iBase_EntitySetHandle volumeEntitySet;
 
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentTetsMap;
+	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentFacesMap;
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentVertsMap;
 	std::map<iBase_EntityHandle,std::vector<Eigen::Vector3d> > vertexVectorsMap;
+	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentTetsToFaceMap;
 };
 
 #endif /* MESH_H_ */
