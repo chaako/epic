@@ -25,8 +25,7 @@
 
 #include <numeric>
 #include <vector>
-//#include <type_traits>
-#include <boost/type_traits.hpp>
+#include <type_traits> // Requires -std=c++0x compiler flag
 //#include <sys/time.h>
 #include <time.h>
 //#include <boost/timer/timer.hpp>

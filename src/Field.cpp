@@ -8,8 +8,6 @@
 #include "epic.h"
 #include "Field.h"
 
-#include <boost/type_traits.hpp>
-
 template <class T>
 Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 		iBase_TagHandle inputTag) {
@@ -21,12 +19,10 @@ Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 		// no tag specified, so create
 		int ierr;
 		int size, type;
-		// TODO: is_same is in std from C++0x, so perhaps switch to
-		//       avoid boost dependency
-		if (boost::is_same<T,double>::value) {
+		if (std::is_same<T,double>::value) {
 			size = 1;
 			type = iBase_DOUBLE;
-		} else if (boost::is_same<T,int>::value) {
+		} else if (std::is_same<T,int>::value) {
 			size = 1;
 			type = iBase_INTEGER;
 		} else {
