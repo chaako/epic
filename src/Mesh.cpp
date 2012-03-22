@@ -381,3 +381,18 @@ iBase_EntityHandle Mesh::findFaceCrossed(iBase_EntityHandle previousElement,
 	return faceCrossed;
 }
 
+iBase_TagHandle Mesh::getTagHandle(std::string tagName) {
+	int ierr;
+	iBase_TagHandle tag=0;
+	iMesh_getTagHandle(meshInstance, tagName.c_str(),
+			&tag, &ierr, tagName.length());
+	return tag;
+}
+
+iBase_TagHandle Mesh::createTagHandle(std::string tagName, int size, int type) {
+	int ierr;
+	iBase_TagHandle tag=0;
+	iMesh_createTag(meshInstance, tagName.c_str(),
+			size, type, &tag, &ierr, (int)tagName.length());
+	return tag;
+}

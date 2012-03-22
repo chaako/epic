@@ -21,7 +21,7 @@ template <class T>
 class Field {
 public:
 	Field(Mesh *inputMesh_ptr, std::string inputName,
-			int entityDimension, iBase_TagHandle inputTag=0);
+			int entityDimension);
 	virtual ~Field() {}
 
 	T getField(Eigen::Vector3d position);
@@ -36,8 +36,7 @@ public:
 
 class ElectricField : public Field<Eigen::Vector3d> {
 public:
-	ElectricField(Mesh *inputMesh_ptr, std::string inputName,
-			iBase_TagHandle inputTag=0);
+	ElectricField(Mesh *inputMesh_ptr, std::string inputName);
 	virtual ~ElectricField() {}
 
 	void calcField(PotentialField potentialField);
@@ -46,8 +45,7 @@ public:
 class DensityField : public Field<double> {
 	// Charge density
 public:
-	DensityField(Mesh *inputMesh_ptr, std::string inputName,
-			iBase_TagHandle inputTag=0);
+	DensityField(Mesh *inputMesh_ptr, std::string inputName);
 	virtual ~DensityField() {}
 
 	void calcField();
@@ -59,8 +57,7 @@ public:
 
 class PotentialField : public Field<double> {
 public:
-	PotentialField(Mesh *inputMesh_ptr, std::string inputName,
-			iBase_TagHandle inputTag=0);
+	PotentialField(Mesh *inputMesh_ptr, std::string inputName);
 	virtual ~PotentialField() {}
 
 	void calcField();
@@ -68,33 +65,27 @@ public:
 
 };
 
-
 // gcc doesn't implement the export keyword, so define template functions here
 template <class T>
 Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
-		int entityDimension, iBase_TagHandle inputTag) {
+		int entityDimension) {
 	mesh_ptr = inputMesh_ptr;
 	name = inputName;
-	if (inputTag) {
-		tag = inputTag;
+	int ierr;
+	int size, type;
+	if (std::is_same<T,double>::value) {
+		size = 1;
+		type = iBase_DOUBLE;
+	} else if (std::is_same<T,int>::value) {
+		size = 1;
+		type = iBase_INTEGER;
 	} else {
-		// no tag specified, so create
-		int ierr;
-		int size, type;
-		if (std::is_same<T,double>::value) {
-			size = 1;
-			type = iBase_DOUBLE;
-		} else if (std::is_same<T,int>::value) {
-			size = 1;
-			type = iBase_INTEGER;
-		} else {
-			size = (int)sizeof(T);
-			type = iBase_BYTES;
-		}
-		iMesh_createTag(mesh_ptr->meshInstance, name.c_str(),
-				size, type, &tag, &ierr, (int)name.length());
-		CHECK("Failure creating tag");
+		size = (int)sizeof(T);
+		type = iBase_BYTES;
 	}
+	tag = mesh_ptr->createTagHandle(name, size, type);
+	// TODO: consider more transparent handling of exiting tag here
+	tag = mesh_ptr->getTagHandle(name);
 	entities = mesh_ptr->getEntities(entityDimension);
 }
 

@@ -8,9 +8,8 @@
 #include "epic.h"
 #include "Field.h"
 
-ElectricField::ElectricField(Mesh *inputMesh_ptr, std::string inputName,
-		iBase_TagHandle inputTag)
-		: Field(inputMesh_ptr, inputName, iBase_VERTEX, inputTag) {
+ElectricField::ElectricField(Mesh *inputMesh_ptr, std::string inputName)
+		: Field(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
 void ElectricField::calcField(PotentialField potentialField) {
@@ -35,9 +34,8 @@ void ElectricField::calcField(PotentialField potentialField) {
 }
 
 
-PotentialField::PotentialField(Mesh *inputMesh_ptr, std::string inputName,
-	iBase_TagHandle inputTag)
-	: Field(inputMesh_ptr, inputName, iBase_VERTEX, inputTag) {
+PotentialField::PotentialField(Mesh *inputMesh_ptr, std::string inputName)
+	: Field(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
 void PotentialField::calcField() {
@@ -73,9 +71,8 @@ void PotentialField::calcField(DensityField ionDensity,
 	}
 }
 
-DensityField::DensityField(Mesh *inputMesh_ptr, std::string inputName,
-		iBase_TagHandle inputTag)
-		: Field(inputMesh_ptr, inputName, iBase_VERTEX, inputTag) {
+DensityField::DensityField(Mesh *inputMesh_ptr, std::string inputName)
+		: Field(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
 void DensityField::calcField() {}

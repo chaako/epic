@@ -42,6 +42,9 @@ public:
 			std::vector<Eigen::Vector3d> vertexVectors);
 	iBase_EntityHandle findFaceCrossed(iBase_EntityHandle previousElement,
 			Eigen::Vector3d previousPosition, Eigen::Vector3d currentPosition);
+	iBase_TagHandle getTagHandle(std::string tagName);
+	iBase_TagHandle createTagHandle(std::string tagName, int size, int type);
+
 	iMesh_Instance meshInstance;
 	iBase_EntitySetHandle rootEntitySet;
 //	iBase_EntitySetHandle vextexEntitySet;

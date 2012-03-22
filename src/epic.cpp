@@ -35,6 +35,9 @@ int main(int argc, char *argv[]) {
 	Mesh mesh2(argv[1]);
 	mesh2.printElementNumbers();
 
+	Field<int> cellCode(&mesh2,std::string("cell_code"),iBase_FACE);
+//	std::cout << "cell_code[3557] = " <<
+//			cellCode.getField(cellCode.entities[3557]) << std::endl;
 	PotentialField potential(&mesh2,std::string("potential"));
 	ElectricField eField(&mesh2,std::string("eField"));
 	DensityField density(&mesh2,std::string("density"));
