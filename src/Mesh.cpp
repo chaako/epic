@@ -181,7 +181,7 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
 				adjacentTet, oldPosition, position);
 		if (faceCrossed) {
 			ents = adjacentTetsToFaceMap[faceCrossed];
-//			ents = this->getAdjacentElements(faceCrossed, iBase_REGION);
+//			ents = this->getAdjacentEntities(faceCrossed, iBase_REGION);
 			for (int i=0; i<ents.size(); i++) {
 				if (this->checkIfInTet(position, meshInstance, ents[i])) {
 					tet = ents[i];
@@ -196,7 +196,7 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
 //	CHECK("Getting regions adjacent to entity failed");
 		ents = adjacentTetsMap[adjacentTet];
 	} else {
-		ents = this->getAdjacentElements(adjacentTet, iBase_REGION);
+		ents = this->getAdjacentEntities(adjacentTet, iBase_REGION);
 //		iMesh_getEntAdj(meshInstance, adjacentTet,
 //				iBase_REGION, &entities, &entities_alloc,
 //				&entities_size, &ierr);
@@ -220,7 +220,7 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
 	return tet;
 }
 
-std::vector<iBase_EntityHandle> Mesh::getElements(int dimension) {
+std::vector<iBase_EntityHandle> Mesh::getEntities(int dimension) {
 	int ierr;
 	iBase_EntityHandle *ents = NULL;
 	int ents_alloc = 0, ents_size;
@@ -239,10 +239,10 @@ std::vector<iBase_EntityHandle> Mesh::getElements(int dimension) {
 
 std::vector<iBase_EntityHandle> Mesh::getVertices(
 		iBase_EntityHandle element) {
-	return this->getAdjacentElements(element, iBase_VERTEX);
+	return this->getAdjacentEntities(element, iBase_VERTEX);
 }
 
-std::vector<iBase_EntityHandle> Mesh::getAdjacentElements(
+std::vector<iBase_EntityHandle> Mesh::getAdjacentEntities(
 		iBase_EntityHandle element, int dimension) {
 	int ierr;
 	iBase_EntityHandle *elements = NULL;
@@ -293,7 +293,7 @@ std::vector<Eigen::Vector3d> Mesh::getVertexVectors(iBase_EntityHandle entity,
 	if (dimension == 3) {
 		vertices = adjacentVertsMap[entity];
 	} else {
-		vertices = this->getAdjacentElements(entity, iBase_VERTEX);
+		vertices = this->getAdjacentEntities(entity, iBase_VERTEX);
 	}
 	assert(vertexVectors.size()==vertices.size());
 	if (useMap && dimension==3) {
@@ -367,7 +367,7 @@ iBase_EntityHandle Mesh::findFaceCrossed(iBase_EntityHandle previousElement,
 	std::vector<iBase_EntityHandle> adjacentFaces =
 			adjacentFacesMap[previousElement];
 //	std::vector<iBase_EntityHandle> adjacentFaces =
-//			getAdjacentElements(previousElement,iBase_FACE);
+//			getAdjacentEntities(previousElement,iBase_FACE);
 
 	for (int i=0; i<adjacentFaces.size(); i++) {
 		std::vector<Eigen::Vector3d> vertexVectors =

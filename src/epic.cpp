@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 	std::cout << "Calculating potential..." << std::endl;
 	potential.calcField();
 	std::cout << "Calculating electric field..." << std::endl;
-	eField.calcField();
+	eField.calcField(potential);
 	std::cout << "Calculating ion charge-density..." << std::endl;
 	ionDensity.calcField(eField, potential,1.);
 	std::cout << "Calculating electron density..." << std::endl;

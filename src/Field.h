@@ -8,6 +8,9 @@
 #ifndef FIELD_H_
 #define FIELD_H_
 
+#include <stdio.h>
+#include <type_traits> // Requires -std=c++0x compiler flag
+
 #include "iMesh.h"
 #include "Eigen/Dense"
 #include "Mesh.h"
@@ -18,20 +21,17 @@ template <class T>
 class Field {
 public:
 	Field(Mesh *inputMesh_ptr, std::string inputName,
-			iBase_TagHandle inputTag=0);
+			int entityDimension, iBase_TagHandle inputTag=0);
 	virtual ~Field() {}
 
 	T getField(Eigen::Vector3d position);
 	T getField(iBase_EntityHandle node);
-
 	void setField(iBase_EntityHandle node, T field);
-
-	virtual void calcField() {}
 
 	Mesh *mesh_ptr;
 	std::string name;
 	iBase_TagHandle tag;
-
+	std::vector<iBase_EntityHandle> entities;
 };
 
 class ElectricField : public Field<Eigen::Vector3d> {
@@ -40,8 +40,7 @@ public:
 			iBase_TagHandle inputTag=0);
 	virtual ~ElectricField() {}
 
-	virtual void calcField();
-
+	void calcField(PotentialField potentialField);
 };
 
 class DensityField : public Field<double> {
@@ -51,7 +50,7 @@ public:
 			iBase_TagHandle inputTag=0);
 	virtual ~DensityField() {}
 
-	virtual void calcField();
+	void calcField();
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField electricField,
 			PotentialField potentialField, double charge=1.);
@@ -64,13 +63,41 @@ public:
 			iBase_TagHandle inputTag=0);
 	virtual ~PotentialField() {}
 
-	virtual void calcField();
+	void calcField();
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 
 };
 
 
-// It would seem template function definitions need to be in the same file
+// gcc doesn't implement the export keyword, so define template functions here
+template <class T>
+Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
+		int entityDimension, iBase_TagHandle inputTag) {
+	mesh_ptr = inputMesh_ptr;
+	name = inputName;
+	if (inputTag) {
+		tag = inputTag;
+	} else {
+		// no tag specified, so create
+		int ierr;
+		int size, type;
+		if (std::is_same<T,double>::value) {
+			size = 1;
+			type = iBase_DOUBLE;
+		} else if (std::is_same<T,int>::value) {
+			size = 1;
+			type = iBase_INTEGER;
+		} else {
+			size = (int)sizeof(T);
+			type = iBase_BYTES;
+		}
+		iMesh_createTag(mesh_ptr->meshInstance, name.c_str(),
+				size, type, &tag, &ierr, (int)name.length());
+		CHECK("Failure creating tag");
+	}
+	entities = mesh_ptr->getEntities(entityDimension);
+}
+
 template <class T>
 T Field<T>::getField(Eigen::Vector3d position) {
 	T field;
