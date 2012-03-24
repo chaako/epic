@@ -35,23 +35,26 @@ int main(int argc, char *argv[]) {
 	Mesh mesh2(argv[1]);
 	mesh2.printElementNumbers();
 
-	Field<int> cellCode(&mesh2,std::string("cell_code"),iBase_FACE);
+	Field<int> faceType(&mesh2,std::string("cell_code"),iBase_FACE);
 //	std::cout << "cell_code[3557] = " <<
-//			cellCode.getField(cellCode.entities[3557]) << std::endl;
+//			faceType.getField(cellCode.entities[3557]) << std::endl;
+	CodeField vertexType(&mesh2,std::string("vertex_code"),iBase_VERTEX);
 	PotentialField potential(&mesh2,std::string("potential"));
 	ElectricField eField(&mesh2,std::string("eField"));
 	DensityField density(&mesh2,std::string("density"));
 	DensityField ionDensity(&mesh2,std::string("ionDensity"));
 	DensityField electronDensity(&mesh2,std::string("electronDensity"));
 
-	std::cout << "Calculating potential..." << std::endl;
+	std::cout << "Setting vertex codes..." << std::endl;
+	vertexType.calcField(faceType);
+	std::cout << "Setting potential..." << std::endl;
 	potential.calcField();
 	std::cout << "Calculating electric field..." << std::endl;
 	eField.calcField(potential);
-	std::cout << "Calculating ion charge-density..." << std::endl;
-	ionDensity.calcField(eField, potential,1.);
 	std::cout << "Calculating electron density..." << std::endl;
-	electronDensity.calcField(eField, potential,-1.);
+	electronDensity.calcField(eField, potential, faceType, vertexType, -1.);
+	std::cout << "Calculating ion charge-density..." << std::endl;
+	ionDensity.calcField(eField, potential, faceType, vertexType, 1.);
 	std::cout << "Calculating charge density..." << std::endl;
 	density.calcField(ionDensity,electronDensity);
 	std::cout << "Calculating updated potential..." << std::endl;
@@ -718,9 +721,14 @@ void valueFromBoundary(unsigned ndim, const double *x,
 			((IntegrandContainer*)integrandContainer_ptr)->electricField_ptr;
 	PotentialField *potentialField_ptr =
 			((IntegrandContainer*)integrandContainer_ptr)->potentialField_ptr;
+	Field<int> *faceTypeField_ptr =
+			((IntegrandContainer*)integrandContainer_ptr)->faceTypeField_ptr;
+	CodeField *vertexTypeField_ptr =
+			((IntegrandContainer*)integrandContainer_ptr)->vertexTypeField_ptr;
 	double charge = ((IntegrandContainer*)integrandContainer_ptr)->charge;
 	Orbit orbit(mesh_ptr,node,velocity,charge);
-	orbit.integrate(*electricField_ptr, *potentialField_ptr);
+	orbit.integrate(*electricField_ptr, *potentialField_ptr,
+			*faceTypeField_ptr, *vertexTypeField_ptr);
 	*fval = 0.;
 	// TODO: shouldn't hard-code domain here
 	if (orbit.finalPosition.norm()>4.9 && !orbit.negativeEnergy) {

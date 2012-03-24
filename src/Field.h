@@ -42,6 +42,15 @@ public:
 	void calcField(PotentialField potentialField);
 };
 
+class CodeField : public Field<int> {
+public:
+	CodeField(Mesh *inputMesh_ptr, std::string inputName,
+			int elementType);
+	virtual ~CodeField() {}
+
+	void calcField(Field<int> faceTypeField);
+};
+
 class DensityField : public Field<double> {
 	// Charge density
 public:
@@ -51,7 +60,8 @@ public:
 	void calcField();
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField electricField,
-			PotentialField potentialField, double charge=1.);
+			PotentialField potentialField,
+			Field<int> faceType, CodeField vertexType, double charge=1.);
 
 };
 

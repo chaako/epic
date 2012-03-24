@@ -10,6 +10,8 @@
 
 #include <map>
 
+template <class T> class Field;
+
 class Mesh {
 public:
 	Mesh(std::string inputMeshFile);
@@ -44,6 +46,10 @@ public:
 			Eigen::Vector3d previousPosition, Eigen::Vector3d currentPosition);
 	iBase_TagHandle getTagHandle(std::string tagName);
 	iBase_TagHandle createTagHandle(std::string tagName, int size, int type);
+	Eigen::Vector3d getNormalVector(iBase_EntityHandle face,
+			Eigen::Vector3d point=Eigen::Vector3d(0.,0.,0.));
+	Eigen::Vector3d getVertexNormalVector(iBase_EntityHandle vertex,
+			Field<int> faceTypeField);
 
 	iMesh_Instance meshInstance;
 	iBase_EntitySetHandle rootEntitySet;

@@ -28,7 +28,8 @@ Orbit::~Orbit() {
 }
 
 void Orbit::integrate(ElectricField& electricField,
-		PotentialField& potentialField, FILE *outFile) {
+		PotentialField& potentialField,
+		Field<int>& faceTypeField, CodeField& vertexTypeField, FILE *outFile) {
 	Eigen::Vector3d eField = electricField.getField(initialNode);
 	int nVertices=4;
 	std::vector<Eigen::Vector3d> eFields(nVertices), vertexVectors(nVertices);
@@ -37,6 +38,20 @@ void Orbit::integrate(ElectricField& electricField,
 	double dt=std::min(0.01,0.01/initialVelocity.norm()), tMax=100;
 	Eigen::Vector3d currentPosition = initialPosition;
 	Eigen::Vector3d currentVelocity = initialVelocity;
+	// TODO: shouldn't hard-code quasi-neutral operation
+	double phiSurface = -4;
+	int vertexType = vertexTypeField.getField(initialNode);
+	Eigen::Vector3d vertexNormalVector;
+	Eigen::Vector3d initialNormalVelocity;
+	if (vertexType==4 && charge<0.) {
+		vertexNormalVector =
+				mesh_ptr->getVertexNormalVector(initialNode, faceTypeField);
+		Eigen::Vector3d coords = mesh_ptr->getCoordinates(initialNode);
+		initialNormalVelocity =
+				currentVelocity.dot(vertexNormalVector)*vertexNormalVector;
+		// TODO: could do something like below to get distribution at surface
+//		currentVelocity += sqrt(2.*charge*phiSurface)*vertexNormalVector;
+	}
 	// Don't integrate orbit if doesn't have enough energy to escape potential
 	// TODO: this should be refined
 //	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
@@ -49,6 +64,12 @@ void Orbit::integrate(ElectricField& electricField,
 	}
 	// For second order leap-frog, offset position from velocity in time
 	currentPosition -= currentVelocity*dt/2.;
+	// TODO: treat inwards electrons in a better way?
+	if (vertexType==4 &&
+			0.5*pow(initialNormalVelocity.norm(),2.)<charge*phiSurface &&
+			currentVelocity.dot(vertexNormalVector)<0.) {
+		currentVelocity -= 2.*initialNormalVelocity;
+	}
 	bool inNewTet = true;
 	int nSteps=0, nNewTet=0;
 //	std::cout << "Initial radius=" << currentPosition.norm() << std::endl;
@@ -79,7 +100,29 @@ void Orbit::integrate(ElectricField& electricField,
 			if (foundTet==false) {
 				iBase_EntityHandle faceCrossed = mesh_ptr->findFaceCrossed(
 						previousElement, previousPosition, currentPosition);
-				break;
+				// TODO: grazing orbits don't enter domain in first time-step
+				int faceType;
+				Eigen::Vector3d normalVector, normalVelocity;
+				if (faceCrossed!=NULL) {
+					faceType = faceTypeField.getField(faceCrossed);
+					normalVector = mesh_ptr->getNormalVector(faceCrossed,
+									previousPosition);
+					normalVelocity =
+							currentVelocity.dot(normalVector)*normalVector;
+					// TODO: shouldn't hard-code boundary code
+				} else {
+					faceType = 0;
+				}
+				if (faceType==4 && 0.5*pow(normalVelocity.norm(),2.)<charge*phiSurface) {
+					foundTet = true;
+					currentElement = previousElement;
+					// TODO: resetting position isn't quite right
+					currentPosition = previousPosition;
+					// TODO: revisit this in magnetized case
+					currentVelocity -= 2.*normalVelocity;
+				} else {
+					break;
+				}
 			}
 			isTet=true;
 

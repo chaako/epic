@@ -216,6 +216,8 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
 			break;
 		}
 	}
+	if (!*tetFound)
+		tet = adjacentTet;
 
 	return tet;
 }
@@ -395,4 +397,70 @@ iBase_TagHandle Mesh::createTagHandle(std::string tagName, int size, int type) {
 	iMesh_createTag(meshInstance, tagName.c_str(),
 			size, type, &tag, &ierr, (int)tagName.length());
 	return tag;
+}
+
+Eigen::Vector3d Mesh::getNormalVector(iBase_EntityHandle face,
+		Eigen::Vector3d point) {
+	std::vector<Eigen::Vector3d> vertexVectors =
+			this->getVertexVectors(face);
+	assert(3 == vertexVectors.size());
+	std::vector<Eigen::Vector3d> edgeVectors(vertexVectors.size()-1);
+
+	edgeVectors[0] = vertexVectors[1]-vertexVectors[0];
+	edgeVectors[1] = vertexVectors[2]-vertexVectors[0];
+
+	Eigen::Vector3d surfaceVector = edgeVectors[0].cross(edgeVectors[1])/2.;
+	if (point==Eigen::Vector3d(0.,0.,0.)) {
+		std::vector<iBase_EntityHandle> tets =
+				this->getAdjacentEntities(face,iBase_REGION);
+		// TODO: handle interior faces with two adjacent tets?
+		std::vector<Eigen::Vector3d> tetVertexVectors =
+				this->getVertexVectors(tets[0]);
+		int nPoints=0;
+		for (int i=0; i<tetVertexVectors.size(); i++) {
+			bool noMatches=true;
+			for (int j=0; j<vertexVectors.size(); j++) {
+				if (tetVertexVectors[i]==vertexVectors[j])
+					noMatches=false;
+			}
+			if (noMatches) {
+				point = tetVertexVectors[i];
+				nPoints++;
+			}
+		}
+		assert(nPoints==1);
+	}
+	assert(point!=Eigen::Vector3d(0.,0.,0.));
+	Eigen::Vector3d referenceVector = point - vertexVectors[0];
+
+	if (referenceVector.dot(surfaceVector)<0)
+		surfaceVector *= -1.;
+
+	return surfaceVector/surfaceVector.norm();
+}
+
+Eigen::Vector3d Mesh::getVertexNormalVector(iBase_EntityHandle vertex,
+		Field<int> faceTypeField) {
+	std::vector<iBase_EntityHandle> faces =
+			this->getAdjacentEntities(vertex, iBase_FACE);
+	// TODO: could pre-allocate normalVectors
+	std::vector<Eigen::Vector3d> normalVectors;
+	std::vector<iBase_EntityHandle>::iterator faceIter = faces.begin();
+	for (; faceIter!=faces.end(); ++faceIter) {
+		int faceType = faceTypeField.getField(*faceIter);
+		if (faceType>0) {
+			Eigen::Vector3d normalVector =
+					this->getNormalVector(*faceIter);
+			normalVectors.push_back(normalVector);
+		}
+	}
+	Eigen::Vector3d normalVector(0.,0.,0.);
+	std::vector<Eigen::Vector3d>::iterator normalIter =
+			normalVectors.begin();
+	for (; normalIter!=normalVectors.end(); ++normalIter) {
+		normalVector += *normalIter;
+	}
+	normalVector /= normalVector.norm();
+	Eigen::Vector3d testCoord = this->getCoordinates(vertex);
+	return normalVector;
 }

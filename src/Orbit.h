@@ -18,7 +18,9 @@ public:
 			Eigen::Vector3d inputVelocity, double inputCharge=1.);
 	~Orbit();
 	void integrate(ElectricField& electricField,
-			PotentialField& potentialField, FILE *outFile=NULL);
+			PotentialField& potentialField,
+			Field<int>& faceType, CodeField& vertexTypeField,
+			FILE *outFile=NULL);
 	Mesh *mesh_ptr;
 	iBase_EntityHandle initialNode;
 	iBase_EntityHandle currentElement;

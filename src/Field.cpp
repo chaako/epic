@@ -87,7 +87,9 @@ void DensityField::calcField(DensityField ionDensity,
 }
 
 void DensityField::calcField(ElectricField electricField,
-		PotentialField potentialField, double charge) {
+		PotentialField potentialField,
+		Field<int> faceType, CodeField vertexType, double charge) {
+	extern_findTet=0;
 	clock_t startClock = clock(); // timing
 	for (int i=0; i<entities.size(); i++) {
 		double density=0.;
@@ -101,6 +103,8 @@ void DensityField::calcField(ElectricField electricField,
 		integrandContainer.node = entities[i];
 		integrandContainer.electricField_ptr = &electricField;
 		integrandContainer.potentialField_ptr = &potentialField;
+		integrandContainer.faceTypeField_ptr = &faceType;
+		integrandContainer.vertexTypeField_ptr = &vertexType;
 		std::stringstream fileNameStream;
 		fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
 				<< "_vert" << i << ".p3d";
@@ -140,5 +144,24 @@ void DensityField::calcField(ElectricField electricField,
 			<< (double)extern_findTet/(double)CLOCKS_PER_SEC << std::endl; // timing
 //	std::cout << "checkIfInNewTet (s)= "
 //			<< (double)extern_checkIfInNewTet/(double)CLOCKS_PER_SEC << std::endl; // timing
+}
+
+CodeField::CodeField(Mesh *inputMesh_ptr, std::string inputName, int elementType)
+		: Field(inputMesh_ptr, inputName, elementType) {
+}
+
+void CodeField::calcField(Field<int> faceTypeField) {
+	for (int i=0; i<entities.size(); i++) {
+		std::vector<iBase_EntityHandle> faces =
+				mesh_ptr->getAdjacentEntities(entities[i],iBase_FACE);
+		int elementType=0;
+		for (int j=0; j<faces.size(); j++) {
+			int faceType = faceTypeField.getField(faces[j]);
+			// TODO: handle case where two adjacent faces are different boundaries?
+			if (faceType>0)
+				elementType=faceType;
+		}
+		this->setField(entities[i],elementType);
+	}
 }
 
