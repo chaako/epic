@@ -40,7 +40,7 @@ void Orbit::integrate(ElectricField& electricField,
 	Eigen::Vector3d currentVelocity = initialVelocity;
 	// TODO: shouldn't hard-code quasi-neutral operation
 	double phiSurface = -4;
-	int vertexType = vertexTypeField.getField(initialNode);
+	vertexType = vertexTypeField.getField(initialNode);
 	Eigen::Vector3d vertexNormalVector;
 	Eigen::Vector3d initialNormalVelocity;
 	if (vertexType==4 && charge<0.) {
@@ -113,6 +113,7 @@ void Orbit::integrate(ElectricField& electricField,
 				} else {
 					faceType = 0;
 				}
+				finalFaceType = faceType;
 				if (faceType==4 && 0.5*pow(normalVelocity.norm(),2.)<charge*phiSurface) {
 					foundTet = true;
 					currentElement = previousElement;

@@ -29,6 +29,8 @@ public:
 	Eigen::Vector3d finalPosition;
 	Eigen::Vector3d finalVelocity;
 	bool negativeEnergy;
+	int vertexType;
+	int finalFaceType;
 	double charge;
 };
 

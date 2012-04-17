@@ -57,7 +57,7 @@ void PotentialField::calcField(DensityField ionDensity,
 		Eigen::Vector3d xzPosition = nodePosition;
 		xzPosition[1] = 0;
 		double r = xzPosition.norm();
-		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
+//		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
 
 		double potential = this->getField(entities[i]);
 		potential -= log(ionDensity.getField(entities[i])/
@@ -67,7 +67,7 @@ void PotentialField::calcField(DensityField ionDensity,
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
 			std::cout << "potential[" << i << "] = " << potential <<
 					", 1/r= " << 1./nodePosition.norm() << std::endl;
-		}
+//		}
 	}
 }
 
@@ -97,7 +97,7 @@ void DensityField::calcField(ElectricField electricField,
 		Eigen::Vector3d xzPosition = nodePosition;
 		xzPosition[1] = 0;
 		double r = xzPosition.norm();
-		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
+//		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
 		IntegrandContainer integrandContainer;
 		integrandContainer.mesh_ptr = mesh_ptr;
 		integrandContainer.node = entities[i];
@@ -119,7 +119,7 @@ void DensityField::calcField(ElectricField electricField,
 		}
 		double error=0.;
 		// TODO: should make number of orbits adaptive
-		int numberOfOrbits=100;
+		int numberOfOrbits=1000;
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
 //			numberOfOrbits = 10000;
 		adapt_integrate(1, &valueFromBoundary, (void*)&integrandContainer,
@@ -134,7 +134,7 @@ void DensityField::calcField(ElectricField electricField,
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
 			std::cout << nodePosition.norm() << " " << density << " " << error << std::endl;
 		fclose(integrandContainer.outFile);
-		}
+//		}
 		this->setField(entities[i], density);
 	}
 	clock_t endClock = clock(); // timing
