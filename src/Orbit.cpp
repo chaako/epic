@@ -109,6 +109,12 @@ void Orbit::integrate(ElectricField& electricField,
 									previousPosition);
 					normalVelocity =
 							currentVelocity.dot(normalVector)*normalVector;
+					finalPotential = 0;
+					vertices = mesh_ptr->getVertices(faceCrossed);
+					for (int i=0; i<vertices.size(); i++) {
+						// TODO: should use point where left domain here
+						finalPotential += 1./3.*potentialField.getField(vertices[i]);
+					}
 					// TODO: shouldn't hard-code boundary code
 				} else {
 					faceType = 0;

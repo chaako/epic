@@ -31,6 +31,7 @@ public:
 	bool negativeEnergy;
 	int vertexType;
 	int finalFaceType;
+	double finalPotential;
 	double charge;
 };
 

@@ -60,13 +60,14 @@ void PotentialField::calcField(DensityField ionDensity,
 //		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
 
 		double potential = this->getField(entities[i]);
-		potential -= log(ionDensity.getField(entities[i])/
+		potential += log(ionDensity.getField(entities[i])/
 				electronDensity.getField(entities[i]));
 		this->setField(entities[i], potential);
 
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
-			std::cout << "potential[" << i << "] = " << potential <<
-					", 1/r= " << 1./nodePosition.norm() << std::endl;
+//			std::cout << "potential[" << i << "] = " << potential <<
+//					", 1/r= " << 1./nodePosition.norm() << std::endl;
+		std::cout << nodePosition.norm() << " " << potential << std::endl;
 //		}
 	}
 }

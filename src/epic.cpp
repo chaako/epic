@@ -45,25 +45,29 @@ int main(int argc, char *argv[]) {
 	DensityField ionDensity(&mesh2,std::string("ionDensity"));
 	DensityField electronDensity(&mesh2,std::string("electronDensity"));
 
-	std::cout << "Setting vertex codes..." << std::endl;
+	std::cout << std::endl << "Setting vertex codes..." << std::endl;
 	vertexType.calcField(faceType);
-	std::cout << "Setting potential..." << std::endl;
+	std::cout << std::endl << "Setting potential..." << std::endl;
 	potential.calcField();
-	std::cout << "Calculating electric field..." << std::endl;
-	eField.calcField(potential);
-	std::cout << "Calculating electron density..." << std::endl;
-	electronDensity.calcField(eField, potential, faceType, vertexType, -1.);
-	std::cout << "Calculating ion charge-density..." << std::endl;
-	ionDensity.calcField(eField, potential, faceType, vertexType, 1.);
-	std::cout << "Calculating charge density..." << std::endl;
-	density.calcField(ionDensity,electronDensity);
-	std::cout << "Calculating updated potential..." << std::endl;
-	potential.calcField(ionDensity,electronDensity);
 
-	{
-	const char *fName = "integratedOrbits.p3d";
-	FILE* outFile = fopen(fName, "w");
-	fprintf(outFile, "# x y z density\n");
+	for (int i=0; i<5; i++) {
+		std::cout << std::endl << "Calculating electric field..." << std::endl;
+		eField.calcField(potential);
+		std::cout << std::endl << "Calculating electron density..." << std::endl;
+		electronDensity.calcField(eField, potential, faceType, vertexType, -1.);
+		std::cout << std::endl << "Calculating ion charge-density..." << std::endl;
+		ionDensity.calcField(eField, potential, faceType, vertexType, 1.);
+		std::cout << std::endl << "Calculating charge density..." << std::endl;
+		density.calcField(ionDensity,electronDensity);
+		std::cout << std::endl << "Calculating updated potential..." << std::endl;
+		potential.calcField(ionDensity,electronDensity);
+		std::cout << std::endl << std::endl << std::endl;
+	}
+
+//	{
+//	const char *fName = "integratedOrbits.p3d";
+//	FILE* outFile = fopen(fName, "w");
+//	fprintf(outFile, "# x y z density\n");
 
 //	iBase_EntityHandle node = mesh2.getRandomVertex();
 //	IntegrandContainer integrandContainer;
@@ -94,8 +98,8 @@ int main(int argc, char *argv[]) {
 //	std::cout << "neval = " << neval << std::endl;
 //	std::cout << "fail = " << fail << std::endl;
 
-	fclose(outFile);
-	}
+//	fclose(outFile);
+//	}
 
 	mesh2.save(argv[2]);
 	return 0;
@@ -753,6 +757,8 @@ void valueFromBoundary(unsigned ndim, const double *x,
 		*fval /= exp(-pow(v,2.)/2.);
 		*fval *= M_PI;
 		*fval *= (1.+x[0])*sqrt(-log((1.+x[0])/2.));
+		if (charge*orbit.finalPotential>0.)
+			*fval *= exp(-charge*orbit.finalPotential);
 	} else if (orbit.finalPosition.norm()>1.) {
 //		std::cout << "orbit terminated with final position in domain:" <<
 //				std::endl << orbit.finalPosition << std::endl;
