@@ -10,6 +10,6 @@ AM_INIT_AUTOMAKE()
 AC_PROG_CC
 AC_PROG_CXX
 
-AC_CONFIG_FILES(Makefile src/Makefile fmdb/Makefile eigen/Makefile cubature/Makefile cuba/Makefile)
+AC_CONFIG_FILES(Makefile src/Makefile fmdb/Makefile eigen/Makefile cubature/Makefile)
 AC_OUTPUT
 
