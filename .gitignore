@@ -46,3 +46,6 @@ fmdb/auxillaryBuildScripts/
 fmdb/buildFMDBSerial.env
 fmdb/buildFMDBSerial.sh
 fmdb/fmdbSerial/
+
+# Output files
+src/distFunc

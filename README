@@ -1,5 +1,10 @@
 Electrostatic Plasma Interaction Code (EPIC)
 
+To build:
+autoreconf -i
+./configure
+make
+
 At present, need to set library path to run, e.g.:
 export LD_LIBRARY_PATH=/home/chaako/epic/fmdb/fmdbSerial//lib
 

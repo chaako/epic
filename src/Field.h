@@ -9,7 +9,7 @@
 #define FIELD_H_
 
 #include <stdio.h>
-#include <type_traits> // Requires -std=c++0x compiler flag
+//#include <type_traits> // Requires -std=c++0x compiler flag
 
 #include "iMesh.h"
 #include "Eigen/Dense"
@@ -26,6 +26,7 @@ public:
 
 	T getField(Eigen::Vector3d position);
 	T getField(iBase_EntityHandle node);
+	T getAverageField(iBase_EntityHandle element);
 	void setField(iBase_EntityHandle node, T field);
 
 	Mesh *mesh_ptr;
@@ -83,16 +84,16 @@ Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 	name = inputName;
 	int ierr;
 	int size, type;
-	if (std::is_same<T,double>::value) {
-		size = 1;
-		type = iBase_DOUBLE;
-	} else if (std::is_same<T,int>::value) {
-		size = 1;
-		type = iBase_INTEGER;
-	} else {
+//	if (std::is_same<T,double>::value) {
+//		size = 1;
+//		type = iBase_DOUBLE;
+//	} else if (std::is_same<T,int>::value) {
+//		size = 1;
+//		type = iBase_INTEGER;
+//	} else {
 		size = (int)sizeof(T);
 		type = iBase_BYTES;
-	}
+//	}
 	tag = mesh_ptr->createTagHandle(name, size, type);
 	// TODO: consider more transparent handling of exiting tag here
 	tag = mesh_ptr->getTagHandle(name);
@@ -101,6 +102,7 @@ Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 
 template <class T>
 T Field<T>::getField(Eigen::Vector3d position) {
+	// TODO: write this function
 	T field;
 	return field;
 }
@@ -116,6 +118,20 @@ T Field<T>::getField(iBase_EntityHandle node) {
 			&field_alloc, &field_size, &ierr);
 	CHECK("Failure getting field");
 	return field;
+}
+
+template <class T>
+T Field<T>::getAverageField(iBase_EntityHandle element) {
+	std::vector<iBase_EntityHandle> vertices =
+			mesh_ptr->getAdjacentEntities(element, iBase_VERTEX);
+	T average=0;
+
+	for (int i=0; i<vertices.size(); i++) {
+		average += this->getField(vertices[i]);
+	}
+	average /= (double)vertices.size();
+
+	return average;
 }
 
 template <class T>

@@ -9,7 +9,7 @@
 #include "Field.h"
 
 ElectricField::ElectricField(Mesh *inputMesh_ptr, std::string inputName)
-		: Field(inputMesh_ptr, inputName, iBase_VERTEX) {
+		: Field<Eigen::Vector3d>(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
 void ElectricField::calcField(PotentialField potentialField) {
@@ -23,8 +23,9 @@ void ElectricField::calcField(PotentialField potentialField) {
 			Eigen::Vector3d surfaceVector =
 					getSurfaceVector(mesh_ptr->meshInstance, point,
 							superCellFaces[j]);
-			double potential = getAverageDblData(mesh_ptr->meshInstance,
-					superCellFaces[j], potentialField.tag);
+//			double potential = getAverageDblData(mesh_ptr->meshInstance,
+//					superCellFaces[j], potentialField.tag);
+			double potential = potentialField.getAverageField(superCellFaces[j]);
 			volume += getTetVolume(mesh_ptr->meshInstance, point, superCellFaces[j]);
 			eField -= potential*surfaceVector;
 		}
@@ -35,7 +36,7 @@ void ElectricField::calcField(PotentialField potentialField) {
 
 
 PotentialField::PotentialField(Mesh *inputMesh_ptr, std::string inputName)
-	: Field(inputMesh_ptr, inputName, iBase_VERTEX) {
+	: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
 void PotentialField::calcField() {
@@ -73,7 +74,7 @@ void PotentialField::calcField(DensityField ionDensity,
 }
 
 DensityField::DensityField(Mesh *inputMesh_ptr, std::string inputName)
-		: Field(inputMesh_ptr, inputName, iBase_VERTEX) {
+		: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
 void DensityField::calcField() {}
@@ -148,7 +149,7 @@ void DensityField::calcField(ElectricField electricField,
 }
 
 CodeField::CodeField(Mesh *inputMesh_ptr, std::string inputName, int elementType)
-		: Field(inputMesh_ptr, inputName, elementType) {
+		: Field<int>(inputMesh_ptr, inputName, elementType) {
 }
 
 void CodeField::calcField(Field<int> faceTypeField) {
