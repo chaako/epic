@@ -110,9 +110,10 @@ void DensityField::calcField(ElectricField electricField,
 		std::stringstream fileNameStream;
 		fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
 				<< "_vert" << i << ".p3d";
-		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
+		integrandContainer.outFile = NULL;
+//		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
 		integrandContainer.charge = charge;
-		fprintf(integrandContainer.outFile, "x y z f\n");
+//		fprintf(integrandContainer.outFile, "x y z f\n");
 		int vdim=3;
 		double xmin[vdim], xmax[vdim];
 		for (int j=0; j<vdim; j++) {
@@ -121,7 +122,7 @@ void DensityField::calcField(ElectricField electricField,
 		}
 		double error=0.;
 		// TODO: should make number of orbits adaptive
-		int numberOfOrbits=1000;
+		int numberOfOrbits=100;
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
 //			numberOfOrbits = 10000;
 		adapt_integrate(1, &valueFromBoundary, (void*)&integrandContainer,
@@ -135,7 +136,7 @@ void DensityField::calcField(ElectricField electricField,
 //		}
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
 			std::cout << nodePosition.norm() << " " << density << " " << error << std::endl;
-		fclose(integrandContainer.outFile);
+//		fclose(integrandContainer.outFile);
 //		}
 		this->setField(entities[i], density);
 	}

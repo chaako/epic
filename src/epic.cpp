@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 	std::cout << std::endl << "Setting potential..." << std::endl;
 	potential.calcField();
 
-	for (int i=0; i<5; i++) {
+	for (int i=0; i<1; i++) {
 		std::cout << std::endl << "Calculating electric field..." << std::endl;
 		eField.calcField(potential);
 		std::cout << std::endl << "Calculating electron density..." << std::endl;
