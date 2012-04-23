@@ -81,7 +81,7 @@ void Orbit::integrate(ElectricField& electricField,
 		currentPosition += dt*currentVelocity;
 //		clock_t startClock = clock(); // timing
 		if (!firstStep)
-			inNewTet = !checkIfInTet(currentPosition, vertexVectors);
+			inNewTet = !mesh_ptr->checkIfInTet(currentPosition, vertexVectors);
 		firstStep=false;
 //		clock_t endClock = clock(); // timing
 //		extern_checkIfInNewTet += endClock-startClock; // timing
@@ -145,7 +145,7 @@ void Orbit::integrate(ElectricField& electricField,
 //			std::cout << "orbit reached tMax" << std::endl;
 
 		assert(vertexVectors.size()==nVertices);
-		std::vector<double> vertexWeights = getVertexWeights(currentPosition,
+		std::vector<double> vertexWeights = mesh_ptr->getVertexWeights(currentPosition,
 				vertexVectors);
 		Eigen::Vector3d currentAcceleration(0.,0.,0.);
 		assert(eFields.size()==vertexWeights.size());

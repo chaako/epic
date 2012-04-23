@@ -46,10 +46,19 @@ public:
 			Eigen::Vector3d previousPosition, Eigen::Vector3d currentPosition);
 	iBase_TagHandle getTagHandle(std::string tagName);
 	iBase_TagHandle createTagHandle(std::string tagName, int size, int type);
+	Eigen::Vector3d getSurfaceVector(iBase_EntityHandle face,
+			Eigen::Vector3d point=Eigen::Vector3d(0.,0.,0.));
 	Eigen::Vector3d getNormalVector(iBase_EntityHandle face,
 			Eigen::Vector3d point=Eigen::Vector3d(0.,0.,0.));
 	Eigen::Vector3d getVertexNormalVector(iBase_EntityHandle vertex,
 			Field<int> faceTypeField);
+	std::vector<iBase_EntityHandle> getSuperCellFaces(iBase_EntityHandle vertex);
+	double getTetVolume(Eigen::Vector3d point, iBase_EntityHandle face);
+	double getTetVolume(std::vector<Eigen::Vector3d> vertexVectors);
+	std::vector<double> getTetSubVolumes(Eigen::Vector3d point,
+			std::vector<Eigen::Vector3d> vertexVectors) ;
+	std::vector<double> getVertexWeights(Eigen::Vector3d point,
+			std::vector<Eigen::Vector3d> vertexVectors);
 
 	iMesh_Instance meshInstance;
 	iBase_EntitySetHandle rootEntitySet;

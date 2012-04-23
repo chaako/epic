@@ -15,19 +15,16 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, std::string inputName)
 void ElectricField::calcField(PotentialField potentialField) {
 	for (int i=0; i<entities.size(); i++) {
 		std::vector<iBase_EntityHandle> superCellFaces =
-				getSuperCellFaces(mesh_ptr->meshInstance, entities[i]);
+				mesh_ptr->getSuperCellFaces(entities[i]);
 		Eigen::Vector3d eField(0.,0.,0.);
 		Eigen::Vector3d point = mesh_ptr->getCoordinates(entities[i]);
 		double volume=0;
 		for (int j=0; j<superCellFaces.size(); j++)  {
 			Eigen::Vector3d surfaceVector =
-					getSurfaceVector(mesh_ptr->meshInstance, point,
-							superCellFaces[j]);
-//			double potential = getAverageDblData(mesh_ptr->meshInstance,
-//					superCellFaces[j], potentialField.tag);
+					mesh_ptr->getSurfaceVector(superCellFaces[j], point);
 			double potential = potentialField.getAverageField(superCellFaces[j]);
-			volume += getTetVolume(mesh_ptr->meshInstance, point, superCellFaces[j]);
-			eField -= potential*surfaceVector;
+			volume += mesh_ptr->getTetVolume(point, superCellFaces[j]);
+			eField += potential*surfaceVector;
 		}
 		eField /= volume;
 		this->setField(entities[i], eField);
@@ -125,7 +122,7 @@ void DensityField::calcField(ElectricField electricField,
 		int numberOfOrbits=100;
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
 //			numberOfOrbits = 10000;
-		adapt_integrate(1, &valueFromBoundary, (void*)&integrandContainer,
+		adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
 				vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, &error);
 //		std::cout << "density[" << i << "] = " << density << ", error ="
 //				<< error << ", r = " << nodePosition.norm() << std::endl;
@@ -155,6 +152,8 @@ CodeField::CodeField(Mesh *inputMesh_ptr, std::string inputName, int elementType
 
 void CodeField::calcField(Field<int> faceTypeField) {
 	for (int i=0; i<entities.size(); i++) {
+		// TODO: this does not tag regions with an edge (but not whole face)
+		//       on the boundary...could do 2ndAdjacent through vertex
 		std::vector<iBase_EntityHandle> faces =
 				mesh_ptr->getAdjacentEntities(entities[i],iBase_FACE);
 		int elementType=0;

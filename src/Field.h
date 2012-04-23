@@ -122,6 +122,7 @@ T Field<T>::getField(iBase_EntityHandle node) {
 
 template <class T>
 T Field<T>::getAverageField(iBase_EntityHandle element) {
+	// TODO: this doesn't work for non-vertex fields
 	std::vector<iBase_EntityHandle> vertices =
 			mesh_ptr->getAdjacentEntities(element, iBase_VERTEX);
 	T average=0;

@@ -9,6 +9,7 @@
 #define EPIC_H_
 
 #define VOLUME_TOLERANCE 1.e-8
+#define LENGTH_TOLERANCE 1.e-10
 
 #include <map>
 #include <iostream>
@@ -41,30 +42,8 @@
 class mMesh;
 int custom_importVTK(mMesh *, const char *);
 
-Eigen::Vector3d getSurfaceVector(iMesh_Instance mesh, Eigen::Vector3d point,
-		iBase_EntityHandle face);
-std::vector<iBase_EntityHandle> getSuperCellFaces(iMesh_Instance mesh,
-		iBase_EntityHandle vertex);
-double getAverageDblData(iMesh_Instance mesh, iBase_EntityHandle entity,
-		iBase_TagHandle dblData_tag);
-double getTetVolume(iMesh_Instance mesh, Eigen::Vector3d point,
-		iBase_EntityHandle face);
-double getTetVolume(std::vector<Eigen::Vector3d> vertexVectors);
-std::vector<Eigen::Vector3d> getVertexVectors(iMesh_Instance mesh,
-		iBase_EntityHandle entity);
-bool checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,
-		iBase_EntityHandle element);
-bool checkIfInTet(Eigen::Vector3d currentPosition,
-		std::vector<Eigen::Vector3d> vertexVectors);
-std::vector<double> getTetSubVolumes(Eigen::Vector3d point,
-		std::vector<Eigen::Vector3d> vertexVectors);
-std::vector<double> getVertexWeights(Eigen::Vector3d point,
-		std::vector<Eigen::Vector3d> vertexVectors);
-//int valueFromBoundaryCuba(const int *ndim, const double x[],
-//  const int *ncomp, double f[], void *integrandContainer_ptr);
-void valueFromBoundary(unsigned ndim, const double *x,
+void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 		void *integrandContainer_ptr, unsigned fdim, double *fval);
-
 
 int intersect_RayTriangle(std::vector<Eigen::Vector3d> R,
 		std::vector<Eigen::Vector3d> T, Eigen::Vector3d* I);

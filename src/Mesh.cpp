@@ -91,7 +91,7 @@ void Mesh::save(std::string outputMeshFile) {
 	CHECK("Couldn't get vertex entities");
 	for (int i = 0; i < ents0d_size; i++) {
 		std::vector<iBase_EntityHandle> superCellFaces =
-				getSuperCellFaces(meshInstance, ents0d[i]);
+				this->getSuperCellFaces(ents0d[i]);
 		Eigen::Vector3d eField(0.,0.,0.);
 		Eigen::Vector3d *eField_ptr = &eField;
 		int eField_alloc = sizeof(Eigen::Vector3d);
@@ -311,17 +311,17 @@ std::vector<Eigen::Vector3d> Mesh::getVertexVectors(iBase_EntityHandle entity,
 
 bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,
 		iBase_EntityHandle element) {
-	std::vector<Eigen::Vector3d> vertexVectors = Mesh::getVertexVectors(element);
+	std::vector<Eigen::Vector3d> vertexVectors = this->getVertexVectors(element);
 
-	return Mesh::checkIfInTet(currentPosition, vertexVectors);
+	return this->checkIfInTet(currentPosition, vertexVectors);
 }
 
 bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition,
 		std::vector<Eigen::Vector3d> vertexVectors) {
-	double tetVolume = getTetVolume(vertexVectors);
+	double tetVolume = this->getTetVolume(vertexVectors);
 	if (tetVolume<VOLUME_TOLERANCE)
 		return false;
-	std::vector<double> subVolumes = getTetSubVolumes(currentPosition,
+	std::vector<double> subVolumes = this->getTetSubVolumes(currentPosition,
 			vertexVectors);
 	double sumSubVolumes =
 			std::accumulate(subVolumes.begin(),subVolumes.end(),0.);
@@ -399,7 +399,7 @@ iBase_TagHandle Mesh::createTagHandle(std::string tagName, int size, int type) {
 	return tag;
 }
 
-Eigen::Vector3d Mesh::getNormalVector(iBase_EntityHandle face,
+Eigen::Vector3d Mesh::getSurfaceVector(iBase_EntityHandle face,
 		Eigen::Vector3d point) {
 	std::vector<Eigen::Vector3d> vertexVectors =
 			this->getVertexVectors(face);
@@ -410,7 +410,9 @@ Eigen::Vector3d Mesh::getNormalVector(iBase_EntityHandle face,
 	edgeVectors[1] = vertexVectors[2]-vertexVectors[0];
 
 	Eigen::Vector3d surfaceVector = edgeVectors[0].cross(edgeVectors[1])/2.;
-	if (point==Eigen::Vector3d(0.,0.,0.)) {
+	Eigen::Vector3d referenceVector = point - vertexVectors[0];
+	if (point==Eigen::Vector3d(0.,0.,0.) ||
+			fabs(referenceVector.dot(surfaceVector))<LENGTH_TOLERANCE) {
 		std::vector<iBase_EntityHandle> tets =
 				this->getAdjacentEntities(face,iBase_REGION);
 		// TODO: handle interior faces with two adjacent tets?
@@ -431,11 +433,17 @@ Eigen::Vector3d Mesh::getNormalVector(iBase_EntityHandle face,
 		assert(nPoints==1);
 	}
 	assert(point!=Eigen::Vector3d(0.,0.,0.));
-	Eigen::Vector3d referenceVector = point - vertexVectors[0];
+	referenceVector = point - vertexVectors[0];
 
 	if (referenceVector.dot(surfaceVector)<0)
 		surfaceVector *= -1.;
 
+	return surfaceVector;
+}
+
+Eigen::Vector3d Mesh::getNormalVector(iBase_EntityHandle face,
+		Eigen::Vector3d point) {
+	Eigen::Vector3d surfaceVector = this->getSurfaceVector(face, point);
 	return surfaceVector/surfaceVector.norm();
 }
 
@@ -464,3 +472,104 @@ Eigen::Vector3d Mesh::getVertexNormalVector(iBase_EntityHandle vertex,
 	Eigen::Vector3d testCoord = this->getCoordinates(vertex);
 	return normalVector;
 }
+
+std::vector<iBase_EntityHandle> Mesh::getSuperCellFaces(
+		iBase_EntityHandle vertex) {
+	int ierr;
+	iBase_EntityHandle *faces = NULL;
+	int faces_alloc = 0, faces_size;
+	std::vector<iBase_EntityHandle> superCellFaces;
+	iBase_TagHandle code_tag;
+
+	// TODO: cleaner way than hard-coding cell_code here?
+	iMesh_getTagHandle(meshInstance, "cell_code", &code_tag,
+			&ierr, 9);
+	CHECK("Failure getting cell_code handle");
+
+	iMesh_getEnt2ndAdj(meshInstance, vertex, iBase_REGION,
+			iBase_FACE, &faces, &faces_alloc,
+			&faces_size, &ierr);
+	CHECK("Failure in getEnt2ndAdj");
+	for (int i = 0; i < faces_size; i++) {
+		iBase_EntityHandle *vertices = NULL;
+		int vertices_alloc = 0, vertices_size;
+		bool onSuperCellSurface = true;
+		int cell_code = 0;
+
+		iMesh_getIntData(meshInstance, faces[i], code_tag,
+				&cell_code, &ierr);
+		CHECK("Failure getting cell_code value");
+
+		iMesh_getEntAdj(meshInstance, faces[i], iBase_VERTEX,
+				&vertices, &vertices_alloc,
+				&vertices_size, &ierr);
+		CHECK("Getting vertices adjacent to face failed");
+
+		for (int j=0; j<vertices_size; j++) {
+			if (cell_code<=1 && vertex==vertices[j])
+				onSuperCellSurface = false;
+		}
+
+		if (onSuperCellSurface) {
+			superCellFaces.push_back(faces[i]);
+		}
+
+		if(vertices) free (vertices);
+		vertices_alloc = 0;
+	}
+	if (faces) free(faces);
+	faces_alloc = 0;
+
+	return superCellFaces;
+}
+
+double Mesh::getTetVolume(Eigen::Vector3d point, iBase_EntityHandle face) {
+	std::vector<Eigen::Vector3d> vertexVectors =
+			this->getVertexVectors(face);
+	vertexVectors.push_back(point);
+
+	return getTetVolume(vertexVectors);
+}
+
+double Mesh::getTetVolume(std::vector<Eigen::Vector3d> vertexVectors) {
+	int nEdges=3;
+	std::vector<Eigen::Vector3d> edgeVectors(nEdges);
+
+	int nVertices=4;
+	assert(vertexVectors.size() == nVertices);
+
+	edgeVectors[0] = vertexVectors[1]-vertexVectors[0];
+	edgeVectors[1] = vertexVectors[2]-vertexVectors[0];
+	edgeVectors[2] = vertexVectors[3]-vertexVectors[0];
+
+	return fabs(
+			edgeVectors[2].dot( edgeVectors[0].cross(edgeVectors[1]) )
+			)/6.;
+}
+
+std::vector<double> Mesh::getTetSubVolumes(Eigen::Vector3d point,
+		std::vector<Eigen::Vector3d> vertexVectors) {
+	int nVertices=4;
+	assert(vertexVectors.size()==nVertices);
+	std::vector<double> subVolumes(nVertices);
+	for (int i=0; i<vertexVectors.size(); i++) {
+		Eigen::Vector3d tmpVertex = vertexVectors[i];
+		vertexVectors[i] = point;
+		double volume = this->getTetVolume(vertexVectors);
+		subVolumes[i] = volume;
+		vertexVectors[i] = tmpVertex;
+	}
+	return subVolumes;
+}
+
+std::vector<double> Mesh::getVertexWeights(Eigen::Vector3d point,
+		std::vector<Eigen::Vector3d> vertexVectors) {
+	std::vector<double> subVolumes = this->getTetSubVolumes(point,
+			vertexVectors);
+	double totalVolume = this->getTetVolume(vertexVectors);
+	for(int i=0; i<subVolumes.size(); i++)
+	    subVolumes[i] /= totalVolume;
+
+	return subVolumes;
+}
+
