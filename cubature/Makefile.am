@@ -1,4 +1,5 @@
-all: cubature-20101018/cubature.c
+noinst_LIBRARIES = libcubature.a
+libcubature_a_SOURCES = cubature-20101018/cubature.c
 
 cubature-20101018/cubature.c:
 	tar -xf cubature-20101018.tgz
