@@ -59,7 +59,10 @@ void Mesh::printElementNumbers() {
 	for (dim = iBase_VERTEX; dim <= iBase_REGION; dim++) {
 		iMesh_getNumOfType(meshInstance, rootEntitySet, dim, &num, &ierr);
 		CHECK("Failure in getNumOfType");
-		printf("Number of %d-dimensional elements = %d\n", dim, num);
+#ifdef HAVE_MPI
+		if (MPI::COMM_WORLD.Get_rank() == 0)
+#endif
+			printf("Number of %d-dimensional elements = %d\n", dim, num);
 	}
 }
 

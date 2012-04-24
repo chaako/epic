@@ -65,7 +65,10 @@ void PotentialField::calcField(DensityField ionDensity,
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
 //			std::cout << "potential[" << i << "] = " << potential <<
 //					", 1/r= " << 1./nodePosition.norm() << std::endl;
-		std::cout << nodePosition.norm() << " " << potential << std::endl;
+#ifdef HAVE_MPI
+		if (MPI::COMM_WORLD.Get_rank() == 0)
+#endif
+			std::cout << nodePosition.norm() << " " << potential << std::endl;
 //		}
 	}
 }
@@ -132,15 +135,24 @@ void DensityField::calcField(ElectricField electricField,
 //			std::cout << electricField.getField(ents0d[i]) << std::endl;
 //		}
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
+#ifdef HAVE_MPI
+		if (MPI::COMM_WORLD.Get_rank() == 0)
+#endif
 			std::cout << nodePosition.norm() << " " << density << " " << error << std::endl;
 //		fclose(integrandContainer.outFile);
 //		}
 		this->setField(entities[i], density);
 	}
 	clock_t endClock = clock(); // timing
-	std::cout << "calcField total (s)= "
+#ifdef HAVE_MPI
+	if (MPI::COMM_WORLD.Get_rank() == 0)
+#endif
+		std::cout << "calcField total (s)= "
 			<< (double)(endClock-startClock)/(double)CLOCKS_PER_SEC << std::endl; // timing
-	std::cout << "findTet total (s)= "
+#ifdef HAVE_MPI
+	if (MPI::COMM_WORLD.Get_rank() == 0)
+#endif
+		std::cout << "findTet total (s)= "
 			<< (double)extern_findTet/(double)CLOCKS_PER_SEC << std::endl; // timing
 //	std::cout << "checkIfInNewTet (s)= "
 //			<< (double)extern_checkIfInNewTet/(double)CLOCKS_PER_SEC << std::endl; // timing

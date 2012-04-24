@@ -24,6 +24,8 @@
 #include "cubature.h"
 //#include "cuba.h"
 
+#include "mpi.h"
+
 #include <numeric>
 #include <vector>
 //#include <type_traits> // Requires -std=c++0x compiler flag

@@ -293,7 +293,7 @@ void custom_importLookUpTable(pMeshMdl mesh, FILE* in, vector<pMeshEnt> entVec, 
      fscanf(in, "%f", &float_data);
    }
  }
- printf("nIntTags = %d\n", nIntTags);
+// printf("nIntTags = %d\n", nIntTags);
 }
 void importLookUpTable(pMeshMdl mesh, FILE* in, int numPnts)
 {

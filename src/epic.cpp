@@ -19,6 +19,18 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+	int mpiId = 0;
+#ifdef HAVE_MPI
+	MPI::Init(argc, argv);
+	mpiId = MPI::COMM_WORLD.Get_rank();
+
+	if (mpiId == 0) {
+		std::cout << "  The number of processes is "
+				<< MPI::COMM_WORLD.Get_size() << "\n";
+	}
+//	std::cout << "  Process " << mpiId << " says 'Hello, world!'\n";
+#endif
+
 	Mesh mesh(argv[1]);
 	mesh.printElementNumbers();
 
@@ -30,26 +42,40 @@ int main(int argc, char *argv[]) {
 	DensityField ionDensity(&mesh,std::string("ionDensity"));
 	DensityField electronDensity(&mesh,std::string("electronDensity"));
 
-	std::cout << std::endl << "Setting vertex codes..." << std::endl;
+	if (mpiId == 0)
+		std::cout << std::endl << "Setting vertex codes..." << std::endl;
 	vertexType.calcField(faceType);
-	std::cout << std::endl << "Setting potential..." << std::endl;
+	if (mpiId == 0)
+		std::cout << std::endl << "Setting potential..." << std::endl;
 	potential.calcField();
 
 	for (int i=0; i<1; i++) {
-		std::cout << std::endl << "Calculating electric field..." << std::endl;
+		if (mpiId == 0)
+			std::cout << std::endl << "Calculating electric field..." << std::endl;
 		eField.calcField(potential);
-		std::cout << std::endl << "Calculating electron density..." << std::endl;
+		if (mpiId == 0)
+			std::cout << std::endl << "Calculating electron density..." << std::endl;
 		electronDensity.calcField(eField, potential, faceType, vertexType, -1.);
-		std::cout << std::endl << "Calculating ion charge-density..." << std::endl;
+		if (mpiId == 0)
+			std::cout << std::endl << "Calculating ion charge-density..." << std::endl;
 		ionDensity.calcField(eField, potential, faceType, vertexType, 1.);
-		std::cout << std::endl << "Calculating charge density..." << std::endl;
+		if (mpiId == 0)
+			std::cout << std::endl << "Calculating charge density..." << std::endl;
 		density.calcField(ionDensity,electronDensity);
-		std::cout << std::endl << "Calculating updated potential..." << std::endl;
+		if (mpiId == 0)
+			std::cout << std::endl << "Calculating updated potential..." << std::endl;
 		potential.calcField(ionDensity,electronDensity);
-		std::cout << std::endl << std::endl << std::endl;
+		if (mpiId == 0)
+			std::cout << std::endl << std::endl << std::endl;
 	}
 
-	mesh.save(argv[2]);
+	if (mpiId == 0)
+		mesh.save(argv[2]);
+
+#ifdef HAVE_MPI
+	MPI::Finalize();
+#endif
+
 	return 0;
 }
 
