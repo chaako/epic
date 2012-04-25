@@ -28,6 +28,12 @@ int main(int argc, char *argv[]) {
 		std::cout << "  The number of processes is "
 				<< MPI::COMM_WORLD.Get_size() << "\n";
 	}
+	if (MPI::COMM_WORLD.Get_size()<2) {
+		std::cout << "ERROR: MPI version currently requires minimum two processes" <<
+				std::endl << "Run './configure --with-mpi=no' to compile serial version" <<
+				std::endl;
+		return 1;
+	}
 //	std::cout << "  Process " << mpiId << " says 'Hello, world!'\n";
 #endif
 
