@@ -6,7 +6,10 @@ autoreconf -i
 make
 
 At present, need to set library path to run, e.g.:
-export LD_LIBRARY_PATH=/home/chaako/epic/fmdb/fmdbSerial//lib
+export LD_LIBRARY_PATH+=:/home/chaako/epic/fmdb/fmdbSerial//lib
+
+If environmental variable CXX is set, need to do '.configure CXX=' for
+mpi wrapper to be detected correctly.
 
 For now, using the Vegas algorithm from the Cuba library appears to
 require extracting the object file from the archive with 'ar x
