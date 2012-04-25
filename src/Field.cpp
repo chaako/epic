@@ -91,72 +91,145 @@ void DensityField::calcField(DensityField ionDensity,
 void DensityField::calcField(ElectricField electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType, double charge) {
+	int mpiId = 0;
+#ifdef HAVE_MPI
+	// TODO: Am assuming here that fields are identical on master and slaves
+	mpiId = MPI::COMM_WORLD.Get_rank();
+	if (mpiId == 0) {
+		DensityField::requestDensityFromSlaves(electricField,
+				potentialField, faceType, vertexType, charge);
+	} else {
+		DensityField::processDensityRequests(electricField,
+				potentialField, faceType, vertexType, charge);
+	}
+#else
 	extern_findTet=0;
 	clock_t startClock = clock(); // timing
-	for (int i=0; i<entities.size(); i++) {
-		double density=0.;
-		Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
-		Eigen::Vector3d xzPosition = nodePosition;
-		xzPosition[1] = 0;
-		double r = xzPosition.norm();
-//		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
-		IntegrandContainer integrandContainer;
-		integrandContainer.mesh_ptr = mesh_ptr;
-		integrandContainer.node = entities[i];
-		integrandContainer.electricField_ptr = &electricField;
-		integrandContainer.potentialField_ptr = &potentialField;
-		integrandContainer.faceTypeField_ptr = &faceType;
-		integrandContainer.vertexTypeField_ptr = &vertexType;
-		std::stringstream fileNameStream;
-		fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
-				<< "_vert" << i << ".p3d";
-		integrandContainer.outFile = NULL;
-//		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
-		integrandContainer.charge = charge;
-//		fprintf(integrandContainer.outFile, "x y z f\n");
-		int vdim=3;
-		double xmin[vdim], xmax[vdim];
-		for (int j=0; j<vdim; j++) {
-			xmin[j] = -1.;
-			xmax[j] = 1.;
-		}
-		double error=0.;
-		// TODO: should make number of orbits adaptive
-		int numberOfOrbits=100;
-//		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
-//			numberOfOrbits = 10000;
-		adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
-				vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, &error);
-//		std::cout << "density[" << i << "] = " << density << ", error ="
-//				<< error << ", r = " << nodePosition.norm() << std::endl;
-//		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499) {
-//			std::cout << "potential[" << i << "] = " << potentialField.getField(ents0d[i]) << std::endl;
-//			std::cout << "eField[" << i << "] = " << std::endl;
-//			std::cout << electricField.getField(ents0d[i]) << std::endl;
-//		}
-//		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
-#ifdef HAVE_MPI
-		if (MPI::COMM_WORLD.Get_rank() == 0)
-#endif
-			std::cout << nodePosition.norm() << " " << density << " " << error << std::endl;
-//		fclose(integrandContainer.outFile);
-//		}
-		this->setField(entities[i], density);
+	for (int node=0; node<entities.size(); node++) {
+		double error;
+	    double density = this->calculateDensity(node, electricField,
+				potentialField, faceType, vertexType, charge, &error);
+		this->setField(entities[node], density);
+		Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
+		std::cout << nodePosition.norm() << " " << density << " " << error << std::endl;
 	}
 	clock_t endClock = clock(); // timing
-#ifdef HAVE_MPI
-	if (MPI::COMM_WORLD.Get_rank() == 0)
-#endif
-		std::cout << "calcField total (s)= "
+	std::cout << "calcField total (s)= "
 			<< (double)(endClock-startClock)/(double)CLOCKS_PER_SEC << std::endl; // timing
-#ifdef HAVE_MPI
-	if (MPI::COMM_WORLD.Get_rank() == 0)
-#endif
-		std::cout << "findTet total (s)= "
+	std::cout << "findTet total (s)= "
 			<< (double)extern_findTet/(double)CLOCKS_PER_SEC << std::endl; // timing
 //	std::cout << "checkIfInNewTet (s)= "
 //			<< (double)extern_checkIfInNewTet/(double)CLOCKS_PER_SEC << std::endl; // timing
+#endif
 }
+
+double DensityField::calculateDensity(int node, ElectricField electricField,
+		PotentialField potentialField,
+		Field<int> faceType, CodeField vertexType, double charge, double *error) {
+	double density=0.;
+	Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
+	IntegrandContainer integrandContainer;
+	integrandContainer.mesh_ptr = mesh_ptr;
+	integrandContainer.node = entities[node];
+	integrandContainer.electricField_ptr = &electricField;
+	integrandContainer.potentialField_ptr = &potentialField;
+	integrandContainer.faceTypeField_ptr = &faceType;
+	integrandContainer.vertexTypeField_ptr = &vertexType;
+	std::stringstream fileNameStream;
+	fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
+			<< "_vert" << node << ".p3d";
+	integrandContainer.outFile = NULL;
+//	integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
+	integrandContainer.charge = charge;
+//	fprintf(integrandContainer.outFile, "x y z f\n");
+	int vdim=3;
+	double xmin[vdim], xmax[vdim];
+	for (int j=0; j<vdim; j++) {
+		xmin[j] = -1.;
+		xmax[j] = 1.;
+	}
+	// TODO: should make number of orbits adaptive
+	int numberOfOrbits=100;
+	adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
+			vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
+//	fclose(integrandContainer.outFile);
+	return density;
+}
+
+#ifdef HAVE_MPI
+void DensityField::requestDensityFromSlaves(ElectricField electricField,
+		PotentialField potentialField,
+		Field<int> faceType, CodeField vertexType, double charge=1.) {
+	int nProcesses = MPI::COMM_WORLD.Get_size();
+	MPI::Status status;
+	int node=0;
+
+	// Send one node to each process
+	for (int rank=1; rank<nProcesses; ++rank) {
+		if (node<entities.size()) {
+			MPI::COMM_WORLD.Send(&node, 1, MPI::INT, rank, WORKTAG);
+			node++;
+		}
+	}
+
+	// Process incoming density and send new nodes until all done
+	while (node<entities.size()) {
+		MPI::Status status = this->receiveDensity();
+		MPI::COMM_WORLD.Send(&node, 1, MPI::INT, status.Get_source(),
+				WORKTAG);
+		node++;
+	}
+
+	// Process any outstanding densities
+	// TODO: could run into problems here if fewer nodes than processes?
+	assert(nProcesses<entities.size());
+	for (int rank=1; rank<nProcesses; ++rank) {
+		this->receiveDensity();
+	}
+
+	// Send empty message with DIETAG to signal done with nodes
+	for (int rank=1; rank<nProcesses; ++rank) {
+		MPI::COMM_WORLD.Send(0, 0, MPI::INT, rank, DIETAG);
+	}
+}
+#endif
+
+#ifdef HAVE_MPI
+MPI::Status DensityField::receiveDensity() {
+	MPI::Status status;
+	double density[2];
+	MPI::COMM_WORLD.Recv(&density[0], 2, MPI::DOUBLE, MPI_ANY_SOURCE,
+			MPI_ANY_TAG, status);
+	int incomingNode = status.Get_tag();
+	if (incomingNode>=0 && incomingNode<entities.size())
+		this->setField(entities[incomingNode], density[0]);
+	Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[incomingNode]);
+	std::cout << nodePosition.norm() << " " << density[0] << " " <<
+			density[1] << std::endl;
+	return status;
+}
+#endif
+
+#ifdef HAVE_MPI
+void DensityField::processDensityRequests(ElectricField electricField,
+		PotentialField potentialField,
+		Field<int> faceType, CodeField vertexType, double charge=1.) {
+	MPI::Status status;
+	int node;
+
+	while (1) {
+		MPI::COMM_WORLD.Recv(&node, 1, MPI::INT, 0, MPI_ANY_TAG,
+				status);
+		if (status.Get_tag() == DIETAG) {
+			return;
+		}
+		double density[2];
+		density[0] = this->calculateDensity(node, electricField,
+				potentialField, faceType, vertexType, charge, &density[1]);
+		MPI::COMM_WORLD.Send(&density[0], 2, MPI::DOUBLE, 0, node);
+	}
+}
+#endif
 
 CodeField::CodeField(Mesh *inputMesh_ptr, std::string inputName, int elementType)
 		: Field<int>(inputMesh_ptr, inputName, elementType) {

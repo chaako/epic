@@ -11,6 +11,9 @@
 #define VOLUME_TOLERANCE 1.e-8
 #define LENGTH_TOLERANCE 1.e-10
 
+#define WORKTAG 999999998
+#define DIETAG 999999999
+
 #include <map>
 #include <iostream>
 #include <stdio.h>
@@ -24,7 +27,9 @@
 #include "cubature.h"
 //#include "cuba.h"
 
+#ifdef HAVE_MPI
 #include "mpi.h"
+#endif
 
 #include <numeric>
 #include <vector>

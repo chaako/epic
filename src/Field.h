@@ -11,6 +11,10 @@
 #include <stdio.h>
 //#include <type_traits> // Requires -std=c++0x compiler flag
 
+#ifdef HAVE_MPI
+#include "mpi.h"
+#endif
+
 #include "iMesh.h"
 #include "Eigen/Dense"
 #include "Mesh.h"
@@ -63,6 +67,19 @@ public:
 	void calcField(ElectricField electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType, double charge=1.);
+	double calculateDensity(int node, ElectricField electricField,
+			PotentialField potentialField,
+			Field<int> faceType, CodeField vertexType, double charge,
+			double *error);
+#ifdef HAVE_MPI
+	void requestDensityFromSlaves(ElectricField electricField,
+			PotentialField potentialField,
+			Field<int> faceType, CodeField vertexType, double charge);
+	MPI::Status receiveDensity();
+	void processDensityRequests(ElectricField electricField,
+			PotentialField potentialField,
+			Field<int> faceType, CodeField vertexType, double charge);
+#endif
 
 };
 
