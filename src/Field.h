@@ -66,7 +66,8 @@ public:
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField electricField,
 			PotentialField potentialField,
-			Field<int> faceType, CodeField vertexType, double charge=1.);
+			Field<int> faceType, CodeField vertexType, double charge=1.,
+			FILE *outFile=NULL);
 	double calculateDensity(int node, ElectricField electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType, double charge,
@@ -74,8 +75,9 @@ public:
 #ifdef HAVE_MPI
 	void requestDensityFromSlaves(ElectricField electricField,
 			PotentialField potentialField,
-			Field<int> faceType, CodeField vertexType, double charge);
-	MPI::Status receiveDensity();
+			Field<int> faceType, CodeField vertexType, double charge,
+			FILE *outFile);
+	MPI::Status receiveDensity(FILE *outFile);
 	void processDensityRequests(ElectricField electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType, double charge);
@@ -89,7 +91,8 @@ public:
 	virtual ~PotentialField() {}
 
 	void calcField();
-	void calcField(DensityField ionDensity, DensityField electronDensity);
+	void calcField(DensityField ionDensity, DensityField electronDensity,
+			FILE *outFile);
 
 };
 

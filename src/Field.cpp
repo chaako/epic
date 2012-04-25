@@ -46,7 +46,7 @@ void PotentialField::calcField() {
 }
 
 void PotentialField::calcField(DensityField ionDensity,
-		DensityField electronDensity) {
+		DensityField electronDensity, FILE *outFile) {
 	assert(ionDensity.mesh_ptr == mesh_ptr);
 	assert(electronDensity.mesh_ptr == mesh_ptr);
 	for (int i=0; i<entities.size(); i++) {
@@ -65,12 +65,16 @@ void PotentialField::calcField(DensityField ionDensity,
 //		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
 //			std::cout << "potential[" << i << "] = " << potential <<
 //					", 1/r= " << 1./nodePosition.norm() << std::endl;
-#ifdef HAVE_MPI
-		if (MPI::COMM_WORLD.Get_rank() == 0)
-#endif
-			std::cout << nodePosition.norm() << " " << potential << std::endl;
+//#ifdef HAVE_MPI
+//		if (MPI::COMM_WORLD.Get_rank() == 0)
+//#endif
+//			std::cout << nodePosition.norm() << " " << potential << std::endl;
+		if (outFile)
+			fprintf(outFile, "%g %g\n", nodePosition.norm(), potential);
 //		}
 	}
+	if (outFile)
+		fprintf(outFile, "\n\n\n\n");
 }
 
 DensityField::DensityField(Mesh *inputMesh_ptr, std::string inputName)
@@ -90,7 +94,8 @@ void DensityField::calcField(DensityField ionDensity,
 
 void DensityField::calcField(ElectricField electricField,
 		PotentialField potentialField,
-		Field<int> faceType, CodeField vertexType, double charge) {
+		Field<int> faceType, CodeField vertexType, double charge,
+		FILE *outFile) {
 	int mpiId = 0;
 #ifdef HAVE_MPI
 	double *density = new double[entities.size()];
@@ -98,7 +103,7 @@ void DensityField::calcField(ElectricField electricField,
 	mpiId = MPI::COMM_WORLD.Get_rank();
 	if (mpiId == 0) {
 		DensityField::requestDensityFromSlaves(electricField,
-				potentialField, faceType, vertexType, charge);
+				potentialField, faceType, vertexType, charge, outFile);
 		for (int node=0; node<entities.size(); node++) {
 			density[node] = this->getField(entities[node]);
 		}
@@ -119,7 +124,9 @@ void DensityField::calcField(ElectricField electricField,
 				potentialField, faceType, vertexType, charge, &error);
 		this->setField(entities[node], density);
 		Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
-		std::cout << nodePosition.norm() << " " << density << " " << error << std::endl;
+//		std::cout << nodePosition.norm() << " " << density << " " << error << std::endl;
+		if (outFile)
+			fprintf(outFile, "%g %g %g\n", nodePosition.norm(), density, error);
 	}
 	clock_t endClock = clock(); // timing
 	std::cout << "calcField total (s)= "
@@ -129,6 +136,8 @@ void DensityField::calcField(ElectricField electricField,
 //	std::cout << "checkIfInNewTet (s)= "
 //			<< (double)extern_checkIfInNewTet/(double)CLOCKS_PER_SEC << std::endl; // timing
 #endif
+	if (outFile)
+		fprintf(outFile, "\n\n\n\n");
 }
 
 double DensityField::calculateDensity(int node, ElectricField electricField,
@@ -167,7 +176,8 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 #ifdef HAVE_MPI
 void DensityField::requestDensityFromSlaves(ElectricField electricField,
 		PotentialField potentialField,
-		Field<int> faceType, CodeField vertexType, double charge=1.) {
+		Field<int> faceType, CodeField vertexType, double charge,
+		FILE *outFile) {
 	int nProcesses = MPI::COMM_WORLD.Get_size();
 	MPI::Status status;
 	int node=0;
@@ -182,7 +192,7 @@ void DensityField::requestDensityFromSlaves(ElectricField electricField,
 
 	// Process incoming density and send new nodes until all done
 	while (node<entities.size()) {
-		MPI::Status status = this->receiveDensity();
+		MPI::Status status = this->receiveDensity(outFile);
 		MPI::COMM_WORLD.Send(&node, 1, MPI::INT, status.Get_source(),
 				WORKTAG);
 		node++;
@@ -192,7 +202,7 @@ void DensityField::requestDensityFromSlaves(ElectricField electricField,
 	// TODO: could run into problems here if fewer nodes than processes?
 	assert(nProcesses<entities.size());
 	for (int rank=1; rank<nProcesses; ++rank) {
-		this->receiveDensity();
+		this->receiveDensity(outFile);
 	}
 
 	// Send empty message with DIETAG to signal done with nodes
@@ -203,7 +213,7 @@ void DensityField::requestDensityFromSlaves(ElectricField electricField,
 #endif
 
 #ifdef HAVE_MPI
-MPI::Status DensityField::receiveDensity() {
+MPI::Status DensityField::receiveDensity(FILE *outFile) {
 	MPI::Status status;
 	double density[2];
 	MPI::COMM_WORLD.Recv(&density[0], 2, MPI::DOUBLE, MPI_ANY_SOURCE,
@@ -212,8 +222,10 @@ MPI::Status DensityField::receiveDensity() {
 	if (incomingNode>=0 && incomingNode<entities.size())
 		this->setField(entities[incomingNode], density[0]);
 	Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[incomingNode]);
-	std::cout << nodePosition.norm() << " " << density[0] << " " <<
-			density[1] << std::endl;
+//	std::cout << nodePosition.norm() << " " << density[0] << " " <<
+//			density[1] << std::endl;
+	if (outFile)
+		fprintf(outFile, "%g %g %g\n", nodePosition.norm(), density[0], density[1]);
 	return status;
 }
 #endif

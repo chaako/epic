@@ -40,6 +40,23 @@ int main(int argc, char *argv[]) {
 	Mesh mesh(argv[1]);
 	mesh.printElementNumbers();
 
+	FILE *densityFile=NULL;
+	FILE *density_electronsFile=NULL;
+	FILE *potentialFile=NULL;
+
+	if (mpiId == 0) {
+		std::string fileName;
+		fileName = "density.dat";
+		densityFile = fopen(fileName.c_str(), "w");
+		fprintf(densityFile, "# r n_i dn_i\n");
+		fileName = "density_electrons.dat";
+		density_electronsFile = fopen(fileName.c_str(), "w");
+		fprintf(density_electronsFile, "# r n_e dn_i\n");
+		fileName = "potential.dat";
+		potentialFile = fopen(fileName.c_str(), "w");
+		fprintf(potentialFile, "# r phi\n");
+	}
+
 	Field<int> faceType(&mesh,std::string("cell_code"),iBase_FACE);
 	CodeField vertexType(&mesh,std::string("vertex_code"),iBase_VERTEX);
 	PotentialField potential(&mesh,std::string("potential"));
@@ -57,26 +74,36 @@ int main(int argc, char *argv[]) {
 
 	for (int i=0; i<1; i++) {
 		if (mpiId == 0)
+			std::cout << std::endl  << std::endl << "ITERATION " << i << std::endl;
+		if (mpiId == 0)
 			std::cout << std::endl << "Calculating electric field..." << std::endl;
 		eField.calcField(potential);
 		if (mpiId == 0)
 			std::cout << std::endl << "Calculating electron density..." << std::endl;
-		electronDensity.calcField(eField, potential, faceType, vertexType, -1.);
+		electronDensity.calcField(eField, potential, faceType, vertexType, -1.,
+				density_electronsFile);
 		if (mpiId == 0)
 			std::cout << std::endl << "Calculating ion charge-density..." << std::endl;
-		ionDensity.calcField(eField, potential, faceType, vertexType, 1.);
+		ionDensity.calcField(eField, potential, faceType, vertexType, 1.,
+				densityFile);
 		if (mpiId == 0)
 			std::cout << std::endl << "Calculating charge density..." << std::endl;
-		density.calcField(ionDensity,electronDensity);
+		density.calcField(ionDensity, electronDensity);
 		if (mpiId == 0)
 			std::cout << std::endl << "Calculating updated potential..." << std::endl;
-		potential.calcField(ionDensity,electronDensity);
+		potential.calcField(ionDensity, electronDensity, potentialFile);
 		if (mpiId == 0)
 			std::cout << std::endl << std::endl << std::endl;
 	}
 
 	if (mpiId == 0)
 		mesh.save(argv[2]);
+
+	if (mpiId == 0) {
+		fclose(densityFile);
+		fclose(density_electronsFile);
+		fclose(potentialFile);
+	}
 
 #ifdef HAVE_MPI
 	MPI::Finalize();
