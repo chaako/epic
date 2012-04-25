@@ -93,14 +93,22 @@ void DensityField::calcField(ElectricField electricField,
 		Field<int> faceType, CodeField vertexType, double charge) {
 	int mpiId = 0;
 #ifdef HAVE_MPI
+	double *density = new double[entities.size()];
 	// TODO: Am assuming here that fields are identical on master and slaves
 	mpiId = MPI::COMM_WORLD.Get_rank();
 	if (mpiId == 0) {
 		DensityField::requestDensityFromSlaves(electricField,
 				potentialField, faceType, vertexType, charge);
+		for (int node=0; node<entities.size(); node++) {
+			density[node] = this->getField(entities[node]);
+		}
 	} else {
 		DensityField::processDensityRequests(electricField,
 				potentialField, faceType, vertexType, charge);
+	}
+	MPI::COMM_WORLD.Bcast(density, entities.size(), MPI::DOUBLE, 0);
+	for (int node=0; node<entities.size(); node++) {
+		this->setField(entities[node], density[node]);
 	}
 #else
 	extern_findTet=0;
