@@ -46,25 +46,26 @@ void PotentialField::calcField() {
 }
 
 void PotentialField::calcField(DensityField ionDensity,
-		DensityField electronDensity, FILE *outFile) {
+		DensityField electronDensity, CodeField vertexType, FILE *outFile) {
 	assert(ionDensity.mesh_ptr == mesh_ptr);
 	assert(electronDensity.mesh_ptr == mesh_ptr);
 	for (int i=0; i<entities.size(); i++) {
 		// TODO: remove this restriction on vertices
 		Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
 		Eigen::Vector3d xzPosition = nodePosition;
-		xzPosition[1] = 0;
-		double r = xzPosition.norm();
-//		if ( r<0.2*nodePosition[1] && 0.<nodePosition[1] ) {
 
-		double potential = this->getField(entities[i]);
-		potential += log(ionDensity.getField(entities[i])/
-				electronDensity.getField(entities[i]));
+		double potential;
+		// TODO: don't hard-code boundary type and quasi-neutral operation
+		if (vertexType.getField(entities[i])==4) {
+			// TODO: don't hard-code sheath potential
+			potential = -1./2.;
+		} else {
+			potential = this->getField(entities[i]);
+			potential += log(ionDensity.getField(entities[i])/
+					electronDensity.getField(entities[i]));
+		}
 		this->setField(entities[i], potential);
 
-//		if (i==381 || i==2543 || i==2540 || i==1052 || i==1489 || i==1598 || i==1597 || i==3499)
-//			std::cout << "potential[" << i << "] = " << potential <<
-//					", 1/r= " << 1./nodePosition.norm() << std::endl;
 //#ifdef HAVE_MPI
 //		if (MPI::COMM_WORLD.Get_rank() == 0)
 //#endif

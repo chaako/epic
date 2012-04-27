@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
 		density.calcField(ionDensity, electronDensity);
 		if (mpiId == 0)
 			std::cout << std::endl << "Calculating updated potential..." << std::endl;
-		potential.calcField(ionDensity, electronDensity, potentialFile);
+		potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
 		if (mpiId == 0)
 			std::cout << std::endl << std::endl << std::endl;
 	}

@@ -92,7 +92,7 @@ public:
 
 	void calcField();
 	void calcField(DensityField ionDensity, DensityField electronDensity,
-			FILE *outFile);
+			CodeField vertexType, FILE *outFile);
 
 };
 
