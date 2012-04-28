@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 //#include <type_traits> // Requires -std=c++0x compiler flag
+#include <boost/type_traits.hpp>
 
 #ifdef HAVE_MPI
 #include "mpi.h"
@@ -105,15 +106,17 @@ Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 	int ierr;
 	int size, type;
 //	if (std::is_same<T,double>::value) {
-//		size = 1;
-//		type = iBase_DOUBLE;
+	if (boost::is_same<T,double>::value) {
+		size = 1;
+		type = iBase_DOUBLE;
 //	} else if (std::is_same<T,int>::value) {
-//		size = 1;
-//		type = iBase_INTEGER;
-//	} else {
+	} else if (boost::is_same<T,int>::value) {
+		size = 1;
+		type = iBase_INTEGER;
+	} else {
 		size = (int)sizeof(T);
 		type = iBase_BYTES;
-//	}
+	}
 	tag = mesh_ptr->createTagHandle(name, size, type);
 	// TODO: consider more transparent handling of exiting tag here
 	tag = mesh_ptr->getTagHandle(name);

@@ -1,1 +1,1 @@
-SUBDIRS = cubature eigen fmdb src
+SUBDIRS = cubature eigen fmdb src boost
