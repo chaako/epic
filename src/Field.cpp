@@ -36,6 +36,14 @@ PotentialField::PotentialField(Mesh *inputMesh_ptr, std::string inputName)
 	: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
+PotentialField::PotentialField(PotentialField potential, std::string inputName)
+	: Field<double>(potential.mesh_ptr, inputName, iBase_VERTEX) {
+	for (int i=0; i<entities.size(); i++) {
+		this->setField(entities[i], potential.getField(entities[i]));
+	}
+}
+
+
 void PotentialField::calcField() {
 	for (int i=0; i<entities.size(); i++) {
 		Eigen::Vector3d point = mesh_ptr->getCoordinates(entities[i]);

@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 		std::cout << std::endl << "Setting potential..." << std::endl;
 	potential.calcField();
 
-	for (int i=0; i<1; i++) {
+	for (int i=0; i<2; i++) {
 		if (mpiId == 0)
 			std::cout << std::endl  << std::endl << "ITERATION " << i << std::endl;
 		if (mpiId == 0)
@@ -89,6 +89,11 @@ int main(int argc, char *argv[]) {
 		if (mpiId == 0)
 			std::cout << std::endl << "Calculating charge density..." << std::endl;
 		density.calcField(ionDensity, electronDensity);
+		if (mpiId == 0)
+			std::cout << std::endl << "Saving current potential..." << std::endl;
+		std::stringstream potentialCopyName;
+		potentialCopyName << "p" << i;
+		PotentialField potentialCopy(potential,potentialCopyName.str());
 		if (mpiId == 0)
 			std::cout << std::endl << "Calculating updated potential..." << std::endl;
 		potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);

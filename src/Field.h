@@ -27,6 +27,7 @@ class Field {
 public:
 	Field(Mesh *inputMesh_ptr, std::string inputName,
 			int entityDimension);
+	// TODO: Does an empty destructor cause a memory leak?
 	virtual ~Field() {}
 
 	T getField(Eigen::Vector3d position);
@@ -89,6 +90,7 @@ public:
 class PotentialField : public Field<double> {
 public:
 	PotentialField(Mesh *inputMesh_ptr, std::string inputName);
+	PotentialField(PotentialField potential, std::string inputName);
 	virtual ~PotentialField() {}
 
 	void calcField();
