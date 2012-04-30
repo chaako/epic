@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 		if (mpiId == 0)
 			std::cout << std::endl << "Saving current potential..." << std::endl;
 		std::stringstream potentialCopyName;
-		potentialCopyName << "p" << i;
+		potentialCopyName << "potIter" << std::setfill('0') << std::setw(2) << i;
 		PotentialField potentialCopy(potential,potentialCopyName.str());
 		if (mpiId == 0)
 			std::cout << std::endl << "Calculating updated potential..." << std::endl;

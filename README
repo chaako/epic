@@ -5,15 +5,11 @@ autoreconf -i
 ./configure
 make
 
-At present, need to set library path to run, e.g.:
-export LD_LIBRARY_PATH+=:/home/chaako/epic/fmdb/fmdbSerial//lib
-
-If environmental variable CXX is set, need to do '.configure CXX=' for
+If environmental variable CXX is set, need to do './configure CXX=' for
 mpi wrapper to be detected correctly.
 
-For now, using the Vegas algorithm from the Cuba library appears to
-require extracting the object file from the archive with 'ar x
-../cuba/Cuba-3.0/libcuba.a Vegas.o' from the src directory.
+At present, need to set library path to run, e.g.:
+export LD_LIBRARY_PATH+=:/home/chaako/epic/fmdb/fmdbSerial//lib
 
 
 Mesh notes:
@@ -25,3 +21,6 @@ FMDB VTK reader), and change the line 'SCALARS cell_code double 1' to
 'SCALARS cell_code int' since it should be an integer tag (and the 1
 throws off the vtk reader).
 
+If a field name in [output].sms matches all the first characters of
+another field name it appears that the VisIt plugin is unable to
+distinguish them (i.e. potential and potential01 are not distinct).
