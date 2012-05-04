@@ -69,7 +69,7 @@ void PotentialField::calcField(DensityField ionDensity,
 			potential = -1./2.;
 		} else {
 			potential = this->getField(entities[i]);
-			potential += log(ionDensity.getField(entities[i])/
+			potential += 1./2.*log(ionDensity.getField(entities[i])/
 					electronDensity.getField(entities[i]));
 		}
 		this->setField(entities[i], potential);
