@@ -16,6 +16,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 	CodeField *vertexTypeField_ptr =
 			((IntegrandContainer*)integrandContainer_ptr)->vertexTypeField_ptr;
 	double charge = ((IntegrandContainer*)integrandContainer_ptr)->charge;
+	FILE *orbitOutFile = ((IntegrandContainer*)integrandContainer_ptr)->orbitOutFile;
 	Eigen::Vector3d velocity;
 	double v = sqrt(-4.*log((1.+x[0])/2.));
 	double theta = acos(x[1]);
@@ -43,7 +44,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 
 	Orbit orbit(mesh_ptr,node,velocity,charge);
 	orbit.integrate(*electricField_ptr, *potentialField_ptr,
-			*faceTypeField_ptr, *vertexTypeField_ptr);
+			*faceTypeField_ptr, *vertexTypeField_ptr, orbitOutFile);
 	*fval = 0.;
 	// TODO: shouldn't hard-code domain here
 	if ((orbit.finalPosition.norm()>4.9 || orbit.finalFaceType==5)

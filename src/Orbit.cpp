@@ -156,9 +156,12 @@ void Orbit::integrate(ElectricField& electricField,
 		double eFieldR = currentAcceleration.dot(currentPosition)/
 				currentPosition.norm();
 		currentVelocity += dt*currentAcceleration;
+		double potential = potentialField.getField(currentPosition, currentElement);
+		Eigen::Vector3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
+		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
 		if (outFile) {
 			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
-					currentPosition[2], eFieldR);
+					currentPosition[2], energy);
 		}
 	}
 //	std::cout << "Final radius=" << currentPosition.norm() << std::endl;

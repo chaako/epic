@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 		std::cout << std::endl << "Setting potential..." << std::endl;
 	potential.calcField();
 
-	for (int i=0; i<2; i++) {
+	for (int i=0; i<1; i++) {
 		if (mpiId == 0)
 			std::cout << std::endl  << std::endl << "ITERATION " << i << std::endl;
 		if (mpiId == 0)

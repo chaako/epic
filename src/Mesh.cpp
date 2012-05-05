@@ -286,12 +286,17 @@ iBase_EntityHandle Mesh::getRandomVertex() {
 	return ents0d[iSelectedNode];
 }
 
-std::vector<Eigen::Vector3d> Mesh::getVertexVectors(iBase_EntityHandle entity,
-		bool useMap) {
+int Mesh::getEntityDimension(iBase_EntityHandle entity) {
 	int ierr;
 	int dimension;
 	iMesh_getEntType(meshInstance, entity, &dimension, &ierr);
-	CHECK("Failure getting entity type");
+	CHECK("Failure getting entity dimension");
+	return dimension;
+}
+
+std::vector<Eigen::Vector3d> Mesh::getVertexVectors(iBase_EntityHandle entity,
+		bool useMap) {
+	int dimension = this->getEntityDimension(entity);
 	int nVerts = dimension + 1;
 	std::vector<Eigen::Vector3d> vertexVectors(nVerts);
 	std::vector<iBase_EntityHandle> vertices(nVerts);

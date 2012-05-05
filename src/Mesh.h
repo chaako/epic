@@ -33,6 +33,7 @@ public:
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
 	getAdjacentsMap(int keyEntityType, int valueEntityType,
 			int bridgeEntityType=-1);
+	int getEntityDimension(iBase_EntityHandle entity);
 	std::vector<Eigen::Vector3d> getVertexVectors(iBase_EntityHandle entity,
 			bool useMap=true);
 	bool checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,

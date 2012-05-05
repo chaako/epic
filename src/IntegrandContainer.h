@@ -26,6 +26,7 @@ public:
 	Field<int> *faceTypeField_ptr;
 	CodeField *vertexTypeField_ptr;
 	FILE *outFile;
+	FILE *orbitOutFile;
 	double charge;
 };
 
