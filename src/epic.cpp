@@ -65,6 +65,23 @@ int main(int argc, char *argv[]) {
 	DensityField ionDensity(&mesh,std::string("ionDensity"));
 	DensityField electronDensity(&mesh,std::string("electronDensity"));
 
+	// TODO: add more robust detection and handling of existing fields
+	if (!mesh.vtkMesh) {
+		if (mpiId == 0)
+			std::cout << std::endl << "Calculating electric field..." << std::endl;
+		eField.calcField(potential);
+		if (mpiId == 0)
+			std::cout << std::endl << "Calculating electron density..." << std::endl;
+		electronDensity.calcField(eField, potential, faceType, vertexType, -1.,
+				density_electronsFile);
+		if (mpiId == 0)
+			std::cout << std::endl << "Calculating ion charge-density..." << std::endl;
+		ionDensity.calcField(eField, potential, faceType, vertexType, 1.,
+				densityFile);
+		// TODO: shouldn't return before closing files etc...
+		return 0;
+	}
+
 	if (mpiId == 0)
 		std::cout << std::endl << "Setting vertex codes..." << std::endl;
 	vertexType.calcField(faceType);

@@ -29,6 +29,7 @@ public:
 	std::vector<iBase_EntityHandle> getEntities(int dimension);
 	iBase_EntityHandle getRandomVertex();
 	std::vector<iBase_EntityHandle> getFaces(iBase_EntityHandle element);
+	bool vtkMesh;
 
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
 	getAdjacentsMap(int keyEntityType, int valueEntityType,

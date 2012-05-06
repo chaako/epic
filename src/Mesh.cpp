@@ -25,11 +25,16 @@ Mesh::Mesh(std::string inputMeshFile) {
 	CHECK("Problems getting root set");
 	rootEntitySet = root;
 
-//	iMesh_load(mesh, root, inputMeshFile.c_str(), options, &ierr,
-//			strlen(inputMeshFile.c_str()), options_len);
-	// FMDB's importVTK can't handle our tags, so use custom version
-	ierr = custom_importVTK((mMesh *)mesh, inputMeshFile.c_str());
-	CHECK("Load failed");
+	if (inputMeshFile.find(".vtk")==std::string::npos) {
+		iMesh_load(mesh, root, inputMeshFile.c_str(), options, &ierr,
+				strlen(inputMeshFile.c_str()), options_len);
+		vtkMesh = false;
+	} else {
+		// FMDB's importVTK can't handle our tags, so use custom version
+		ierr = custom_importVTK((mMesh *)mesh, inputMeshFile.c_str());
+		CHECK("Load failed");
+		vtkMesh = true;
+	}
 
 	// store adjacency info for fast access
 	adjacentTetsMap = getAdjacentsMap(iBase_REGION, iBase_REGION,
