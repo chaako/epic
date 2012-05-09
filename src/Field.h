@@ -40,6 +40,8 @@ public:
 	iBase_TagHandle tag;
 	std::vector<iBase_EntityHandle> entities;
 	iBase_EntityHandle currentElement;
+	std::vector<iBase_EntityHandle> currentVertices;
+	std::vector<T> currentFields;
 };
 
 class ElectricField : public Field<Eigen::Vector3d> {
@@ -124,47 +126,71 @@ Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 	// TODO: consider more transparent handling of exiting tag here
 	tag = mesh_ptr->getTagHandle(name);
 	entities = mesh_ptr->getEntities(entityDimension);
+	currentElement = NULL;
+	// TODO: nVertices should be standardized across functions
+	int nVertices = 4;
+	currentFields = std::vector<T>(nVertices);
 }
 
 template <class T>
 T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity) {
 	// TODO: this doesn't work for non-vertex fields
 	T field;
-	bool isElement;
+	bool inElement=false;
+	Eigen::Vector4d interpolationCoeffs;
 	if (*entity==NULL) {
 		// TODO: handle case with no entity hint
 		std::vector<iBase_EntityHandle> adjacentEntities =
 				mesh_ptr->getAdjacentEntities(entities[0],iBase_REGION);
 		*entity = adjacentEntities[0];
+	} else if (*entity==currentElement) {
+//		int dimension=mesh_ptr->getEntityDimension(*entity);
+//		if (dimension==iBase_REGION) {
+			inElement=true;
+			interpolationCoeffs =
+					mesh_ptr->getInterpolationCoeffs(position, currentElement);
+			for (int i=0; i<interpolationCoeffs.rows(); i++)
+				if (interpolationCoeffs[i]<0.)
+					inElement=false;
+//		} else {
+//			std::cout << currentElement << ": " << dimension << " " <<
+//					position.transpose() <<
+//					" " << position.norm() << std::endl;
+//		}
 	}
-	Eigen::Vector3d centroid(0.,0.,0.);
-	int dimension=mesh_ptr->getEntityDimension(*entity);
-	if (dimension!=iBase_REGION) {
-		// TODO: find adjacent element
-//		*entity = entities[0];
-		isElement = false;
-	} else {
-		isElement = true;
-		std::vector<Eigen::Vector3d> vVs =
-				mesh_ptr->getVertexVectors(currentElement);
-		centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+	bool isElement;
+	if (!inElement) {
+		Eigen::Vector3d centroid(0.,0.,0.);
+		int dimension=mesh_ptr->getEntityDimension(*entity);
+		if (dimension!=iBase_REGION) {
+			// TODO: find adjacent element
+	//		*entity = entities[0];
+			isElement = false;
+		} else {
+			isElement = true;
+			std::vector<Eigen::Vector3d> vVs =
+					mesh_ptr->getVertexVectors(*entity);
+			centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+		}
+		currentElement = *entity;
+		bool foundTet=false;
+		currentElement = mesh_ptr->findTet(centroid,
+				position, currentElement, &foundTet, isElement);
+		// TODO: failure to find tet doesn't really mean outside domain yet
+		if (!foundTet)
+			throw int(OUTSIDE_DOMAIN);
+		// TODO: should ensure order of handles and vectors is same
+		currentVertices = mesh_ptr->getVertices(currentElement);
+		for (int i=0;i<currentVertices.size();i++) {
+			currentFields[i] = this->getField(currentVertices[i]);
+		}
+		interpolationCoeffs =
+				mesh_ptr->getInterpolationCoeffs(position, currentElement);
 	}
-	currentElement = *entity;
-	bool foundTet=false;
-	currentElement = mesh_ptr->findTet(centroid,
-			position, currentElement, &foundTet, isElement);
-	// TODO: failure to find tet doesn't really mean outside domain yet
-	if (!foundTet)
-		throw int(OUTSIDE_DOMAIN);
-	Eigen::Vector4d interpolationCoeffs =
-			mesh_ptr->getInterpolationCoeffs(position, currentElement);
-	// TODO: should ensure order of handles and vectors is same
-	std::vector<iBase_EntityHandle> vertices =
-			mesh_ptr->getVertices(currentElement);
 	field *= 0.;
-	assert(vertices.size()==interpolationCoeffs.rows());
+	assert(currentVertices.size()==interpolationCoeffs.rows());
 	for (int i=0;i<interpolationCoeffs.rows();i++) {
-		field += interpolationCoeffs[i]*this->getField(vertices[i]);
+		field += interpolationCoeffs[i]*currentFields[i];
 	}
 //	std::cout << field << std::endl;
 	*entity = currentElement;

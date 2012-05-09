@@ -211,67 +211,90 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	int nSteps=0;
 	double potential=0.;
 	bool endLoop=false;
-	for (double t=0; t<tMax; t+=dt) {
+	bool foundTet=false;
+	for (double t=0.; t<tMax; t+=dt) {
 		nSteps++;
 		Eigen::Vector3d previousPosition = currentPosition;
 		currentPosition += dt*currentVelocity;
 		iBase_EntityHandle previousElement = currentElement;
 		Eigen::Vector3d currentAcceleration(0.,0.,0.);
-		try {
-			currentAcceleration = charge*
-					electricField.getField(currentPosition, &currentElement);
-//			potential = potentialField.getField(currentPosition, &currentElement);
-//			// TODO: hard-coding dimension here...
-//			for (int i=0; i<3; i++) {
-//				double potentialD = potentialField.getField(currentPosition +
-//						Eigen::Vector3d::Unit(i)*DELTA_LENGTH, currentElement);
-//				currentAcceleration[i] = charge*(potentialD-potential)/DELTA_LENGTH;
-//			}
-		} catch (int signal) {
-			switch (signal) {
-			case OUTSIDE_DOMAIN: {
-				iBase_EntityHandle faceCrossed = mesh_ptr->findFaceCrossed(
-						previousElement, previousPosition, currentPosition);
-				// TODO: grazing orbits don't enter domain in first time-step
-				int faceType;
-				Eigen::Vector3d normalVector(0.,0.,0.), normalVelocity(0.,0.,0.);
-				if (faceCrossed!=NULL) {
-					faceType = faceTypeField.getField(faceCrossed);
-					normalVector = mesh_ptr->getNormalVector(faceCrossed,
-									previousPosition);
-					normalVelocity =
-							currentVelocity.dot(normalVector)*normalVector;
-					finalPotential = 0.;
-					std::vector<iBase_EntityHandle> vertices =
-							mesh_ptr->getVertices(faceCrossed);
-					for (int i=0; i<vertices.size(); i++) {
-						// TODO: should use point where left domain here
-						finalPotential += 1./3.*potentialField.getField(vertices[i]);
-					}
-					// TODO: shouldn't hard-code boundary code
-				} else {
-					faceType = 0;
+		// TODO: replace this hack
+		if (t==0.) {
+			currentElement = mesh_ptr->findTet(previousPosition,
+					currentPosition, initialNode, &foundTet, false);
+			// TODO: figure out why sometimes throw here (grazing orbits?)
+//			if (!foundTet)
+//				throw;
+			int dimension=mesh_ptr->getEntityDimension(currentElement);
+			if (dimension!=iBase_REGION)
+				foundTet = false;
+		}
+//		if (!foundTet)
+//			break;
+		if (foundTet) {
+			try {
+//				clock_t startClock = clock(); // timing
+				currentAcceleration = charge*
+						electricField.getField(currentPosition, &currentElement);
+//				clock_t endClock = clock(); // timing
+//				extern_checkIfInNewTet += endClock-startClock; // timing
+//				potential = potentialField.getField(currentPosition, &currentElement);
+//				// TODO: hard-coding dimension here...
+//				for (int i=0; i<3; i++) {
+//					double potentialD = potentialField.getField(currentPosition +
+//							Eigen::Vector3d::Unit(i)*DELTA_LENGTH, currentElement);
+//					currentAcceleration[i] = charge*(potentialD-potential)/DELTA_LENGTH;
+//				}
+			} catch (int signal) {
+				switch (signal) {
+				case OUTSIDE_DOMAIN:
+					foundTet = false;
+					break;
+				default:
+					// TODO: handle other exceptions?
+					throw;
+					break;
 				}
-				finalFaceType = faceType;
-				if (faceType==4 && 0.5*pow(normalVelocity.norm(),2.)<charge*phiSurface) {
-					currentElement = previousElement;
-					// TODO: resetting position isn't quite right
-					currentPosition = previousPosition;
-					// TODO: revisit this in magnetized case
-					currentVelocity -= 2.*normalVelocity;
-				} else {
-					endLoop=true;
-				}
-				break;
-			} // Need curly braces to define scope of variables declared in case
-			default:
+			} catch (...) {
 				// TODO: handle other exceptions?
 				throw;
-				break;
 			}
-		} catch (...) {
-			// TODO: handle other exceptions?
-			throw;
+		}
+
+		if (foundTet==false) {
+			iBase_EntityHandle faceCrossed = mesh_ptr->findFaceCrossed(
+					previousElement, previousPosition, currentPosition);
+			// TODO: grazing orbits don't enter domain in first time-step
+			int faceType;
+			Eigen::Vector3d normalVector(0.,0.,0.), normalVelocity(0.,0.,0.);
+			if (faceCrossed!=NULL) {
+				faceType = faceTypeField.getField(faceCrossed);
+				normalVector = mesh_ptr->getNormalVector(faceCrossed,
+								previousPosition);
+				normalVelocity =
+						currentVelocity.dot(normalVector)*normalVector;
+				finalPotential = 0.;
+				std::vector<iBase_EntityHandle> vertices =
+						mesh_ptr->getVertices(faceCrossed);
+				for (int i=0; i<vertices.size(); i++) {
+					// TODO: should use point where left domain here
+					finalPotential += 1./3.*potentialField.getField(vertices[i]);
+				}
+				// TODO: shouldn't hard-code boundary code
+			} else {
+				faceType = 0;
+			}
+			finalFaceType = faceType;
+			if (faceType==4 && 0.5*pow(normalVelocity.norm(),2.)<charge*phiSurface) {
+				currentElement = previousElement;
+				foundTet = true;
+				// TODO: resetting position isn't quite right
+				currentPosition = previousPosition;
+				// TODO: revisit this in magnetized case
+				currentVelocity -= 2.*normalVelocity;
+			} else {
+				endLoop=true;
+			}
 		}
 
 		double eFieldR = currentAcceleration.dot(currentPosition)/

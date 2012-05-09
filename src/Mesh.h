@@ -72,6 +72,9 @@ public:
 //	iBase_EntitySetHandle surfaceEntitySet;
 //	iBase_EntitySetHandle volumeEntitySet;
 
+	iBase_EntityHandle previousInterpolationElement;
+	Eigen::Matrix4d previousCoordsToBasis;
+
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentTetsMap;
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentFacesMap;
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentVertsMap;

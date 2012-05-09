@@ -49,6 +49,8 @@ Mesh::Mesh(std::string inputMeshFile) {
 		vertexVectorsMap[iter->first] = Mesh::getVertexVectors(iter->first, false);
 		assert(vertexVectorsMap[iter->first].size()==4);
 	}
+
+	previousInterpolationElement = NULL;
 }
 
 Mesh::~Mesh() {
@@ -595,8 +597,18 @@ std::vector<double> Mesh::getVertexWeights(Eigen::Vector3d point,
 
 Eigen::Vector4d Mesh::getInterpolationCoeffs(Eigen::Vector3d position,
 		iBase_EntityHandle element) {
-	std::vector<Eigen::Vector3d> vVs = this->getVertexVectors(element);
-	return this->getInterpolationCoeffs(position,vVs);
+	Eigen::Vector4d interpolationCoeffs;
+	if (element==previousInterpolationElement && element!=NULL) {
+		Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
+		interpolationCoeffs = previousCoordsToBasis*paddedPosition;
+	} else {
+		std::vector<Eigen::Vector3d> vVs = this->getVertexVectors(element);
+		interpolationCoeffs = this->getInterpolationCoeffs(position,vVs);
+		// TODO: need to set this after getInterpolationCoeffs call since it
+		//       sets it to NULL, but not clean code
+		previousInterpolationElement = element;
+	}
+	return interpolationCoeffs;
 }
 
 Eigen::Vector4d Mesh::getInterpolationCoeffs(Eigen::Vector3d position,
@@ -618,6 +630,10 @@ Eigen::Vector4d Mesh::getInterpolationCoeffs(Eigen::Vector3d position,
 //	std::cout << paddedPosition << std::endl;
 	interpolationCoeffs = coordsToBasis*paddedPosition;
 //	std::cout << interpolationCoeffs << std::endl;
+	// TODO: have to set handle to NULL to prevent changing of matxix
+	//       without changing handle, but not clean code...
+	previousInterpolationElement = NULL;
+	previousCoordsToBasis = coordsToBasis;
 
 	return interpolationCoeffs;
 }
