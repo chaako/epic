@@ -146,6 +146,10 @@ T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity) {
 	} else if (*entity==currentElement) {
 //		int dimension=mesh_ptr->getEntityDimension(*entity);
 //		if (dimension==iBase_REGION) {
+		// TODO: should probably reset currentElement somehow at beginning
+		//       of each orbit to prevent data from an old field being used
+		//       (probably very unlikely since end tet of one orbit would have
+		//       to be start tet of the next)
 			inElement=true;
 			interpolationCoeffs =
 					mesh_ptr->getInterpolationCoeffs(position, currentElement);

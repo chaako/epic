@@ -233,18 +233,18 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //			break;
 		if (foundTet) {
 			try {
-//				clock_t startClock = clock(); // timing
-				currentAcceleration = charge*
-						electricField.getField(currentPosition, &currentElement);
-//				clock_t endClock = clock(); // timing
-//				extern_checkIfInNewTet += endClock-startClock; // timing
-//				potential = potentialField.getField(currentPosition, &currentElement);
-//				// TODO: hard-coding dimension here...
-//				for (int i=0; i<3; i++) {
-//					double potentialD = potentialField.getField(currentPosition +
-//							Eigen::Vector3d::Unit(i)*DELTA_LENGTH, currentElement);
-//					currentAcceleration[i] = charge*(potentialD-potential)/DELTA_LENGTH;
-//				}
+//				currentAcceleration = charge*
+//						electricField.getField(currentPosition, &currentElement);
+				potential = potentialField.getField(currentPosition, &currentElement);
+				// TODO: hard-coding dimension here...
+				for (int i=0; i<3; i++) {
+					Eigen::Vector3d perturbedPosition = currentPosition +
+							Eigen::Vector3d::Unit(i)*DELTA_LENGTH;
+					double pertubedPotential = potentialField.getField(
+							perturbedPosition, &currentElement);
+					currentAcceleration[i] =
+							-charge*(pertubedPotential-potential)/DELTA_LENGTH;
+				}
 			} catch (int signal) {
 				switch (signal) {
 				case OUTSIDE_DOMAIN:

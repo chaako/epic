@@ -169,7 +169,8 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	std::stringstream fileNameStreamOrbit;
 	fileNameStreamOrbit << "orbits/orbits_q" << charge << "_r"
 			<< nodePosition.norm() << "_vert" << node << ".p3d";
-	// TODO: don't hard-code output nodes
+//	fprintf(integrandContainer.outFile, "x y z f\n");
+//	// TODO: don't hard-code output nodes
 //	if (node==5 || node==2540) {
 //		integrandContainer.orbitOutFile =
 //				fopen(fileNameStreamOrbit.str().c_str(), "w");
@@ -178,7 +179,6 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 		integrandContainer.orbitOutFile = NULL;
 //	}
 	integrandContainer.charge = charge;
-//	fprintf(integrandContainer.outFile, "x y z f\n");
 	int vdim=3;
 	double xmin[vdim], xmax[vdim];
 	for (int j=0; j<vdim; j++) {
