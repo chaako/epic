@@ -21,6 +21,10 @@ public:
 			PotentialField& potentialField,
 			Field<int>& faceType, CodeField& vertexTypeField,
 			FILE *outFile=NULL);
+	void integrate(PotentialField& potentialField,
+			ElectricField& electricField,
+			Field<int>& faceType, CodeField& vertexTypeField,
+			FILE *outFile=NULL);
 	Mesh *mesh_ptr;
 	iBase_EntityHandle initialNode;
 	iBase_EntityHandle currentElement;

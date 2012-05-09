@@ -156,13 +156,135 @@ void Orbit::integrate(ElectricField& electricField,
 		double eFieldR = currentAcceleration.dot(currentPosition)/
 				currentPosition.norm();
 		currentVelocity += dt*currentAcceleration;
-		double potential = potentialField.getField(currentPosition, currentElement);
+//		double potential = potentialField.getField(currentPosition, currentElement);
+//		Eigen::Vector3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
+//		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
+//		if (outFile) {
+//			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
+//					currentPosition[2], energy);
+//		}
+	}
+//	std::cout << "Final radius=" << currentPosition.norm() << std::endl;
+	finalPosition = currentPosition;
+	// TODO: correct for time-step offset?
+	finalVelocity = currentVelocity;
+}
+
+void Orbit::integrate(PotentialField& potentialField, ElectricField& electricField,
+		Field<int>& faceTypeField, CodeField& vertexTypeField, FILE *outFile) {
+	// TODO: need some clever way to set tMax and/or detect trapped orbits
+	double dt=std::min(0.01,0.01/initialVelocity.norm()), tMax=100;
+	Eigen::Vector3d currentPosition = initialPosition;
+	Eigen::Vector3d currentVelocity = initialVelocity;
+	// TODO: shouldn't hard-code quasi-neutral operation
+	double phiSurface = -4;
+	vertexType = vertexTypeField.getField(initialNode);
+	Eigen::Vector3d vertexNormalVector;
+	Eigen::Vector3d initialNormalVelocity;
+	if (vertexType==4 && charge<0.) {
+		vertexNormalVector =
+				mesh_ptr->getVertexNormalVector(initialNode, faceTypeField);
+		Eigen::Vector3d coords = mesh_ptr->getCoordinates(initialNode);
+		initialNormalVelocity =
+				currentVelocity.dot(vertexNormalVector)*vertexNormalVector;
+		// TODO: could do something like below to get distribution at surface
+//		currentVelocity += sqrt(2.*charge*phiSurface)*vertexNormalVector;
+	}
+	// Don't integrate orbit if doesn't have enough energy to escape potential
+	// TODO: this should be refined
+//	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
+	if ((0.5*pow(initialVelocity.norm(),2.) +
+			charge*potentialField.getField(initialNode)) < 0.) {
+		negativeEnergy = true;
+		tMax = 0.;
+	} else {
+		negativeEnergy = false;
+	}
+	// For second order leap-frog, offset position from velocity in time
+	currentPosition -= currentVelocity*dt/2.;
+	// TODO: treat inwards electrons in a better way?
+	if (vertexType==4 &&
+			0.5*pow(initialNormalVelocity.norm(),2.)<charge*phiSurface &&
+			currentVelocity.dot(vertexNormalVector)<0.) {
+		currentVelocity -= 2.*initialNormalVelocity;
+	}
+	int nSteps=0;
+	double potential=0.;
+	bool endLoop=false;
+	for (double t=0; t<tMax; t+=dt) {
+		nSteps++;
+		Eigen::Vector3d previousPosition = currentPosition;
+		currentPosition += dt*currentVelocity;
+		iBase_EntityHandle previousElement = currentElement;
+		Eigen::Vector3d currentAcceleration(0.,0.,0.);
+		try {
+			currentAcceleration = charge*
+					electricField.getField(currentPosition, &currentElement);
+//			potential = potentialField.getField(currentPosition, &currentElement);
+//			// TODO: hard-coding dimension here...
+//			for (int i=0; i<3; i++) {
+//				double potentialD = potentialField.getField(currentPosition +
+//						Eigen::Vector3d::Unit(i)*DELTA_LENGTH, currentElement);
+//				currentAcceleration[i] = charge*(potentialD-potential)/DELTA_LENGTH;
+//			}
+		} catch (int signal) {
+			switch (signal) {
+			case OUTSIDE_DOMAIN: {
+				iBase_EntityHandle faceCrossed = mesh_ptr->findFaceCrossed(
+						previousElement, previousPosition, currentPosition);
+				// TODO: grazing orbits don't enter domain in first time-step
+				int faceType;
+				Eigen::Vector3d normalVector(0.,0.,0.), normalVelocity(0.,0.,0.);
+				if (faceCrossed!=NULL) {
+					faceType = faceTypeField.getField(faceCrossed);
+					normalVector = mesh_ptr->getNormalVector(faceCrossed,
+									previousPosition);
+					normalVelocity =
+							currentVelocity.dot(normalVector)*normalVector;
+					finalPotential = 0.;
+					std::vector<iBase_EntityHandle> vertices =
+							mesh_ptr->getVertices(faceCrossed);
+					for (int i=0; i<vertices.size(); i++) {
+						// TODO: should use point where left domain here
+						finalPotential += 1./3.*potentialField.getField(vertices[i]);
+					}
+					// TODO: shouldn't hard-code boundary code
+				} else {
+					faceType = 0;
+				}
+				finalFaceType = faceType;
+				if (faceType==4 && 0.5*pow(normalVelocity.norm(),2.)<charge*phiSurface) {
+					currentElement = previousElement;
+					// TODO: resetting position isn't quite right
+					currentPosition = previousPosition;
+					// TODO: revisit this in magnetized case
+					currentVelocity -= 2.*normalVelocity;
+				} else {
+					endLoop=true;
+				}
+				break;
+			} // Need curly braces to define scope of variables declared in case
+			default:
+				// TODO: handle other exceptions?
+				throw;
+				break;
+			}
+		} catch (...) {
+			// TODO: handle other exceptions?
+			throw;
+		}
+
+		double eFieldR = currentAcceleration.dot(currentPosition)/
+				currentPosition.norm();
+		currentVelocity += dt*currentAcceleration;
 		Eigen::Vector3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
 		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
 		if (outFile) {
 			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
 					currentPosition[2], energy);
 		}
+		if (endLoop)
+			break;
 	}
 //	std::cout << "Final radius=" << currentPosition.norm() << std::endl;
 	finalPosition = currentPosition;

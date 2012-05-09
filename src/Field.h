@@ -30,7 +30,7 @@ public:
 	// TODO: Does an empty destructor cause a memory leak?
 	virtual ~Field() {}
 
-	T getField(Eigen::Vector3d position, iBase_EntityHandle entity=NULL);
+	T getField(Eigen::Vector3d position, iBase_EntityHandle *entity=NULL);
 	T getField(iBase_EntityHandle node);
 	T getAverageField(iBase_EntityHandle element);
 	void setField(iBase_EntityHandle node, T field);
@@ -39,6 +39,7 @@ public:
 	std::string name;
 	iBase_TagHandle tag;
 	std::vector<iBase_EntityHandle> entities;
+	iBase_EntityHandle currentElement;
 };
 
 class ElectricField : public Field<Eigen::Vector3d> {
@@ -126,44 +127,47 @@ Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 }
 
 template <class T>
-T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle entity) {
+T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity) {
 	// TODO: this doesn't work for non-vertex fields
 	T field;
-	if (entity==NULL) {
+	bool isElement;
+	if (*entity==NULL) {
 		// TODO: handle case with no entity hint
 		std::vector<iBase_EntityHandle> adjacentEntities =
 				mesh_ptr->getAdjacentEntities(entities[0],iBase_REGION);
-		entity = adjacentEntities[0];
+		*entity = adjacentEntities[0];
 	}
-	int dimension=mesh_ptr->getEntityDimension(entity);
+	Eigen::Vector3d centroid(0.,0.,0.);
+	int dimension=mesh_ptr->getEntityDimension(*entity);
 	if (dimension!=iBase_REGION) {
 		// TODO: find adjacent element
-		entity = entities[0];
+//		*entity = entities[0];
+		isElement = false;
+	} else {
+		isElement = true;
+		std::vector<Eigen::Vector3d> vVs =
+				mesh_ptr->getVertexVectors(currentElement);
+		centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
 	}
-	std::vector<Eigen::Vector3d> vVs = mesh_ptr->getVertexVectors(entity);
-	assert(vVs.size()==4);
-	Eigen::Matrix4d basisToCoords;
-	basisToCoords <<
-			1.,			1.,			1.,			1.,
-			vVs[0][0],	vVs[1][0],	vVs[2][0],	vVs[3][0],
-			vVs[0][1],	vVs[1][1],	vVs[2][1],	vVs[3][1],
-			vVs[0][2],	vVs[1][2],	vVs[2][2],	vVs[3][2];
-//	std::cout << basisToCoords << std::endl;
-	Eigen::Matrix4d coordsToBasis = basisToCoords.inverse();
-//	std::cout << coordsToBasis*basisToCoords << std::endl;
-	position = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
-	Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
-//	std::cout << coordsToBasis << std::endl;
-//	std::cout << paddedPosition << std::endl;
-	Eigen::Vector4d interpolationCoeffs = coordsToBasis*paddedPosition;
-//	std::cout << interpolationCoeffs << std::endl;
-	field = 0;
+	currentElement = *entity;
+	bool foundTet=false;
+	currentElement = mesh_ptr->findTet(centroid,
+			position, currentElement, &foundTet, isElement);
+	// TODO: failure to find tet doesn't really mean outside domain yet
+	if (!foundTet)
+		throw int(OUTSIDE_DOMAIN);
+	Eigen::Vector4d interpolationCoeffs =
+			mesh_ptr->getInterpolationCoeffs(position, currentElement);
 	// TODO: should ensure order of handles and vectors is same
-	std::vector<iBase_EntityHandle> vertices = mesh_ptr->getVertices(entity);
+	std::vector<iBase_EntityHandle> vertices =
+			mesh_ptr->getVertices(currentElement);
+	field *= 0.;
 	assert(vertices.size()==interpolationCoeffs.rows());
-	for (int i=0;i<interpolationCoeffs.rows();i++)
+	for (int i=0;i<interpolationCoeffs.rows();i++) {
 		field += interpolationCoeffs[i]*this->getField(vertices[i]);
+	}
 //	std::cout << field << std::endl;
+	*entity = currentElement;
 	return field;
 }
 

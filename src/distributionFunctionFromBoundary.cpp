@@ -43,7 +43,9 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 //			", " << velocity[2] << std::endl;
 
 	Orbit orbit(mesh_ptr,node,velocity,charge);
-	orbit.integrate(*electricField_ptr, *potentialField_ptr,
+//	orbit.integrate(*electricField_ptr, *potentialField_ptr,
+//			*faceTypeField_ptr, *vertexTypeField_ptr, orbitOutFile);
+	orbit.integrate(*potentialField_ptr, *electricField_ptr,
 			*faceTypeField_ptr, *vertexTypeField_ptr, orbitOutFile);
 	*fval = 0.;
 	// TODO: shouldn't hard-code domain here

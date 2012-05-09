@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 		fprintf(densityFile, "# r n_i dn_i\n");
 		fileName = "density_electrons.dat";
 		density_electronsFile = fopen(fileName.c_str(), "w");
-		fprintf(density_electronsFile, "# r n_e dn_i\n");
+		fprintf(density_electronsFile, "# r n_e dn_e\n");
 		fileName = "potential.dat";
 		potentialFile = fopen(fileName.c_str(), "w");
 		fprintf(potentialFile, "# r phi\n");

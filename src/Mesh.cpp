@@ -191,7 +191,7 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
 			ents = adjacentTetsToFaceMap[faceCrossed];
 //			ents = this->getAdjacentEntities(faceCrossed, iBase_REGION);
 			for (int i=0; i<ents.size(); i++) {
-				if (this->checkIfInTet(position, meshInstance, ents[i])) {
+				if (this->checkIfInTet(position, ents[i])) {
 					tet = ents[i];
 					*tetFound = true;
 					return tet;
@@ -217,7 +217,7 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
 	entities_alloc = 0;
 
 	for (int i=0; i<ents.size(); i++) {
-		if (Mesh::checkIfInTet(position, meshInstance, ents[i])) {
+		if (Mesh::checkIfInTet(position, ents[i])) {
 			tet = ents[i];
 			// TODO: could throw error if tetFound is false rather than pass
 			*tetFound = true;
@@ -322,7 +322,7 @@ std::vector<Eigen::Vector3d> Mesh::getVertexVectors(iBase_EntityHandle entity,
 	return vertexVectors;
 }
 
-bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,
+bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition,
 		iBase_EntityHandle element) {
 	std::vector<Eigen::Vector3d> vertexVectors = this->getVertexVectors(element);
 
@@ -331,14 +331,21 @@ bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,
 
 bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition,
 		std::vector<Eigen::Vector3d> vertexVectors) {
-	double tetVolume = this->getTetVolume(vertexVectors);
-	if (tetVolume<VOLUME_TOLERANCE)
-		return false;
-	std::vector<double> subVolumes = this->getTetSubVolumes(currentPosition,
-			vertexVectors);
-	double sumSubVolumes =
-			std::accumulate(subVolumes.begin(),subVolumes.end(),0.);
-	return (fabs(sumSubVolumes-tetVolume)<VOLUME_TOLERANCE);
+//	double tetVolume = this->getTetVolume(vertexVectors);
+//	if (tetVolume<VOLUME_TOLERANCE)
+//		return false;
+//	std::vector<double> subVolumes = this->getTetSubVolumes(currentPosition,
+//			vertexVectors);
+//	double sumSubVolumes =
+//			std::accumulate(subVolumes.begin(),subVolumes.end(),0.);
+//	return (fabs(sumSubVolumes-tetVolume)<VOLUME_TOLERANCE);
+	Eigen::Vector4d interpolationCoeffs = this->getInterpolationCoeffs(
+			currentPosition, vertexVectors);
+	bool inElement=true;
+	for (int i=0; i<interpolationCoeffs.rows(); i++)
+		if (interpolationCoeffs[i]<0.)
+			inElement=false;
+	return inElement;
 }
 
 bool Mesh::checkIfIntersectsTriangle(Eigen::Vector3d previousPosition,
@@ -586,3 +593,31 @@ std::vector<double> Mesh::getVertexWeights(Eigen::Vector3d point,
 	return subVolumes;
 }
 
+Eigen::Vector4d Mesh::getInterpolationCoeffs(Eigen::Vector3d position,
+		iBase_EntityHandle element) {
+	std::vector<Eigen::Vector3d> vVs = this->getVertexVectors(element);
+	return this->getInterpolationCoeffs(position,vVs);
+}
+
+Eigen::Vector4d Mesh::getInterpolationCoeffs(Eigen::Vector3d position,
+		std::vector<Eigen::Vector3d> vVs) {
+	assert(vVs.size()==4);
+	Eigen::Vector4d interpolationCoeffs;
+	Eigen::Matrix4d basisToCoords;
+	basisToCoords <<
+			1.,			1.,			1.,			1.,
+			vVs[0][0],	vVs[1][0],	vVs[2][0],	vVs[3][0],
+			vVs[0][1],	vVs[1][1],	vVs[2][1],	vVs[3][1],
+			vVs[0][2],	vVs[1][2],	vVs[2][2],	vVs[3][2];
+//	std::cout << basisToCoords << std::endl;
+	Eigen::Matrix4d coordsToBasis = basisToCoords.inverse();
+//	std::cout << coordsToBasis*basisToCoords << std::endl;
+//	position = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+	Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
+//	std::cout << coordsToBasis << std::endl;
+//	std::cout << paddedPosition << std::endl;
+	interpolationCoeffs = coordsToBasis*paddedPosition;
+//	std::cout << interpolationCoeffs << std::endl;
+
+	return interpolationCoeffs;
+}

@@ -37,7 +37,7 @@ public:
 	int getEntityDimension(iBase_EntityHandle entity);
 	std::vector<Eigen::Vector3d> getVertexVectors(iBase_EntityHandle entity,
 			bool useMap=true);
-	bool checkIfInTet(Eigen::Vector3d currentPosition, iMesh_Instance mesh,
+	bool checkIfInTet(Eigen::Vector3d currentPosition,
 			iBase_EntityHandle element);
 	bool checkIfInTet(Eigen::Vector3d currentPosition,
 			std::vector<Eigen::Vector3d> vertexVectors);
@@ -61,6 +61,10 @@ public:
 			std::vector<Eigen::Vector3d> vertexVectors) ;
 	std::vector<double> getVertexWeights(Eigen::Vector3d point,
 			std::vector<Eigen::Vector3d> vertexVectors);
+	Eigen::Vector4d getInterpolationCoeffs(Eigen::Vector3d position,
+			iBase_EntityHandle element);
+	Eigen::Vector4d getInterpolationCoeffs(Eigen::Vector3d position,
+			std::vector<Eigen::Vector3d> vVs);
 
 	iMesh_Instance meshInstance;
 	iBase_EntitySetHandle rootEntitySet;
