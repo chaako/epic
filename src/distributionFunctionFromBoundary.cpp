@@ -56,6 +56,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 		*fval /= exp(-pow(v,2.)/2.);
 		*fval *= M_PI;
 		*fval *= (1.+x[0])*sqrt(-log((1.+x[0])/2.));
+		// TODO: if fix outer potential this may not give equal ion and electron dens.
 		if (charge*orbit.finalPotential>0.)
 			*fval *= exp(-charge*orbit.finalPotential);
 	} else if (orbit.finalPosition.norm()>1.) {

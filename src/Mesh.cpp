@@ -41,6 +41,7 @@ Mesh::Mesh(std::string inputMeshFile) {
 			iBase_VERTEX);
 	adjacentFacesMap = getAdjacentsMap(iBase_REGION, iBase_FACE);
 	adjacentVertsMap = getAdjacentsMap(iBase_REGION, iBase_VERTEX);
+	surroundingVertsMap = getSurroundingVerticesMap();
 	adjacentTetsToFaceMap = getAdjacentsMap(iBase_FACE, iBase_REGION);
 
 	// store vertex coordinates for fast access
@@ -50,7 +51,7 @@ Mesh::Mesh(std::string inputMeshFile) {
 		assert(vertexVectorsMap[iter->first].size()==4);
 	}
 
-	previousInterpolationElement = NULL;
+	previousCoordsToBasisElement = NULL;
 }
 
 Mesh::~Mesh() {
@@ -125,6 +126,51 @@ void Mesh::save(std::string outputMeshFile) {
 	iMesh_save(meshInstance, rootEntitySet, outputMeshFile.c_str(),
 			options, &ierr, outputMeshFile.length(), options_len);
 	CHECK("Save failed");
+}
+
+std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
+Mesh::getSurroundingVerticesMap() {
+	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
+	surroundingVerticesMap;
+	// TODO: should handle case where adjacentTetsMap isn't available yet
+	assert(adjacentTetsMap.begin()!=adjacentTetsMap.end());
+	for(std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >::iterator
+			adjacentTets = adjacentTetsMap.begin();
+			adjacentTets != adjacentTetsMap.end();
+			adjacentTets++) {
+		iBase_EntityHandle element = adjacentTets->first;
+		std::set<iBase_EntityHandle> surroundingVerticesSet;
+		for (std::vector<iBase_EntityHandle>::iterator adjacentTet =
+				adjacentTets->second.begin();
+				adjacentTet!=adjacentTets->second.end(); ++adjacentTet) {
+			std::vector<iBase_EntityHandle> adjacentVertices =
+					getAdjacentEntities(*adjacentTet, iBase_VERTEX);
+			for (std::vector<iBase_EntityHandle>::iterator vertex =
+					adjacentVertices.begin(); vertex!=adjacentVertices.end();
+					++vertex) {
+				surroundingVerticesSet.insert(*vertex);
+			}
+		}
+		// Remove the vertices of the tet itself
+		std::vector<iBase_EntityHandle> vertices =
+				getAdjacentEntities(element, iBase_VERTEX);
+//		std::vector<iBase_EntityHandle>& vec = adjacentTets->second;
+		int initialSize = surroundingVerticesSet.size();
+		for (std::vector<iBase_EntityHandle>::iterator vertex =
+				vertices.begin(); vertex!=vertices.end(); ++vertex) {
+			surroundingVerticesSet.erase(*vertex);
+//			// Compact elements!=*vertex to front of vector and remove remaining
+//			vec.erase(std::remove(vec.begin(), vec.end(), *vertex), vec.end());
+		}
+		std::vector<iBase_EntityHandle> surroundingVertices(
+				surroundingVerticesSet.begin(), surroundingVerticesSet.end());
+//		std::cout << element << std::endl;
+//		std::cout << surroundingVerticesSet.size() << " " <<
+//				initialSize << std::endl;
+		assert(surroundingVertices.size()==initialSize-4);
+		surroundingVerticesMap[element] = surroundingVertices;
+	}
+	return surroundingVerticesMap;
 }
 
 std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
@@ -341,11 +387,11 @@ bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition,
 //	double sumSubVolumes =
 //			std::accumulate(subVolumes.begin(),subVolumes.end(),0.);
 //	return (fabs(sumSubVolumes-tetVolume)<VOLUME_TOLERANCE);
-	Eigen::Vector4d interpolationCoeffs = this->getInterpolationCoeffs(
+	Eigen::Vector4d linearBasisFunctions = this->evaluateLinearBasisFunctions(
 			currentPosition, vertexVectors);
 	bool inElement=true;
-	for (int i=0; i<interpolationCoeffs.rows(); i++)
-		if (interpolationCoeffs[i]<0.)
+	for (int i=0; i<linearBasisFunctions.rows(); i++)
+		if (linearBasisFunctions[i]<0.)
 			inElement=false;
 	return inElement;
 }
@@ -595,45 +641,102 @@ std::vector<double> Mesh::getVertexWeights(Eigen::Vector3d point,
 	return subVolumes;
 }
 
-Eigen::Vector4d Mesh::getInterpolationCoeffs(Eigen::Vector3d position,
+Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(Eigen::Vector3d position,
 		iBase_EntityHandle element) {
-	Eigen::Vector4d interpolationCoeffs;
-	if (element==previousInterpolationElement && element!=NULL) {
+	Eigen::Vector4d basisFunctions;
+	if (element==previousCoordsToBasisElement && element!=NULL) {
 		Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
-		interpolationCoeffs = previousCoordsToBasis*paddedPosition;
+		basisFunctions = previousCoordsToBasis*paddedPosition;
 	} else {
 		std::vector<Eigen::Vector3d> vVs = this->getVertexVectors(element);
-		interpolationCoeffs = this->getInterpolationCoeffs(position,vVs);
-		// TODO: need to set this after getInterpolationCoeffs call since it
+		basisFunctions = this->evaluateLinearBasisFunctions(position,vVs);
+		// TODO: need to set this after evalLinBasFuncs call since it
 		//       sets it to NULL, but not clean code
-		previousInterpolationElement = element;
+		previousCoordsToBasisElement = element;
 	}
-	return interpolationCoeffs;
+	return basisFunctions;
 }
 
-Eigen::Vector4d Mesh::getInterpolationCoeffs(Eigen::Vector3d position,
+Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(Eigen::Vector3d position,
 		std::vector<Eigen::Vector3d> vVs) {
+	// TODO: should replace 4 here with unified number across functions
 	assert(vVs.size()==4);
-	Eigen::Vector4d interpolationCoeffs;
+	Eigen::Vector4d basisFunctions;
 	Eigen::Matrix4d basisToCoords;
 	basisToCoords <<
 			1.,			1.,			1.,			1.,
 			vVs[0][0],	vVs[1][0],	vVs[2][0],	vVs[3][0],
 			vVs[0][1],	vVs[1][1],	vVs[2][1],	vVs[3][1],
 			vVs[0][2],	vVs[1][2],	vVs[2][2],	vVs[3][2];
-//	std::cout << basisToCoords << std::endl;
 	Eigen::Matrix4d coordsToBasis = basisToCoords.inverse();
-//	std::cout << coordsToBasis*basisToCoords << std::endl;
-//	position = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
 	Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
-//	std::cout << coordsToBasis << std::endl;
-//	std::cout << paddedPosition << std::endl;
-	interpolationCoeffs = coordsToBasis*paddedPosition;
-//	std::cout << interpolationCoeffs << std::endl;
-	// TODO: have to set handle to NULL to prevent changing of matxix
+	basisFunctions = coordsToBasis*paddedPosition;
+	// TODO: have to set handle to NULL to prevent changing of matrix
 	//       without changing handle, but not clean code...
-	previousInterpolationElement = NULL;
+	previousCoordsToBasisElement = NULL;
 	previousCoordsToBasis = coordsToBasis;
 
-	return interpolationCoeffs;
+	return basisFunctions;
+}
+
+Eigen::VectorXd Mesh::evaluateQuadraticErrorBases(
+		Eigen::Vector4d linearBasisFunctions) {
+	assert(linearBasisFunctions.rows()==4);
+	Eigen::VectorXd quadraticBasisFunctions(6);
+	quadraticBasisFunctions[0] =
+			linearBasisFunctions[0]*linearBasisFunctions[1];
+	quadraticBasisFunctions[1] =
+			linearBasisFunctions[0]*linearBasisFunctions[2];
+	quadraticBasisFunctions[2] =
+			linearBasisFunctions[0]*linearBasisFunctions[3];
+	quadraticBasisFunctions[3] =
+			linearBasisFunctions[1]*linearBasisFunctions[2];
+	quadraticBasisFunctions[4] =
+			linearBasisFunctions[1]*linearBasisFunctions[3];
+	quadraticBasisFunctions[5] =
+			linearBasisFunctions[2]*linearBasisFunctions[3];
+	return quadraticBasisFunctions;
+}
+
+Eigen::VectorXd Mesh::evaluateCubicErrorBases(
+		Eigen::Vector4d linearBasisFunctions) {
+	Eigen::VectorXd cubicBasisFunctions(16);
+	// TODO: replace below with some sort of loop?
+	cubicBasisFunctions[0] = linearBasisFunctions[0]*
+			linearBasisFunctions[0]*linearBasisFunctions[1];
+	cubicBasisFunctions[1] = linearBasisFunctions[0]*
+			linearBasisFunctions[0]*linearBasisFunctions[2];
+	cubicBasisFunctions[2] = linearBasisFunctions[0]*
+			linearBasisFunctions[0]*linearBasisFunctions[3];
+	cubicBasisFunctions[3] = linearBasisFunctions[0]*
+			linearBasisFunctions[1]*linearBasisFunctions[2];
+	cubicBasisFunctions[4] = linearBasisFunctions[0]*
+			linearBasisFunctions[1]*linearBasisFunctions[3];
+	cubicBasisFunctions[5] = linearBasisFunctions[0]*
+			linearBasisFunctions[2]*linearBasisFunctions[3];
+
+	cubicBasisFunctions[6] = linearBasisFunctions[1]*
+			linearBasisFunctions[0]*linearBasisFunctions[1];
+	cubicBasisFunctions[7] = linearBasisFunctions[1]*
+			linearBasisFunctions[1]*linearBasisFunctions[2];
+	cubicBasisFunctions[8] = linearBasisFunctions[1]*
+			linearBasisFunctions[1]*linearBasisFunctions[3];
+	cubicBasisFunctions[9] = linearBasisFunctions[1]*
+			linearBasisFunctions[2]*linearBasisFunctions[3];
+
+	cubicBasisFunctions[10] = linearBasisFunctions[2]*
+			linearBasisFunctions[0]*linearBasisFunctions[2];
+	cubicBasisFunctions[11] = linearBasisFunctions[2]*
+			linearBasisFunctions[1]*linearBasisFunctions[2];
+	cubicBasisFunctions[12] = linearBasisFunctions[2]*
+			linearBasisFunctions[2]*linearBasisFunctions[3];
+
+	cubicBasisFunctions[13] = linearBasisFunctions[3]*
+			linearBasisFunctions[0]*linearBasisFunctions[3];
+	cubicBasisFunctions[14] = linearBasisFunctions[3]*
+			linearBasisFunctions[1]*linearBasisFunctions[3];
+	cubicBasisFunctions[15] = linearBasisFunctions[3]*
+			linearBasisFunctions[2]*linearBasisFunctions[3];
+
+	return cubicBasisFunctions;
 }

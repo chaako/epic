@@ -233,17 +233,33 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //			break;
 		if (foundTet) {
 			try {
+				// TODO: set order through input parameter?
+				int interpolationOrder = 1;
 //				currentAcceleration = charge*
 //						electricField.getField(currentPosition, &currentElement);
-				potential = potentialField.getField(currentPosition, &currentElement);
+				potential = potentialField.getField(currentPosition, &currentElement,
+						interpolationOrder);
+				if (isnan(potential))
+					potential = potentialField.getField(currentPosition,
+							&currentElement, 1);
 				// TODO: hard-coding dimension here...
 				for (int i=0; i<3; i++) {
 					Eigen::Vector3d perturbedPosition = currentPosition +
 							Eigen::Vector3d::Unit(i)*DELTA_LENGTH;
-					double pertubedPotential = potentialField.getField(
-							perturbedPosition, &currentElement);
+					double perturbedPotential = potentialField.getField(
+							perturbedPosition, &currentElement, interpolationOrder);
+					// TODO: track down why perturbedPotential sometimes is NaN
+					if (isnan(perturbedPotential)) {
+						perturbedPotential = potentialField.getField(
+								perturbedPosition, &currentElement, 1);
+					}
+//					if (isnan(potential) || isnan(perturbedPotential)) {
+//						std::cout << potential << " " << perturbedPotential <<
+//						" " << currentPosition.transpose() << std::endl;
+//						throw;
+//					}
 					currentAcceleration[i] =
-							-charge*(pertubedPotential-potential)/DELTA_LENGTH;
+							-charge*(perturbedPotential-potential)/DELTA_LENGTH;
 				}
 			} catch (int signal) {
 				switch (signal) {

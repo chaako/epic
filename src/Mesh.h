@@ -29,8 +29,8 @@ public:
 	std::vector<iBase_EntityHandle> getEntities(int dimension);
 	iBase_EntityHandle getRandomVertex();
 	std::vector<iBase_EntityHandle> getFaces(iBase_EntityHandle element);
-	bool vtkMesh;
-
+	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
+	getSurroundingVerticesMap();
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
 	getAdjacentsMap(int keyEntityType, int valueEntityType,
 			int bridgeEntityType=-1);
@@ -61,23 +61,34 @@ public:
 			std::vector<Eigen::Vector3d> vertexVectors) ;
 	std::vector<double> getVertexWeights(Eigen::Vector3d point,
 			std::vector<Eigen::Vector3d> vertexVectors);
-	Eigen::Vector4d getInterpolationCoeffs(Eigen::Vector3d position,
+	Eigen::VectorXd getErrorCoefficients(Eigen::Vector3d position,
+			iBase_EntityHandle element, int interpolationOrder=1);
+	Eigen::VectorXd getErrorCoefficients(Eigen::Vector3d position,
+			std::vector<Eigen::Vector3d> vVs, int interpolationOrder=1);
+	Eigen::Vector4d evaluateLinearBasisFunctions(Eigen::Vector3d position,
 			iBase_EntityHandle element);
-	Eigen::Vector4d getInterpolationCoeffs(Eigen::Vector3d position,
+	Eigen::Vector4d evaluateLinearBasisFunctions(Eigen::Vector3d position,
 			std::vector<Eigen::Vector3d> vVs);
+	Eigen::VectorXd evaluateQuadraticErrorBases(
+			Eigen::Vector4d linearBasisFunctions);
+	Eigen::VectorXd evaluateCubicErrorBases(
+			Eigen::Vector4d linearBasisFunctions);
+
 
 	iMesh_Instance meshInstance;
+	bool vtkMesh;
 	iBase_EntitySetHandle rootEntitySet;
 //	iBase_EntitySetHandle vextexEntitySet;
 //	iBase_EntitySetHandle surfaceEntitySet;
 //	iBase_EntitySetHandle volumeEntitySet;
 
-	iBase_EntityHandle previousInterpolationElement;
+	iBase_EntityHandle previousCoordsToBasisElement;
 	Eigen::Matrix4d previousCoordsToBasis;
 
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentTetsMap;
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentFacesMap;
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentVertsMap;
+	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > surroundingVertsMap;
 	std::map<iBase_EntityHandle,std::vector<Eigen::Vector3d> > vertexVectorsMap;
 	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentTetsToFaceMap;
 };
