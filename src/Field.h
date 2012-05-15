@@ -314,7 +314,7 @@ Eigen::VectorXd Field<T>::getErrorCoefficients(
 				// TODO: could probably use block operations here
 				assert(errorBases.rows()==evaluatedErrorBases.cols());
 				for (int j=0;j<errorBases.rows();j++) {
-					evaluatedErrorBases(i,j) += errorBases[j];
+					evaluatedErrorBases(i,j) = errorBases[j];
 				}
 				T fieldValue = this->getField(surroundingVertices[i]);
 				T interpolatedField;
