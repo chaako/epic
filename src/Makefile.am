@@ -14,4 +14,7 @@ if USE_MPI
 epic_CXXFLAGS += -DHAVE_MPI
 endif
 epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lrt
+#epic_LDFLAGS = $(AM_LDFLAGS) -lrt -pg \
+#				$(FMDB_LIBDIR)/libFMDB.a $(FMDB_LIBDIR)/libSCORECModel.a \
+#				$(FMDB_LIBDIR)/libmeshModel.a $(FMDB_LIBDIR)/libSCORECUtil.a
 epic_LDADD   = ../cubature/libcubature.a

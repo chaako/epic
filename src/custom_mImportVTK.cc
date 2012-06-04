@@ -28,8 +28,8 @@ using std::istream;
 using std::endl;
 using std::vector;
  
-void importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in);
-void importLookUpTable(pMeshMdl mesh, FILE* in, int numPnts);
+void original_importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in);
+void original_importLookUpTable(pMeshMdl mesh, FILE* in, int numPnts);
 void custom_importLookUpTable(pMeshMdl, FILE*, vector<pMeshEnt>, int);
 // **********************************************************
 int custom_importVTK(mMesh *mesh, const char *fName)
@@ -223,21 +223,21 @@ int custom_importVTK(mMesh *mesh, const char *fName)
    if(strcmp(pt_str, "POINT_DATA")==0)
     {
     if(strcmp(att_str, "SCALARS")==0)
-     importLookUpTable(mesh, in, vertices.size());
+     original_importLookUpTable(mesh, in, vertices.size());
     if(strcmp(att_str, "FIELD")==0)
-     importTags(mesh, vertices, in);
+     original_importTags(mesh, vertices, in);
     }
    else if(strcmp(pt_str, "CELL_DATA")==0)
     {
     if(strcmp(att_str, "SCALARS")==0)
-//     importLookUpTable(mesh, in, regs_count);
+//     original_importLookUpTable(mesh, in, regs_count);
      custom_importLookUpTable(mesh, in, cellVec, cells_count);
     if(strcmp(att_str, "FIELD")==0)
     {
     if(mDim==2)
-     importTags(mesh, faceVec, in);
+     original_importTags(mesh, faceVec, in);
     else
-     importTags(mesh, regVec, in);
+     original_importTags(mesh, regVec, in);
     }
     }
   } 
@@ -295,7 +295,7 @@ void custom_importLookUpTable(pMeshMdl mesh, FILE* in, vector<pMeshEnt> entVec, 
  }
 // printf("nIntTags = %d\n", nIntTags);
 }
-void importLookUpTable(pMeshMdl mesh, FILE* in, int numPnts)
+void original_importLookUpTable(pMeshMdl mesh, FILE* in, int numPnts)
 {
  char scalar_type[64], scalar_name[64],dummy_str[64];
  fscanf(in, "%s %s", scalar_name, scalar_type);
@@ -319,7 +319,7 @@ void importLookUpTable(pMeshMdl mesh, FILE* in, int numPnts)
    }
  }
 }
-void importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in)
+void original_importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in)
 {
   int numTag, opq_data_size;
   char dummy_str[64];
