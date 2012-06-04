@@ -188,6 +188,7 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	// TODO: should make number of orbits adaptive
 	int numberOfOrbits=100;
 //	if (node==5 || node==2540)
+//	if (node%1000==42)
 	adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
 			vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
 	if (integrandContainer.outFile)

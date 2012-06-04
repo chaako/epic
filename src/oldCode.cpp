@@ -108,3 +108,146 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
 	return 0;
 }
 
+
+
+// start an orbit at a random node
+{
+	const char *fName = "integratedOrbitTest.p3d";
+	FILE* outFile = fopen(fName, "w");
+	fprintf(outFile, "# x y z density\n");
+	int nOrbits=0;
+	for (double multiplier=0.5; multiplier<3; multiplier*=2.) {
+		nOrbits++;
+		int iSelectedNode = rand() % ents0d_size;
+		double x, y, z;
+		double eFieldX, eFieldY, eFieldZ;
+		iMesh_getVtxCoord(mesh, ents0d[iSelectedNode], &x, &y, &z, &ierr);
+		CHECK("Failure getting vertex coordinates");
+		iBase_EntityHandle currentTet=NULL;
+		Eigen::Vector3d currentPosition(x,y,z);
+		Eigen::Vector3d currentVelocity, zHat(0.,0.,1.);
+		double potential;
+		iMesh_getDblData(mesh, ents0d[iSelectedNode], potential_tag, &potential,
+				&ierr);
+		CHECK("Failure getting potential tag");
+		currentVelocity = currentPosition.cross(zHat);
+		currentVelocity /= currentVelocity.norm();
+		currentVelocity *= sqrt(-potential);
+		currentVelocity *= multiplier;
+		Eigen::Vector3d eField(0.,0.,0.);
+		int eField_alloc = sizeof(Eigen::Vector3d);
+		int eField_size = sizeof(Eigen::Vector3d);
+		vector<Eigen::Vector3d> eFields, vertexVectors;
+		// TODO: initialize these in some better way
+		int nVertices=4;
+		eFields.reserve(nVertices);
+		vertexVectors.reserve(nVertices);
+		eFields.push_back(eField);
+		eFields.push_back(eField);
+		eFields.push_back(eField);
+		eFields.push_back(eField);
+		vertexVectors.push_back(eField);
+		vertexVectors.push_back(eField);
+		vertexVectors.push_back(eField);
+		vertexVectors.push_back(eField);
+		// make output a text file in Point3D format for VisIt
+		double dt=0.01, tMax=100;
+		currentPosition -= currentVelocity*dt/2.;
+		bool inNewTet = true;
+		int nSteps=0, nNewTet=0;
+		std::cout << "Initial radius=" << currentPosition.norm() << endl;
+		for (double t=0; t<tMax; t+=dt) {
+			nSteps++;
+			currentPosition += dt*currentVelocity;
+			inNewTet = !checkIfInTet(currentPosition, vertexVectors);
+			if (inNewTet) {
+				nNewTet++;
+				// determine which tet currentPosition is in
+				iBase_EntityHandle *entities = NULL;
+				int entities_alloc = 0, entities_size;
+
+				if (currentTet) {
+					iMesh_getEnt2ndAdj(mesh, currentTet, iBase_VERTEX,
+							iBase_REGION, &entities, &entities_alloc,
+							&entities_size, &ierr);
+					CHECK("Getting regions adjacent to entity failed");
+				} else {
+					iMesh_getEntAdj(mesh, ents0d[iSelectedNode],
+							iBase_REGION, &entities, &entities_alloc,
+							&entities_size, &ierr);
+					CHECK("Getting regions adjacent to entity failed");
+				}
+				for (int i=0; i<entities_size; i++) {
+					if (checkIfInTet(currentPosition, mesh, entities[i])) {
+						currentTet = entities[i];
+						inNewTet = false;
+						break;
+					}
+				}
+				// assert(inNewTet == false);
+				if(entities) free (entities);
+				entities_alloc = 0;
+
+				if (inNewTet==true) {
+					std::cout << "Failed to identify current tet: currentPosition ="
+							<< currentPosition << endl;
+					std::cout << "nSteps=" << nSteps << ", nNewTet=" << nNewTet << endl;
+					break;
+				}
+
+				iMesh_setIntData(mesh, currentTet, visited_tag, nOrbits, &ierr);
+				CHECK("Failure setting visited tag");
+
+				// get coordinates and field at vertices
+				// TODO: unify with getVertexVectors
+				iBase_EntityHandle *vertices = NULL;
+				int vertices_alloc = 0, vertices_size;
+
+				iMesh_getEntAdj(mesh, currentTet, iBase_VERTEX, &vertices, &vertices_alloc,
+						&vertices_size, &ierr);
+				CHECK("Getting vertices adjacent to entity failed");
+
+				assert(vertices_size==vertexVectors.size() && vertices_size==eFields.size());
+				for (int i=0; i<vertices_size; i++) {
+					iMesh_getVtxCoord(mesh, vertices[i], &x, &y, &z, &ierr);
+					CHECK("Failure getting vertex coordinates");
+					vertexVectors[i] << x, y, z;
+
+					iMesh_getDblData(mesh, vertices[i], eFieldX_tag, &eFieldX, &ierr);
+					CHECK("Failure getting double data");
+					iMesh_getDblData(mesh, vertices[i], eFieldY_tag, &eFieldY, &ierr);
+					CHECK("Failure getting double data");
+					iMesh_getDblData(mesh, vertices[i], eFieldZ_tag, &eFieldZ, &ierr);
+					CHECK("Failure getting double data");
+					eField << eFieldX, eFieldY, eFieldZ;
+
+					// iMesh_getData(mesh, vertices[i], eField_tag, &eField,
+					// &eField_alloc, &eField_size, &ierr);
+					// CHECK("Failure getting eField tag");
+					eFields[i] = eField;
+				}
+				if(vertices) free (vertices);
+				vertices_alloc = 0;
+			}
+
+			assert(vertexVectors.size()==nVertices);
+			std::vector<double> vertexWeights = getVertexWeights(currentPosition,
+					vertexVectors);
+			Eigen::Vector3d currentAcceleration(0.,0.,0.);
+			assert(eFields.size()==vertexWeights.size());
+			for (int i=0; i<vertexWeights.size(); i++) {
+				currentAcceleration += eFields[i]*vertexWeights[i];
+			}
+			currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
+			double eFieldR = currentAcceleration.dot(currentPosition)/
+					currentPosition.norm();
+			currentVelocity += dt*currentAcceleration;
+			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
+					currentPosition[2], eFieldR);
+			// fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
+			// currentPosition[2], nNewTet);
+		}
+		std::cout << "Final radius=" << currentPosition.norm() << endl;
+	}
+	fclose(outFile);
+}

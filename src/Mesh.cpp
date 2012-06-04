@@ -701,6 +701,7 @@ Eigen::VectorXd Mesh::evaluateQuadraticErrorBases(
 Eigen::VectorXd Mesh::evaluateCubicErrorBases(
 		Eigen::Vector4d linearBasisFunctions) {
 	Eigen::VectorXd cubicBasisFunctions(16);
+//	Eigen::VectorXd cubicBasisFunctions(22);
 	// TODO: replace below with some sort of loop?
 	cubicBasisFunctions[0] = linearBasisFunctions[0]*
 			linearBasisFunctions[0]*linearBasisFunctions[1];
@@ -737,6 +738,19 @@ Eigen::VectorXd Mesh::evaluateCubicErrorBases(
 			linearBasisFunctions[1]*linearBasisFunctions[3];
 	cubicBasisFunctions[15] = linearBasisFunctions[3]*
 			linearBasisFunctions[2]*linearBasisFunctions[3];
+
+//	cubicBasisFunctions[16] =
+//			linearBasisFunctions[0]*linearBasisFunctions[1];
+//	cubicBasisFunctions[17] =
+//			linearBasisFunctions[0]*linearBasisFunctions[2];
+//	cubicBasisFunctions[18] =
+//			linearBasisFunctions[0]*linearBasisFunctions[3];
+//	cubicBasisFunctions[19] =
+//			linearBasisFunctions[1]*linearBasisFunctions[2];
+//	cubicBasisFunctions[20] =
+//			linearBasisFunctions[1]*linearBasisFunctions[3];
+//	cubicBasisFunctions[21] =
+//			linearBasisFunctions[2]*linearBasisFunctions[3];
 
 	return cubicBasisFunctions;
 }

@@ -173,7 +173,9 @@ void Orbit::integrate(ElectricField& electricField,
 void Orbit::integrate(PotentialField& potentialField, ElectricField& electricField,
 		Field<int>& faceTypeField, CodeField& vertexTypeField, FILE *outFile) {
 	// TODO: need some clever way to set tMax and/or detect trapped orbits
+//	double dt=std::min(0.005,0.005/initialVelocity.norm()), tMax=100;
 	double dt=std::min(0.01,0.01/initialVelocity.norm()), tMax=100;
+//	double dt=std::min(0.02,0.02/initialVelocity.norm()), tMax=100;
 	Eigen::Vector3d currentPosition = initialPosition;
 	Eigen::Vector3d currentVelocity = initialVelocity;
 	// TODO: shouldn't hard-code quasi-neutral operation
@@ -249,9 +251,13 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 					double perturbedPotential = potentialField.getField(
 							perturbedPosition, &currentElement, interpolationOrder);
 					// TODO: track down why perturbedPotential sometimes is NaN
+//					std::cout << "calculation of error term succeeded." <<
+//							i << " " << currentElement << std::endl;
 					if (isnan(perturbedPotential)) {
 						perturbedPotential = potentialField.getField(
 								perturbedPosition, &currentElement, 1);
+						std::cout << "calculation of error term failed." <<
+								i << " " << currentElement << std::endl;
 					}
 //					if (isnan(potential) || isnan(perturbedPotential)) {
 //						std::cout << potential << " " << perturbedPotential <<
@@ -315,12 +321,16 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 
 		double eFieldR = currentAcceleration.dot(currentPosition)/
 				currentPosition.norm();
+//		 // TODO: comment out this
+//		currentAcceleration = -charge*currentPosition/
+//				pow(currentPosition.norm(),3.);
 		currentVelocity += dt*currentAcceleration;
 		Eigen::Vector3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
 		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
 		if (outFile) {
 			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
 					currentPosition[2], energy);
+//					currentPosition[2], eFieldR);
 		}
 		if (endLoop)
 			break;

@@ -89,6 +89,26 @@ int main(int argc, char *argv[]) {
 		std::cout << std::endl << "Setting potential..." << std::endl;
 	potential.calcField();
 
+//	// Integrate a circular test orbit
+//	{
+//		iBase_EntityHandle node = ionDensity.entities[2540];
+//		double nodePotential = potential.getField(node);
+//		Eigen::Vector3d position = mesh.getCoordinates(node);
+//		Eigen::Vector3d velocity, zHat(0.,0.,1.);
+//		velocity = position.cross(zHat);
+//		velocity /= velocity.norm();
+//		velocity *= sqrt(-nodePotential);
+//		Orbit orbit(&mesh,node,velocity,1.);
+//		const char *fName = "integratedOrbitTest.p3d";
+//		FILE* outFile = fopen(fName, "w");
+//		fprintf(outFile, "x y z energy\n");
+//		orbit.integrate(potential, eField,
+//				faceType, vertexType, outFile);
+//		fclose(outFile);
+//
+//		return 0;
+//	}
+
 	for (int i=0; i<1; i++) {
 		if (mpiId == 0)
 			std::cout << std::endl  << std::endl << "ITERATION " << i << std::endl;

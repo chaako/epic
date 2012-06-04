@@ -142,7 +142,7 @@ template <class T>
 T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity,
 		int interpolationOrder) {
 	// TODO: this doesn't work for non-vertex fields
-	T field;
+	T field=T();
 	bool inElement=false;
 	Eigen::Vector4d linearBasisFunctions;
 	Eigen::VectorXd errorBases, errorCoefficients;
@@ -282,6 +282,7 @@ Eigen::VectorXd Field<T>::getErrorCoefficients(
 			errorBasesSize = 6;
 		} else if (interpolationOrder==3) {
 			errorBasesSize = 16;
+//			errorBasesSize = 22;
 		} else {
 			// TODO: specify exception
 			throw;
