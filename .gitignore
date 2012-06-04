@@ -18,8 +18,6 @@
 # Executables
 src/epic
 
-# Output files
-
 # Autotools files
 autom4te.cache/
 /config.status
@@ -47,5 +45,26 @@ fmdb/buildFMDBSerial.env
 fmdb/buildFMDBSerial.sh
 fmdb/fmdbSerial/
 
+# Library build dirs
+boost/boost_1_49_0/
+cuba/Cuba-3.0/
+cubature/cubature-20101018/
+eigen/eigen-eigen-13a11181fc5a/
+
+# Profiling output
+gmon.out
+
+# Input files
+*.vtk
+*.vtu
+
 # Output files
 src/distFunc
+*.sms
+*.p3d
+*.dat
+*.nc
+*.out
+
+# Logs
+*.log
