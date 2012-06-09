@@ -146,6 +146,8 @@ T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity,
 	bool inElement=false;
 	Eigen::Vector4d linearBasisFunctions;
 	Eigen::VectorXd errorBases, errorCoefficients;
+//	std::cout << this << " " << *entity << " " << currentElement << " " <<
+//			position.transpose() << std::endl;
 	if (*entity==NULL) {
 		// TODO: handle case with no entity hint
 		std::vector<iBase_EntityHandle> adjacentEntities =

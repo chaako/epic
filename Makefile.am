@@ -1,1 +1,1 @@
-SUBDIRS = cubature eigen fmdb src boost
+SUBDIRS = vtk odeint cuba cubature eigen fmdb src boost

@@ -10,7 +10,8 @@
 
 #define VOLUME_TOLERANCE 1.e-8
 #define LENGTH_TOLERANCE 1.e-10
-#define DELTA_LENGTH 1.e-10
+//#define DELTA_LENGTH 1.e-10
+#define DELTA_LENGTH 1.e-5
 
 #define WORKTAG 999999998
 #define DIETAG 999999999
@@ -39,6 +40,8 @@ enum {
 
 #include <numeric>
 #include <vector>
+#include <boost/array.hpp>
+#include <boost/numeric/odeint.hpp> // Not true boost library
 #include <set>
 //#include <type_traits> // Requires -std=c++0x compiler flag
 #include <boost/type_traits.hpp>
@@ -47,9 +50,23 @@ enum {
 //#include <boost/timer/timer.hpp>
 #include <algorithm>
 
+#include <vtkVersion.h>
+#include <vtkSmartPointer.h>
+#include <vtkCellArray.h>
+#include <vtkTetra.h>
+#include <vtkGenericCell.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkPoints.h>
+#include <vtkCellType.h>
+#include <vtkDataSetMapper.h>
+#include <vtkCellTreeLocator.h>
+#include <vtkCellLocator.h>
+
 #include "Mesh.h"
 #include "IntegrandContainer.h"
 #include "Field.h"
+#include "Stepper.h"
+#include "VelocityAndAcceleration.h"
 #include "Orbit.h"
 
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)

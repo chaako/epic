@@ -28,12 +28,12 @@ Mesh::Mesh(std::string inputMeshFile) {
 	if (inputMeshFile.find(".vtk")==std::string::npos) {
 		iMesh_load(mesh, root, inputMeshFile.c_str(), options, &ierr,
 				strlen(inputMeshFile.c_str()), options_len);
-		vtkMesh = false;
+		vtkInputMesh = false;
 	} else {
 		// FMDB's importVTK can't handle our tags, so use custom version
 		ierr = custom_importVTK((mMesh *)mesh, inputMeshFile.c_str());
 		CHECK("Load failed");
-		vtkMesh = true;
+		vtkInputMesh = true;
 	}
 
 	// store adjacency info for fast access
@@ -52,6 +52,8 @@ Mesh::Mesh(std::string inputMeshFile) {
 	}
 
 	previousCoordsToBasisElement = NULL;
+
+	vtkMesh_ptr = this->createVtkMesh();
 }
 
 Mesh::~Mesh() {
@@ -274,9 +276,21 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
 	}
 	if (!*tetFound)
 		tet = adjacentTet;
+//		tet = ents[0];
 
+//	int dimension=this->getEntityDimension(tet);
+//	std::cout << tet << " " << *tetFound << " " << isTet << " " << dimension << std::endl;
 	return tet;
 }
+
+//iBase_EntityHandle Mesh::findStartingTet(Eigen::Vector3d const &position,
+//		Eigen::Vector3d const &velocity, iBase_EntityHandle vertex) {
+//	iBase_EntityHandle startingTet=NULL;
+//	Eigen::Vector3d perturbedPosition =
+//			position + DELTA_LENGTH*velocity/velocity.norm();
+//
+//	return startingTet;
+//}
 
 std::vector<iBase_EntityHandle> Mesh::getEntities(int dimension) {
 	int ierr;
@@ -390,9 +404,11 @@ bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition,
 	Eigen::Vector4d linearBasisFunctions = this->evaluateLinearBasisFunctions(
 			currentPosition, vertexVectors);
 	bool inElement=true;
-	for (int i=0; i<linearBasisFunctions.rows(); i++)
-		if (linearBasisFunctions[i]<0.)
-			inElement=false;
+	for (int i=0; i<linearBasisFunctions.rows(); i++) {
+		//		if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE)
+				if (linearBasisFunctions[i]<0.)
+					inElement=false;
+	}
 	return inElement;
 }
 
@@ -753,4 +769,85 @@ Eigen::VectorXd Mesh::evaluateCubicErrorBases(
 //			linearBasisFunctions[2]*linearBasisFunctions[3];
 
 	return cubicBasisFunctions;
+}
+
+vtkSmartPointer<vtkUnstructuredGrid> Mesh::createVtkMesh() {
+	vtkSmartPointer<vtkUnstructuredGrid> mesh =
+			vtkSmartPointer<vtkUnstructuredGrid>::New();
+
+	vtkSmartPointer<vtkPoints> points =
+			vtkSmartPointer<vtkPoints>::New();
+	std::vector<iBase_EntityHandle> vertices =
+			this->getEntities(iBase_VERTEX);
+	points->SetNumberOfPoints(vertices.size());
+	std::map<iBase_EntityHandle,int> indexOfVertex;
+	for(int i=0; i<vertices.size(); i++) {
+		Eigen::Vector3d vV = this->getCoordinates(vertices[i]);
+		points->InsertPoint(i, vV[0], vV[1], vV[2]);
+		indexOfVertex[vertices[i]] = i;
+//		if (i==1399)
+//			std::cout << vV.transpose() << " " << vertices[i] << std::endl;
+	}
+//	for(std::vector<iBase_EntityHandle>::iterator vertexIter
+//			= vertices.begin();
+//			vertexIter != vertices.end();
+//			++vertexIter) {
+//		Eigen::Vector3d vV = this->getCoordinates(*vertexIter);
+//		points->InsertNextPoint(vV[0],vV[1],vV[2]);
+//	}
+	mesh->SetPoints(points);
+
+	vtkSmartPointer<vtkCellArray> cellArray =
+			vtkSmartPointer<vtkCellArray>::New();
+	std::vector<iBase_EntityHandle> elements =
+			this->getEntities(iBase_REGION);
+	vtkSmartPointer<vtkTetra> tetra =
+			vtkSmartPointer<vtkTetra>::New();
+	for (int i=0; i<elements.size(); i++) {
+		std::vector<iBase_EntityHandle> verts =
+				this->getAdjacentEntities(elements[i],
+						iBase_VERTEX);
+		tetra->GetPointIds()->SetId(0, indexOfVertex[verts[0]]);
+		tetra->GetPointIds()->SetId(1, indexOfVertex[verts[1]]);
+		tetra->GetPointIds()->SetId(2, indexOfVertex[verts[2]]);
+		tetra->GetPointIds()->SetId(3, indexOfVertex[verts[3]]);
+		cellArray->InsertNextCell(tetra);
+	}
+	mesh->SetCells(tetra->GetCellType(), cellArray);
+//	mesh->SetCells(VTK_TETRA, cellArray);
+	mesh->Update();
+
+//	double coords[3];
+//	points->GetPoint(1399,coords);
+//	std::cout << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
+//	mesh->GetPoints()->GetPoint(1399,coords);
+//	std::cout << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
+//	return mesh;
+
+//	// Create the tree
+//	vtkSmartPointer<vtkCellTreeLocator> cellTree =
+//			vtkSmartPointer<vtkCellTreeLocator>::New();
+////	vtkSmartPointer<vtkCellLocator> cellTree =
+////			vtkSmartPointer<vtkCellLocator>::New();
+//	cellTree->SetDataSet(mesh);
+//	cellTree->BuildLocator();
+//
+//	double testInside[3] = {2., 0.0, 0.0};
+//	double testOutside[3] = {10.0, 0.0, 0.0};
+//	double pcoords[3], weights[3];
+//	vtkSmartPointer<vtkGenericCell> cell = vtkSmartPointer<vtkGenericCell>::New();
+//	vtkIdType cellId = cellTree->FindCell(testInside,0,
+//			cell, pcoords, weights);
+//	std::cout << "In cell " << cellId << std::endl;
+//	double bounds[6];
+//	mesh->GetCellBounds(cellId,bounds);
+//	std::cout << bounds[0] << " " << bounds[1] << std::endl;
+//	std::cout << bounds[2] << " " << bounds[3] << std::endl;
+//	std::cout << bounds[4] << " " << bounds[5] << std::endl;
+//
+//	cellId = cellTree->FindCell(testOutside,0,
+//			cell, pcoords, weights);
+//	std::cout << "In cell " << cellId << std::endl;
+
+	return mesh;
 }

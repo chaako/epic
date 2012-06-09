@@ -45,11 +45,14 @@ fmdb/buildFMDBSerial.env
 fmdb/buildFMDBSerial.sh
 fmdb/fmdbSerial/
 
-# Library build dirs
+# Library builds
 boost/boost_1_49_0/
 cuba/Cuba-3.0/
+cuba/config.h
 cubature/cubature-20101018/
 eigen/eigen-eigen-13a11181fc5a/
+odeint/headmyshoulder-odeint-v2-47dbdac/
+vtk/VTK/
 
 # Profiling output
 gmon.out

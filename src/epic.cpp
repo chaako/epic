@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 	DensityField electronDensity(&mesh,std::string("electronDensity"));
 
 	// TODO: add more robust detection and handling of existing fields
-	if (!mesh.vtkMesh) {
+	if (!mesh.vtkInputMesh) {
 		if (mpiId == 0)
 			std::cout << std::endl << "Calculating electric field..." << std::endl;
 		eField.calcField(potential);

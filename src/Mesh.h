@@ -9,6 +9,17 @@
 #define MESH_H_
 
 #include <map>
+#include <vector>
+
+#include <vtkVersion.h>
+#include <vtkSmartPointer.h>
+#include <vtkCellArray.h>
+#include <vtkTetra.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkPoints.h>
+#include <vtkCellType.h>
+#include <vtkDataSetMapper.h>
+
 
 template <class T> class Field;
 
@@ -23,6 +34,8 @@ public:
 	Eigen::Vector3d getCoordinates(iBase_EntityHandle node, bool useMap=false);
 	iBase_EntityHandle findTet(Eigen::Vector3d oldPosition, Eigen::Vector3d position,
 			iBase_EntityHandle adjacentTet, bool *tetFound, bool isTet=true);
+//	iBase_EntityHandle findStartingTet(Eigen::Vector3d const &position,
+//			Eigen::Vector3d const &velocity, iBase_EntityHandle vertex);
 	std::vector<iBase_EntityHandle> getVertices(iBase_EntityHandle element);
 	std::vector<iBase_EntityHandle> getAdjacentEntities(iBase_EntityHandle element,
 			int dimension);
@@ -74,9 +87,13 @@ public:
 	Eigen::VectorXd evaluateCubicErrorBases(
 			Eigen::Vector4d linearBasisFunctions);
 
+	vtkSmartPointer<vtkUnstructuredGrid> createVtkMesh();
+
+	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh_ptr;
 
 	iMesh_Instance meshInstance;
-	bool vtkMesh;
+	// TODO: rename vtkInputMesh something like inputMeshIsVtk
+	bool vtkInputMesh;
 	iBase_EntitySetHandle rootEntitySet;
 //	iBase_EntitySetHandle vextexEntitySet;
 //	iBase_EntitySetHandle surfaceEntitySet;
