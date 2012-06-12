@@ -10,8 +10,8 @@
 
 #define VOLUME_TOLERANCE 1.e-8
 #define LENGTH_TOLERANCE 1.e-10
-//#define DELTA_LENGTH 1.e-10
-#define DELTA_LENGTH 1.e-5
+#define DELTA_LENGTH 1.e-10
+//#define DELTA_LENGTH 1.e-5
 
 #define WORKTAG 999999998
 #define DIETAG 999999999

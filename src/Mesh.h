@@ -90,6 +90,8 @@ public:
 	vtkSmartPointer<vtkUnstructuredGrid> createVtkMesh();
 
 	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh_ptr;
+	vtkSmartPointer<vtkCellTreeLocator> vtkCellTree_ptr;
+	std::vector<iBase_EntityHandle> vtkToIMesh;
 
 	iMesh_Instance meshInstance;
 	// TODO: rename vtkInputMesh something like inputMeshIsVtk
