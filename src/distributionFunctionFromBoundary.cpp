@@ -61,7 +61,10 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 			*fval *= exp(-charge*orbit.finalPotential);
 	} else if (orbit.finalPosition.norm()>1.) {
 //		std::cout << "orbit terminated with final position in domain:" <<
-//				std::endl << orbit.finalPosition << std::endl;
+//				std::endl << orbit.finalPosition.transpose() << " r=" <<
+//				orbit.finalPosition.norm() << " " << orbit.finalFaceType <<
+//				" " << orbit.negativeEnergy << std::endl;
+//		std::cout << ".";
 	}
 	if (((IntegrandContainer*)integrandContainer_ptr)->outFile) {
 		fprintf(((IntegrandContainer*)integrandContainer_ptr)->outFile,

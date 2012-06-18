@@ -202,75 +202,101 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	} else {
 		negativeEnergy = false;
 	}
-	// For second order leap-frog, offset position from velocity in time
-	currentPosition -= currentVelocity*dt/2.;
 	// TODO: treat inwards electrons in a better way?
 	if (vertexType==4 &&
 			0.5*pow(initialNormalVelocity.norm(),2.)<charge*phiSurface &&
 			currentVelocity.dot(vertexNormalVector)<0.) {
 		currentVelocity -= 2.*initialNormalVelocity;
 	}
+
 	int nSteps=0;
 	double potential=0.;
 	bool endLoop=false;
 	bool foundTet=false;
+
+	// TODO: hard-coding dimensionality
+	const int nDim=3;
+	boost::array<Eigen::Matrix<double,nDim,1>, 2> positionAndVelocity;
+//	positionAndVelocity[0] = currentPosition;
+//	positionAndVelocity[1] = currentVelocity;
+	VelocityVerletStepper<nDim> timestepper;
+	VelocityAndAcceleration<nDim> velocityAndAcceleration(potentialField,
+			charge, initialNode);
+	foundTet = velocityAndAcceleration.foundTet;
+
+//	// For second order leap-frog, offset position from velocity in time
+//	currentPosition -= currentVelocity*dt/2.;
 	for (double t=0.; t<tMax; t+=dt) {
 		nSteps++;
 		Eigen::Vector3d previousPosition = currentPosition;
-		currentPosition += dt*currentVelocity;
+		Eigen::Vector3d previousVelocity = currentVelocity;
 		iBase_EntityHandle previousElement = currentElement;
-		Eigen::Vector3d currentAcceleration(0.,0.,0.);
-		// TODO: replace this hack
-		if (t==0.) {
-			currentElement = mesh_ptr->findTet(previousPosition,
-					currentPosition, initialNode, &foundTet, false);
-			// TODO: figure out why sometimes throw here (grazing orbits?)
-//			if (!foundTet)
-//				throw;
-			int dimension=mesh_ptr->getEntityDimension(currentElement);
-			if (dimension!=iBase_REGION)
-				foundTet = false;
-		}
-//		if (!foundTet)
-//			break;
-		if (foundTet) {
+//		currentPosition += dt*currentVelocity;
+//		Eigen::Vector3d currentAcceleration(0.,0.,0.);
+//		// TODO: replace this hack
+//		if (t==0.) {
+//			currentElement = mesh_ptr->findTet(previousPosition,
+//					currentPosition, initialNode, &foundTet, false);
+//			// TODO: figure out why sometimes throw here (grazing orbits?)
+////			if (!foundTet)
+////				throw;
+//			int dimension=mesh_ptr->getEntityDimension(currentElement);
+//			if (dimension!=iBase_REGION)
+//				foundTet = false;
+//		}
+////		if (!foundTet)
+////			break;
+//		if (foundTet) {
 			try {
-				// TODO: set order through input parameter?
-				int interpolationOrder = 1;
-//				currentAcceleration = charge*
-//						electricField.getField(currentPosition, &currentElement);
-				potential = potentialField.getField(currentPosition, &currentElement,
-						interpolationOrder);
-				if (isnan(potential))
-					potential = potentialField.getField(currentPosition,
-							&currentElement, 1);
-				// TODO: hard-coding dimension here...
-				for (int i=0; i<3; i++) {
-					Eigen::Vector3d perturbedPosition = currentPosition +
-							Eigen::Vector3d::Unit(i)*DELTA_LENGTH;
-					double perturbedPotential = potentialField.getField(
-							perturbedPosition, &currentElement, interpolationOrder);
-					// TODO: track down why perturbedPotential sometimes is NaN
-//					std::cout << "calculation of error term succeeded." <<
-//							i << " " << currentElement << std::endl;
-					if (isnan(perturbedPotential)) {
-						perturbedPotential = potentialField.getField(
-								perturbedPosition, &currentElement, 1);
-						std::cout << "calculation of error term failed." <<
-								i << " " << currentElement << std::endl;
-					}
-//					if (isnan(potential) || isnan(perturbedPotential)) {
-//						std::cout << potential << " " << perturbedPotential <<
-//						" " << currentPosition.transpose() << std::endl;
-//						throw;
-//					}
-					currentAcceleration[i] =
-							-charge*(perturbedPotential-potential)/DELTA_LENGTH;
+				positionAndVelocity[0] = currentPosition;
+				positionAndVelocity[1] = currentVelocity;
+				timestepper.do_step(velocityAndAcceleration, positionAndVelocity, t, dt);
+				currentPosition = positionAndVelocity[0];
+				currentVelocity = positionAndVelocity[1];
+				currentElement = velocityAndAcceleration.currentElement;
+				foundTet = mesh_ptr->checkIfInTet(currentPosition, currentElement);
+				if (!foundTet) {
+					currentElement = mesh_ptr->findTet(previousPosition, currentPosition,
+							currentElement, &foundTet);
 				}
+//				// TODO: set order through input parameter?
+//				int interpolationOrder = 1;
+////				currentAcceleration = charge*
+////						electricField.getField(currentPosition, &currentElement);
+//				potential = potentialField.getField(currentPosition, &currentElement,
+//						interpolationOrder);
+//				if (isnan(potential))
+//					potential = potentialField.getField(currentPosition,
+//							&currentElement, 1);
+//				// TODO: hard-coding dimension here...
+//				for (int i=0; i<3; i++) {
+//					Eigen::Vector3d perturbedPosition = currentPosition +
+//							Eigen::Vector3d::Unit(i)*DELTA_LENGTH;
+//					double perturbedPotential = potentialField.getField(
+//							perturbedPosition, &currentElement, interpolationOrder);
+//					// TODO: track down why perturbedPotential sometimes is NaN
+////					std::cout << "calculation of error term succeeded." <<
+////							i << " " << currentElement << std::endl;
+//					if (isnan(perturbedPotential)) {
+//						perturbedPotential = potentialField.getField(
+//								perturbedPosition, &currentElement, 1);
+//						std::cout << "calculation of error term failed." <<
+//								i << " " << currentElement << std::endl;
+//					}
+////					if (isnan(potential) || isnan(perturbedPotential)) {
+////						std::cout << potential << " " << perturbedPotential <<
+////						" " << currentPosition.transpose() << std::endl;
+////						throw;
+////					}
+//					currentAcceleration[i] =
+//							-charge*(perturbedPotential-potential)/DELTA_LENGTH;
+//				}
 			} catch (int signal) {
 				switch (signal) {
 				case OUTSIDE_DOMAIN:
 					foundTet = false;
+					currentPosition = positionAndVelocity[0];
+					currentVelocity = positionAndVelocity[1];
 					break;
 				default:
 					// TODO: handle other exceptions?
@@ -281,9 +307,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				// TODO: handle other exceptions?
 				throw;
 			}
-		}
+//		}
 
 		if (foundTet==false) {
+			// TODO: if near vertex could leave domain through non-boundary face
+			//       by crossing sliver of other tet in one time-step
 			iBase_EntityHandle faceCrossed = mesh_ptr->findFaceCrossed(
 					previousElement, previousPosition, currentPosition);
 			// TODO: grazing orbits don't enter domain in first time-step
@@ -306,6 +334,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 			} else {
 				faceType = 0;
 			}
+//			if (faceType==0) {
+//				std::cout << previousElement << " " <<
+//						faceCrossed << " " << currentPosition.norm() <<
+//						" " << previousPosition.norm() << std::endl;
+//			}
 			finalFaceType = faceType;
 			if (faceType==4 && 0.5*pow(normalVelocity.norm(),2.)<charge*phiSurface) {
 				currentElement = previousElement;
@@ -313,21 +346,40 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				// TODO: resetting position isn't quite right
 				currentPosition = previousPosition;
 				// TODO: revisit this in magnetized case
+				// TODO: calc this from previousVelocity?
 				currentVelocity -= 2.*normalVelocity;
 			} else {
+//				if (faceType==0)
+//					std::cout << "last face crossed was an interior one" << std::endl;
 				endLoop=true;
 			}
 		}
 
-		double eFieldR = currentAcceleration.dot(currentPosition)/
-				currentPosition.norm();
-//		 // TODO: comment out this
-//		currentAcceleration = -charge*currentPosition/
-//				pow(currentPosition.norm(),3.);
-		currentVelocity += dt*currentAcceleration;
-		Eigen::Vector3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
-		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
+//		if (nSteps==1 && !foundTet) {
+//			std::cout << currentPosition.transpose() << " " <<
+//					currentVelocity.transpose() << " " <<
+//					currentPosition.dot(currentVelocity) << std::endl;
+//		}
+
+//		double eFieldR = currentAcceleration.dot(currentPosition)/
+//				currentPosition.norm();
+////		 // TODO: comment out this
+////		currentAcceleration = -charge*currentPosition/
+////				pow(currentPosition.norm(),3.);
+//		currentVelocity += dt*currentAcceleration;
+//		Eigen::Vector3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
+//		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
+		if (foundTet) {
+			potential = potentialField.getField(currentPosition,
+					&velocityAndAcceleration.currentElement,
+					velocityAndAcceleration.interpolationOrder);
+		} else {
+			potential = 0.;
+		}
+		double energy = 1./2.*pow(currentVelocity.norm(),2.) + charge*potential;
 		if (outFile) {
+//			fprintf(outFile, "%f %f %f %p\n", currentPosition[0], currentPosition[1],
+//					currentPosition[2], (void*)currentElement);
 			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
 					currentPosition[2], energy);
 //					currentPosition[2], eFieldR);
@@ -336,6 +388,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 			break;
 	}
 //	std::cout << "Final radius=" << currentPosition.norm() << std::endl;
+//	std::cout << "nSteps=" << nSteps << std::endl;
 	finalPosition = currentPosition;
 	// TODO: correct for time-step offset?
 	finalVelocity = currentVelocity;

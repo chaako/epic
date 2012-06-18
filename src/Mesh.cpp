@@ -53,10 +53,25 @@ Mesh::Mesh(std::string inputMeshFile) {
 
 	previousCoordsToBasisElement = NULL;
 
+	allVertices = this->getEntities(iBase_VERTEX);
+	for(int i=0; i<allVertices.size(); i++) {
+		indexOfVertices[allVertices[i]] = i;
+	}
+	allFaces = this->getEntities(iBase_FACE);
+	for(int i=0; i<allFaces.size(); i++) {
+		indexOfFaces[allFaces[i]] = i;
+	}
+	allElements = this->getEntities(iBase_REGION);
+	for(int i=0; i<allElements.size(); i++) {
+		indexOfElements[allElements[i]] = i;
+	}
+
 	vtkMesh_ptr = this->createVtkMesh();
 	vtkCellTree_ptr = vtkSmartPointer<vtkCellTreeLocator>::New();
 	vtkCellTree_ptr->SetDataSet(vtkMesh_ptr);
 	vtkCellTree_ptr->BuildLocator();
+
+
 }
 
 Mesh::~Mesh() {
@@ -300,8 +315,8 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
 		}
 	}
 	if (!*tetFound) {
-		tet = adjacentTet;
-//		tet = ents[0];
+//		tet = adjacentTet;
+		tet = ents[0];
 	}
 
 //	int dimension=this->getEntityDimension(tet);

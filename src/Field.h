@@ -149,10 +149,14 @@ T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity,
 //	std::cout << this << " " << *entity << " " << currentElement << " " <<
 //			position.transpose() << std::endl;
 	if (*entity==NULL) {
+//		std::cout << this << " " << *entity << " " << currentElement << " " <<
+//				position.transpose() << std::endl;
 		// TODO: handle case with no entity hint
 		std::vector<iBase_EntityHandle> adjacentEntities =
 				mesh_ptr->getAdjacentEntities(entities[0],iBase_REGION);
 		*entity = adjacentEntities[0];
+//		std::cout << this << " " << *entity << " " << currentElement << " " <<
+//				position.transpose() << std::endl << std::endl;
 	} else if (*entity==currentElement) {
 //		int dimension=mesh_ptr->getEntityDimension(*entity);
 //		if (dimension==iBase_REGION) {
@@ -175,6 +179,13 @@ T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity,
 	}
 	bool isElement;
 	if (!inElement) {
+//		if (currentElement==NULL) {
+//			std::cout << this << " " << *entity << " " << currentElement << " " <<
+//					position.transpose() << std::endl;
+//			std::cout << " " << mesh_ptr->indexOfVertices[*entity] <<
+//					" " << mesh_ptr->indexOfFaces[*entity] <<
+//					" " << mesh_ptr->indexOfElements[*entity] << std::endl;
+//		}
 		Eigen::Vector3d centroid(0.,0.,0.);
 		int dimension=mesh_ptr->getEntityDimension(*entity);
 		if (dimension!=iBase_REGION) {

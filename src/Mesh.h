@@ -101,6 +101,14 @@ public:
 //	iBase_EntitySetHandle surfaceEntitySet;
 //	iBase_EntitySetHandle volumeEntitySet;
 
+	std::vector<iBase_EntityHandle> allVertices;
+	std::vector<iBase_EntityHandle> allFaces;
+	std::vector<iBase_EntityHandle> allElements;
+
+	std::map<iBase_EntityHandle,int> indexOfVertices;
+	std::map<iBase_EntityHandle,int> indexOfFaces;
+	std::map<iBase_EntityHandle,int> indexOfElements;
+
 	iBase_EntityHandle previousCoordsToBasisElement;
 	Eigen::Matrix4d previousCoordsToBasis;
 

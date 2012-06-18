@@ -162,16 +162,19 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	integrandContainer.faceTypeField_ptr = &faceType;
 	integrandContainer.vertexTypeField_ptr = &vertexType;
 	std::stringstream fileNameStream;
-	fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
-			<< "_vert" << node << ".p3d";
+//	fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
+//			<< "_vert" << node << ".p3d";
+	fileNameStream << "distFunc/distributionFunction_q" << charge << "_r"
+			<< nodePosition.norm() << "_vert" << node << ".p3d";
 	integrandContainer.outFile = NULL;
-//	integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
 	std::stringstream fileNameStreamOrbit;
 	fileNameStreamOrbit << "orbits/orbits_q" << charge << "_r"
 			<< nodePosition.norm() << "_vert" << node << ".p3d";
-//	fprintf(integrandContainer.outFile, "x y z f\n");
 //	// TODO: don't hard-code output nodes
-//	if (node==5 || node==2540) {
+//	if (node==0) {
+////	if (node==5 || node==2540) {
+//		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
+//		fprintf(integrandContainer.outFile, "x y z f\n");
 //		integrandContainer.orbitOutFile =
 //				fopen(fileNameStreamOrbit.str().c_str(), "w");
 //		fprintf(integrandContainer.orbitOutFile, "x y z energy\n");
@@ -189,6 +192,7 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	int numberOfOrbits=100;
 //	if (node==5 || node==2540)
 //	if (node%1000==42)
+//	if (node==0)
 	adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
 			vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
 	if (integrandContainer.outFile)
