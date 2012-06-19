@@ -25,16 +25,16 @@ int main(int argc, char *argv[]) {
 	mpiId = MPI::COMM_WORLD.Get_rank();
 
 	if (mpiId == 0) {
-		std::cout << "  The number of processes is "
+		cout << "  The number of processes is "
 				<< MPI::COMM_WORLD.Get_size() << "\n";
 	}
 	if (MPI::COMM_WORLD.Get_size()<2) {
-		std::cout << "ERROR: MPI version currently requires minimum two processes" <<
-				std::endl << "Run './configure --with-mpi=no' to compile serial version" <<
-				std::endl;
+		cout << "ERROR: MPI version currently requires minimum two processes" <<
+				endl << "Run './configure --with-mpi=no' to compile serial version" <<
+				endl;
 		return 1;
 	}
-//	std::cout << "  Process " << mpiId << " says 'Hello, world!'\n";
+//	cout << "  Process " << mpiId << " says 'Hello, world!'\n";
 #endif
 
 	Mesh mesh(argv[1]);
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 	FILE *potentialFile=NULL;
 
 	if (mpiId == 0) {
-		std::string fileName;
+		string fileName;
 		fileName = "density.dat";
 		densityFile = fopen(fileName.c_str(), "w");
 		fprintf(densityFile, "# r n_i dn_i\n");
@@ -57,25 +57,25 @@ int main(int argc, char *argv[]) {
 		fprintf(potentialFile, "# r phi\n");
 	}
 
-	Field<int> faceType(&mesh,std::string("cell_code"),iBase_FACE);
-	CodeField vertexType(&mesh,std::string("vertex_code"),iBase_VERTEX);
-	PotentialField potential(&mesh,std::string("potential"));
-	ElectricField eField(&mesh,std::string("eField"));
-	DensityField density(&mesh,std::string("density"));
-	DensityField ionDensity(&mesh,std::string("ionDensity"));
-	DensityField electronDensity(&mesh,std::string("electronDensity"));
+	Field<int> faceType(&mesh,string("cell_code"),iBase_FACE);
+	CodeField vertexType(&mesh,string("vertex_code"),iBase_VERTEX);
+	PotentialField potential(&mesh,string("potential"));
+	ElectricField eField(&mesh,string("eField"));
+	DensityField density(&mesh,string("density"));
+	DensityField ionDensity(&mesh,string("ionDensity"));
+	DensityField electronDensity(&mesh,string("electronDensity"));
 
 	// TODO: add more robust detection and handling of existing fields
 	if (!mesh.vtkInputMesh) {
 		if (mpiId == 0)
-			std::cout << std::endl << "Calculating electric field..." << std::endl;
+			cout << endl << "Calculating electric field..." << endl;
 		eField.calcField(potential);
 		if (mpiId == 0)
-			std::cout << std::endl << "Calculating electron density..." << std::endl;
+			cout << endl << "Calculating electron density..." << endl;
 		electronDensity.calcField(eField, potential, faceType, vertexType, -1.,
 				density_electronsFile);
 		if (mpiId == 0)
-			std::cout << std::endl << "Calculating ion charge-density..." << std::endl;
+			cout << endl << "Calculating ion charge-density..." << endl;
 		ionDensity.calcField(eField, potential, faceType, vertexType, 1.,
 				densityFile);
 		// TODO: shouldn't return before closing files etc...
@@ -83,10 +83,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (mpiId == 0)
-		std::cout << std::endl << "Setting vertex codes..." << std::endl;
+		cout << endl << "Setting vertex codes..." << endl;
 	vertexType.calcField(faceType);
 	if (mpiId == 0)
-		std::cout << std::endl << "Setting potential..." << std::endl;
+		cout << endl << "Setting potential..." << endl;
 	potential.calcField();
 
 //	// Integrate a circular test orbit
@@ -111,31 +111,31 @@ int main(int argc, char *argv[]) {
 
 	for (int i=0; i<1; i++) {
 		if (mpiId == 0)
-			std::cout << std::endl  << std::endl << "ITERATION " << i << std::endl;
+			cout << endl  << endl << "ITERATION " << i << endl;
 		if (mpiId == 0)
-			std::cout << std::endl << "Calculating electric field..." << std::endl;
+			cout << endl << "Calculating electric field..." << endl;
 		eField.calcField(potential);
 		if (mpiId == 0)
-			std::cout << std::endl << "Calculating electron density..." << std::endl;
+			cout << endl << "Calculating electron density..." << endl;
 		electronDensity.calcField(eField, potential, faceType, vertexType, -1.,
 				density_electronsFile);
 		if (mpiId == 0)
-			std::cout << std::endl << "Calculating ion charge-density..." << std::endl;
+			cout << endl << "Calculating ion charge-density..." << endl;
 		ionDensity.calcField(eField, potential, faceType, vertexType, 1.,
 				densityFile);
 		if (mpiId == 0)
-			std::cout << std::endl << "Calculating charge density..." << std::endl;
+			cout << endl << "Calculating charge density..." << endl;
 		density.calcField(ionDensity, electronDensity);
 		if (mpiId == 0)
-			std::cout << std::endl << "Saving current potential..." << std::endl;
-		std::stringstream potentialCopyName;
-		potentialCopyName << "potIter" << std::setfill('0') << std::setw(2) << i;
+			cout << endl << "Saving current potential..." << endl;
+		stringstream potentialCopyName;
+		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
 		PotentialField potentialCopy(potential,potentialCopyName.str());
 		if (mpiId == 0)
-			std::cout << std::endl << "Calculating updated potential..." << std::endl;
+			cout << endl << "Calculating updated potential..." << endl;
 		potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
 		if (mpiId == 0)
-			std::cout << std::endl << std::endl << std::endl;
+			cout << endl << endl << endl;
 	}
 
 	if (mpiId == 0)

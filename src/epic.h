@@ -23,8 +23,8 @@ int custom_importVTK(mMesh *, const char *);
 void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 		void *integrandContainer_ptr, unsigned fdim, double *fval);
 
-int intersect_RayTriangle(std::vector<vect3d> R,
-		std::vector<vect3d> T, vect3d* I);
+int intersect_RayTriangle(vector<vect3d> R,
+		vector<vect3d> T, vect3d* I);
 
 
 // External timing variables

@@ -46,8 +46,8 @@
 //             1 = intersect in unique point I1
 //             2 = are in the same plane
 int
-intersect_RayTriangle( std::vector<vect3d> R,
-		std::vector<vect3d> T, vect3d* I )
+intersect_RayTriangle( vector<vect3d> R,
+		vector<vect3d> T, vect3d* I )
 {
     vect3d    u, v, n;             // triangle vectors
     vect3d    dir, w0, w;          // ray vectors

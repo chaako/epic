@@ -27,63 +27,63 @@ template <class T> class Field;
 
 class Mesh {
 public:
-	Mesh(std::string inputMeshFile);
+	Mesh(string inputMeshFile);
 	virtual ~Mesh();
 
 	void printElementNumbers();
-	void save(std::string outputMeshFile);
+	void save(string outputMeshFile);
 
 	vect3d getCoordinates(entHandle node, bool useMap=false);
 	entHandle findTet(vect3d oldPosition, vect3d position,
 			entHandle adjacentTet, bool *tetFound, bool isTet=true);
 //	entHandle findStartingTet(vect3d const &position,
 //			vect3d const &velocity, entHandle vertex);
-	std::vector<entHandle> getVertices(entHandle element);
-	std::vector<entHandle> getAdjacentEntities(entHandle element,
+	vector<entHandle> getVertices(entHandle element);
+	vector<entHandle> getAdjacentEntities(entHandle element,
 			int dimension);
-	std::vector<entHandle> getEntities(int dimension);
+	vector<entHandle> getEntities(int dimension);
 	entHandle getRandomVertex();
-	std::vector<entHandle> getFaces(entHandle element);
-	std::map<entHandle,std::vector<entHandle> >
+	vector<entHandle> getFaces(entHandle element);
+	map<entHandle,vector<entHandle> >
 	getSurroundingVerticesMap();
-	std::map<entHandle,std::vector<entHandle> >
+	map<entHandle,vector<entHandle> >
 	getAdjacentsMap(int keyEntityType, int valueEntityType,
 			int bridgeEntityType=-1);
 	int getEntityDimension(entHandle entity);
-	std::vector<vect3d> getVertexVectors(entHandle entity,
+	vector<vect3d> getVertexVectors(entHandle entity,
 			bool useMap=true);
 	bool checkIfInTet(vect3d currentPosition,
 			entHandle element);
 	bool checkIfInTet(vect3d currentPosition,
-			std::vector<vect3d> vertexVectors);
+			vector<vect3d> vertexVectors);
 	bool checkIfIntersectsTriangle(vect3d previousPosition,
 			vect3d currentPosition,
-			std::vector<vect3d> vertexVectors);
+			vector<vect3d> vertexVectors);
 	entHandle findFaceCrossed(entHandle previousElement,
 			vect3d previousPosition, vect3d currentPosition);
-	iBase_TagHandle getTagHandle(std::string tagName);
-	iBase_TagHandle createTagHandle(std::string tagName, int size, int type);
+	iBase_TagHandle getTagHandle(string tagName);
+	iBase_TagHandle createTagHandle(string tagName, int size, int type);
 	vect3d getSurfaceVector(entHandle face,
 			vect3d point=vect3d(0.,0.,0.));
 	vect3d getNormalVector(entHandle face,
 			vect3d point=vect3d(0.,0.,0.));
 	vect3d getVertexNormalVector(entHandle vertex,
 			Field<int> faceTypeField);
-	std::vector<entHandle> getSuperCellFaces(entHandle vertex);
+	vector<entHandle> getSuperCellFaces(entHandle vertex);
 	double getTetVolume(vect3d point, entHandle face);
-	double getTetVolume(std::vector<vect3d> vertexVectors);
-	std::vector<double> getTetSubVolumes(vect3d point,
-			std::vector<vect3d> vertexVectors) ;
-	std::vector<double> getVertexWeights(vect3d point,
-			std::vector<vect3d> vertexVectors);
+	double getTetVolume(vector<vect3d> vertexVectors);
+	vector<double> getTetSubVolumes(vect3d point,
+			vector<vect3d> vertexVectors) ;
+	vector<double> getVertexWeights(vect3d point,
+			vector<vect3d> vertexVectors);
 	Eigen::VectorXd getErrorCoefficients(vect3d position,
 			entHandle element, int interpolationOrder=1);
 	Eigen::VectorXd getErrorCoefficients(vect3d position,
-			std::vector<vect3d> vVs, int interpolationOrder=1);
+			vector<vect3d> vVs, int interpolationOrder=1);
 	Eigen::Vector4d evaluateLinearBasisFunctions(vect3d position,
 			entHandle element);
 	Eigen::Vector4d evaluateLinearBasisFunctions(vect3d position,
-			std::vector<vect3d> vVs);
+			vector<vect3d> vVs);
 	Eigen::VectorXd evaluateQuadraticErrorBases(
 			Eigen::Vector4d linearBasisFunctions);
 	Eigen::VectorXd evaluateCubicErrorBases(
@@ -93,7 +93,7 @@ public:
 
 	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh_ptr;
 	vtkSmartPointer<vtkCellTreeLocator> vtkCellTree_ptr;
-	std::vector<entHandle> vtkToIMesh;
+	vector<entHandle> vtkToIMesh;
 
 	iMesh_Instance meshInstance;
 	// TODO: rename vtkInputMesh something like inputMeshIsVtk
@@ -103,23 +103,23 @@ public:
 //	iBase_EntitySetHandle surfaceEntitySet;
 //	iBase_EntitySetHandle volumeEntitySet;
 
-	std::vector<entHandle> allVertices;
-	std::vector<entHandle> allFaces;
-	std::vector<entHandle> allElements;
+	vector<entHandle> allVertices;
+	vector<entHandle> allFaces;
+	vector<entHandle> allElements;
 
-	std::map<entHandle,int> indexOfVertices;
-	std::map<entHandle,int> indexOfFaces;
-	std::map<entHandle,int> indexOfElements;
+	map<entHandle,int> indexOfVertices;
+	map<entHandle,int> indexOfFaces;
+	map<entHandle,int> indexOfElements;
 
 	entHandle previousCoordsToBasisElement;
 	Eigen::Matrix4d previousCoordsToBasis;
 
-	std::map<entHandle,std::vector<entHandle> > adjacentTetsMap;
-	std::map<entHandle,std::vector<entHandle> > adjacentFacesMap;
-	std::map<entHandle,std::vector<entHandle> > adjacentVertsMap;
-	std::map<entHandle,std::vector<entHandle> > surroundingVertsMap;
-	std::map<entHandle,std::vector<vect3d> > vertexVectorsMap;
-	std::map<entHandle,std::vector<entHandle> > adjacentTetsToFaceMap;
+	map<entHandle,vector<entHandle> > adjacentTetsMap;
+	map<entHandle,vector<entHandle> > adjacentFacesMap;
+	map<entHandle,vector<entHandle> > adjacentVertsMap;
+	map<entHandle,vector<entHandle> > surroundingVertsMap;
+	map<entHandle,vector<vect3d> > vertexVectorsMap;
+	map<entHandle,vector<entHandle> > adjacentTetsToFaceMap;
 };
 
 #endif /* MESH_H_ */

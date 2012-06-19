@@ -26,7 +26,7 @@
 template <class T>
 class Field {
 public:
-	Field(Mesh *inputMesh_ptr, std::string inputName,
+	Field(Mesh *inputMesh_ptr, string inputName,
 			int entityDimension);
 	// TODO: Does an empty destructor cause a memory leak?
 	virtual ~Field() {}
@@ -40,19 +40,19 @@ public:
 			int interpolationOrder);
 
 	Mesh *mesh_ptr;
-	std::string name;
+	string name;
 	iBase_TagHandle tag;
-	std::vector<entHandle> entities;
+	vector<entHandle> entities;
 	entHandle currentElement;
-	std::vector<entHandle> currentVertices;
-	std::vector<T> currentFields;
+	vector<entHandle> currentVertices;
+	vector<T> currentFields;
 	entHandle currentInterpolationElement;
 	Eigen::VectorXd currentErrorCoefficients;
 };
 
 class ElectricField : public Field<vect3d> {
 public:
-	ElectricField(Mesh *inputMesh_ptr, std::string inputName);
+	ElectricField(Mesh *inputMesh_ptr, string inputName);
 	virtual ~ElectricField() {}
 
 	void calcField(PotentialField potentialField);
@@ -60,7 +60,7 @@ public:
 
 class CodeField : public Field<int> {
 public:
-	CodeField(Mesh *inputMesh_ptr, std::string inputName,
+	CodeField(Mesh *inputMesh_ptr, string inputName,
 			int elementType);
 	virtual ~CodeField() {}
 
@@ -70,7 +70,7 @@ public:
 class DensityField : public Field<double> {
 	// Charge density
 public:
-	DensityField(Mesh *inputMesh_ptr, std::string inputName);
+	DensityField(Mesh *inputMesh_ptr, string inputName);
 	virtual ~DensityField() {}
 
 	void calcField();
@@ -98,8 +98,8 @@ public:
 
 class PotentialField : public Field<double> {
 public:
-	PotentialField(Mesh *inputMesh_ptr, std::string inputName);
-	PotentialField(PotentialField potential, std::string inputName);
+	PotentialField(Mesh *inputMesh_ptr, string inputName);
+	PotentialField(PotentialField potential, string inputName);
 	virtual ~PotentialField() {}
 
 	void calcField();
@@ -110,17 +110,17 @@ public:
 
 // gcc doesn't implement the export keyword, so define template functions here
 template <class T>
-Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
+Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 		int entityDimension) {
 	mesh_ptr = inputMesh_ptr;
 	name = inputName;
 	int ierr;
 	int size, type;
-//	if (std::is_same<T,double>::value) {
+//	if (is_same<T,double>::value) {
 	if (boost::is_same<T,double>::value) {
 		size = 1;
 		type = iBase_DOUBLE;
-//	} else if (std::is_same<T,int>::value) {
+//	} else if (is_same<T,int>::value) {
 	} else if (boost::is_same<T,int>::value) {
 		size = 1;
 		type = iBase_INTEGER;
@@ -135,7 +135,7 @@ Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 	currentElement = NULL;
 	// TODO: nVertices should be standardized across functions
 	int nVertices = 4;
-	currentFields = std::vector<T>(nVertices);
+	currentFields = vector<T>(nVertices);
 	currentInterpolationElement = NULL;
 }
 
@@ -147,17 +147,17 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 	bool inElement=false;
 	Eigen::Vector4d linearBasisFunctions;
 	Eigen::VectorXd errorBases, errorCoefficients;
-//	std::cout << this << " " << *entity << " " << currentElement << " " <<
-//			position.transpose() << std::endl;
+//	cout << this << " " << *entity << " " << currentElement << " " <<
+//			position.transpose() << endl;
 	if (*entity==NULL) {
-//		std::cout << this << " " << *entity << " " << currentElement << " " <<
-//				position.transpose() << std::endl;
+//		cout << this << " " << *entity << " " << currentElement << " " <<
+//				position.transpose() << endl;
 		// TODO: handle case with no entity hint
-		std::vector<entHandle> adjacentEntities =
+		vector<entHandle> adjacentEntities =
 				mesh_ptr->getAdjacentEntities(entities[0],iBase_REGION);
 		*entity = adjacentEntities[0];
-//		std::cout << this << " " << *entity << " " << currentElement << " " <<
-//				position.transpose() << std::endl << std::endl;
+//		cout << this << " " << *entity << " " << currentElement << " " <<
+//				position.transpose() << endl << endl;
 	} else if (*entity==currentElement) {
 //		int dimension=mesh_ptr->getEntityDimension(*entity);
 //		if (dimension==iBase_REGION) {
@@ -173,19 +173,19 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 				if (linearBasisFunctions[i]<0.)
 					inElement=false;
 //		} else {
-//			std::cout << currentElement << ": " << dimension << " " <<
+//			cout << currentElement << ": " << dimension << " " <<
 //					position.transpose() <<
-//					" " << position.norm() << std::endl;
+//					" " << position.norm() << endl;
 //		}
 	}
 	bool isElement;
 	if (!inElement) {
 //		if (currentElement==NULL) {
-//			std::cout << this << " " << *entity << " " << currentElement << " " <<
-//					position.transpose() << std::endl;
-//			std::cout << " " << mesh_ptr->indexOfVertices[*entity] <<
+//			cout << this << " " << *entity << " " << currentElement << " " <<
+//					position.transpose() << endl;
+//			cout << " " << mesh_ptr->indexOfVertices[*entity] <<
 //					" " << mesh_ptr->indexOfFaces[*entity] <<
-//					" " << mesh_ptr->indexOfElements[*entity] << std::endl;
+//					" " << mesh_ptr->indexOfElements[*entity] << endl;
 //		}
 		vect3d centroid(0.,0.,0.);
 		int dimension=mesh_ptr->getEntityDimension(*entity);
@@ -195,7 +195,7 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 			isElement = false;
 		} else {
 			isElement = true;
-			std::vector<vect3d> vVs =
+			vector<vect3d> vVs =
 					mesh_ptr->getVertexVectors(*entity);
 			centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
 		}
@@ -229,20 +229,20 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 	if (interpolationOrder>1) {
 		errorCoefficients = this->getErrorCoefficients(
 				currentElement, interpolationOrder);
-//		std::cout << errorBases.rows() << " " << errorCoefficients.rows() <<
+//		cout << errorBases.rows() << " " << errorCoefficients.rows() <<
 //				" " << errorBases.cols() << " " << errorCoefficients.cols() <<
-//				std::endl;
+//				endl;
 		assert(errorBases.rows()==errorCoefficients.rows());
-//		std::cout << errorCoefficients.transpose() << std::endl;
-//		std::cout << errorBases.transpose() << std::endl << std::endl;
-//		std::cout << field << std::endl;
-//		std::cout << errorCoefficients.dot(errorBases) << std::endl;
+//		cout << errorCoefficients.transpose() << endl;
+//		cout << errorBases.transpose() << endl << endl;
+//		cout << field << endl;
+//		cout << errorCoefficients.dot(errorBases) << endl;
 		field += errorCoefficients.dot(errorBases);
 //		for (int i=0;i<errorBases.rows();i++) {
 //			field += errorCoefficients[i]*errorBases[i];
 //		}
 	}
-//	std::cout << field << std::endl;
+//	cout << field << endl;
 	*entity = currentElement;
 	return field;
 }
@@ -263,7 +263,7 @@ T Field<T>::getField(entHandle node) {
 template <class T>
 T Field<T>::getAverageField(entHandle element) {
 	// TODO: this doesn't work for non-vertex fields
-	std::vector<entHandle> vertices =
+	vector<entHandle> vertices =
 			mesh_ptr->getAdjacentEntities(element, iBase_VERTEX);
 	T average=0;
 
@@ -303,7 +303,7 @@ Eigen::VectorXd Field<T>::getErrorCoefficients(
 		}
 		// TODO: only dealing with doubles for now
 		if (boost::is_same<T,double>::value) {
-			std::vector<entHandle> surroundingVertices =
+			vector<entHandle> surroundingVertices =
 					mesh_ptr->surroundingVertsMap[element];
 			Eigen::MatrixXd evaluatedErrorBases(surroundingVertices.size(),
 					errorBasesSize);

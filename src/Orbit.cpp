@@ -32,10 +32,10 @@ void Orbit::integrate(ElectricField& electricField,
 		Field<int>& faceTypeField, CodeField& vertexTypeField, FILE *outFile) {
 	vect3d eField = electricField.getField(initialNode);
 	int nVertices=4;
-	std::vector<vect3d> eFields(nVertices), vertexVectors(nVertices);
-	std::vector<entHandle> vertices(nVertices);
+	vector<vect3d> eFields(nVertices), vertexVectors(nVertices);
+	vector<entHandle> vertices(nVertices);
 	// TODO: need some clever way to set tMax and/or detect trapped orbits
-	double dt=std::min(0.01,0.01/initialVelocity.norm()), tMax=100;
+	double dt=min(0.01,0.01/initialVelocity.norm()), tMax=100;
 	vect3d currentPosition = initialPosition;
 	vect3d currentVelocity = initialVelocity;
 	// TODO: shouldn't hard-code quasi-neutral operation
@@ -72,7 +72,7 @@ void Orbit::integrate(ElectricField& electricField,
 	}
 	bool inNewTet = true;
 	int nSteps=0, nNewTet=0;
-//	std::cout << "Initial radius=" << currentPosition.norm() << std::endl;
+//	cout << "Initial radius=" << currentPosition.norm() << endl;
 	bool isTet=false;
 	bool firstStep=true;
 	for (double t=0; t<tMax; t+=dt) {
@@ -142,10 +142,10 @@ void Orbit::integrate(ElectricField& electricField,
 			}
 		}
 //		if (t>=tMax-dt)
-//			std::cout << "orbit reached tMax" << std::endl;
+//			cout << "orbit reached tMax" << endl;
 
 		assert(vertexVectors.size()==nVertices);
-		std::vector<double> vertexWeights = mesh_ptr->getVertexWeights(currentPosition,
+		vector<double> vertexWeights = mesh_ptr->getVertexWeights(currentPosition,
 				vertexVectors);
 		vect3d currentAcceleration(0.,0.,0.);
 		assert(eFields.size()==vertexWeights.size());
@@ -164,7 +164,7 @@ void Orbit::integrate(ElectricField& electricField,
 //					currentPosition[2], energy);
 //		}
 	}
-//	std::cout << "Final radius=" << currentPosition.norm() << std::endl;
+//	cout << "Final radius=" << currentPosition.norm() << endl;
 	finalPosition = currentPosition;
 	// TODO: correct for time-step offset?
 	finalVelocity = currentVelocity;
@@ -173,9 +173,9 @@ void Orbit::integrate(ElectricField& electricField,
 void Orbit::integrate(PotentialField& potentialField, ElectricField& electricField,
 		Field<int>& faceTypeField, CodeField& vertexTypeField, FILE *outFile) {
 	// TODO: need some clever way to set tMax and/or detect trapped orbits
-//	double dt=std::min(0.005,0.005/initialVelocity.norm()), tMax=100;
-	double dt=std::min(0.01,0.01/initialVelocity.norm()), tMax=100;
-//	double dt=std::min(0.02,0.02/initialVelocity.norm()), tMax=100;
+//	double dt=min(0.005,0.005/initialVelocity.norm()), tMax=100;
+	double dt=min(0.01,0.01/initialVelocity.norm()), tMax=100;
+//	double dt=min(0.02,0.02/initialVelocity.norm()), tMax=100;
 	vect3d currentPosition = initialPosition;
 	vect3d currentVelocity = initialVelocity;
 	// TODO: shouldn't hard-code quasi-neutral operation
@@ -275,17 +275,17 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //					double perturbedPotential = potentialField.getField(
 //							perturbedPosition, &currentElement, interpolationOrder);
 //					// TODO: track down why perturbedPotential sometimes is NaN
-////					std::cout << "calculation of error term succeeded." <<
-////							i << " " << currentElement << std::endl;
+////					cout << "calculation of error term succeeded." <<
+////							i << " " << currentElement << endl;
 //					if (isnan(perturbedPotential)) {
 //						perturbedPotential = potentialField.getField(
 //								perturbedPosition, &currentElement, 1);
-//						std::cout << "calculation of error term failed." <<
-//								i << " " << currentElement << std::endl;
+//						cout << "calculation of error term failed." <<
+//								i << " " << currentElement << endl;
 //					}
 ////					if (isnan(potential) || isnan(perturbedPotential)) {
-////						std::cout << potential << " " << perturbedPotential <<
-////						" " << currentPosition.transpose() << std::endl;
+////						cout << potential << " " << perturbedPotential <<
+////						" " << currentPosition.transpose() << endl;
 ////						throw;
 ////					}
 //					currentAcceleration[i] =
@@ -324,7 +324,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				normalVelocity =
 						currentVelocity.dot(normalVector)*normalVector;
 				finalPotential = 0.;
-				std::vector<entHandle> vertices =
+				vector<entHandle> vertices =
 						mesh_ptr->getVertices(faceCrossed);
 				for (int i=0; i<vertices.size(); i++) {
 					// TODO: should use point where left domain here
@@ -335,9 +335,9 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				faceType = 0;
 			}
 //			if (faceType==0) {
-//				std::cout << previousElement << " " <<
+//				cout << previousElement << " " <<
 //						faceCrossed << " " << currentPosition.norm() <<
-//						" " << previousPosition.norm() << std::endl;
+//						" " << previousPosition.norm() << endl;
 //			}
 			finalFaceType = faceType;
 			if (faceType==4 && 0.5*pow(normalVelocity.norm(),2.)<charge*phiSurface) {
@@ -350,15 +350,15 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				currentVelocity -= 2.*normalVelocity;
 			} else {
 //				if (faceType==0)
-//					std::cout << "last face crossed was an interior one" << std::endl;
+//					cout << "last face crossed was an interior one" << endl;
 				endLoop=true;
 			}
 		}
 
 //		if (nSteps==1 && !foundTet) {
-//			std::cout << currentPosition.transpose() << " " <<
+//			cout << currentPosition.transpose() << " " <<
 //					currentVelocity.transpose() << " " <<
-//					currentPosition.dot(currentVelocity) << std::endl;
+//					currentPosition.dot(currentVelocity) << endl;
 //		}
 
 //		double eFieldR = currentAcceleration.dot(currentPosition)/
@@ -387,8 +387,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		if (endLoop)
 			break;
 	}
-//	std::cout << "Final radius=" << currentPosition.norm() << std::endl;
-//	std::cout << "nSteps=" << nSteps << std::endl;
+//	cout << "Final radius=" << currentPosition.norm() << endl;
+//	cout << "nSteps=" << nSteps << endl;
 	finalPosition = currentPosition;
 	// TODO: correct for time-step offset?
 	finalVelocity = currentVelocity;

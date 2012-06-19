@@ -155,7 +155,7 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
 		currentPosition -= currentVelocity*dt/2.;
 		bool inNewTet = true;
 		int nSteps=0, nNewTet=0;
-		std::cout << "Initial radius=" << currentPosition.norm() << endl;
+		cout << "Initial radius=" << currentPosition.norm() << endl;
 		for (double t=0; t<tMax; t+=dt) {
 			nSteps++;
 			currentPosition += dt*currentVelocity;
@@ -189,9 +189,9 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
 				entities_alloc = 0;
 
 				if (inNewTet==true) {
-					std::cout << "Failed to identify current tet: currentPosition ="
+					cout << "Failed to identify current tet: currentPosition ="
 							<< currentPosition << endl;
-					std::cout << "nSteps=" << nSteps << ", nNewTet=" << nNewTet << endl;
+					cout << "nSteps=" << nSteps << ", nNewTet=" << nNewTet << endl;
 					break;
 				}
 
@@ -231,7 +231,7 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
 			}
 
 			assert(vertexVectors.size()==nVertices);
-			std::vector<double> vertexWeights = getVertexWeights(currentPosition,
+			vector<double> vertexWeights = getVertexWeights(currentPosition,
 					vertexVectors);
 			vect3d currentAcceleration(0.,0.,0.);
 			assert(eFields.size()==vertexWeights.size());
@@ -247,7 +247,7 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
 			// fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
 			// currentPosition[2], nNewTet);
 		}
-		std::cout << "Final radius=" << currentPosition.norm() << endl;
+		cout << "Final radius=" << currentPosition.norm() << endl;
 	}
 	fclose(outFile);
 }

@@ -8,13 +8,13 @@
 #include "epic.h"
 #include "Field.h"
 
-ElectricField::ElectricField(Mesh *inputMesh_ptr, std::string inputName)
+ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName)
 		: Field<vect3d>(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
 void ElectricField::calcField(PotentialField potentialField) {
 	for (int i=0; i<entities.size(); i++) {
-		std::vector<entHandle> superCellFaces =
+		vector<entHandle> superCellFaces =
 				mesh_ptr->getSuperCellFaces(entities[i]);
 		vect3d eField(0.,0.,0.);
 		vect3d point = mesh_ptr->getCoordinates(entities[i]);
@@ -32,11 +32,11 @@ void ElectricField::calcField(PotentialField potentialField) {
 }
 
 
-PotentialField::PotentialField(Mesh *inputMesh_ptr, std::string inputName)
+PotentialField::PotentialField(Mesh *inputMesh_ptr, string inputName)
 	: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
-PotentialField::PotentialField(PotentialField potential, std::string inputName)
+PotentialField::PotentialField(PotentialField potential, string inputName)
 	: Field<double>(potential.mesh_ptr, inputName, iBase_VERTEX) {
 	for (int i=0; i<entities.size(); i++) {
 		this->setField(entities[i], potential.getField(entities[i]));
@@ -77,7 +77,7 @@ void PotentialField::calcField(DensityField ionDensity,
 //#ifdef HAVE_MPI
 //		if (MPI::COMM_WORLD.Get_rank() == 0)
 //#endif
-//			std::cout << nodePosition.norm() << " " << potential << std::endl;
+//			cout << nodePosition.norm() << " " << potential << endl;
 		if (outFile)
 			fprintf(outFile, "%g %g\n", nodePosition.norm(), potential);
 //		}
@@ -86,7 +86,7 @@ void PotentialField::calcField(DensityField ionDensity,
 		fprintf(outFile, "\n\n\n\n");
 }
 
-DensityField::DensityField(Mesh *inputMesh_ptr, std::string inputName)
+DensityField::DensityField(Mesh *inputMesh_ptr, string inputName)
 		: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
@@ -133,17 +133,17 @@ void DensityField::calcField(ElectricField electricField,
 				potentialField, faceType, vertexType, charge, &error);
 		this->setField(entities[node], density);
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
-//		std::cout << nodePosition.norm() << " " << density << " " << error << std::endl;
+//		cout << nodePosition.norm() << " " << density << " " << error << endl;
 		if (outFile)
 			fprintf(outFile, "%g %g %g\n", nodePosition.norm(), density, error);
 	}
 	clock_t endClock = clock(); // timing
-	std::cout << "calcField total (s)= "
-			<< (double)(endClock-startClock)/(double)CLOCKS_PER_SEC << std::endl; // timing
-	std::cout << "findTet total (s)= "
-			<< (double)extern_findTet/(double)CLOCKS_PER_SEC << std::endl; // timing
-//	std::cout << "checkIfInNewTet (s)= "
-//			<< (double)extern_checkIfInNewTet/(double)CLOCKS_PER_SEC << std::endl; // timing
+	cout << "calcField total (s)= "
+			<< (double)(endClock-startClock)/(double)CLOCKS_PER_SEC << endl; // timing
+	cout << "findTet total (s)= "
+			<< (double)extern_findTet/(double)CLOCKS_PER_SEC << endl; // timing
+//	cout << "checkIfInNewTet (s)= "
+//			<< (double)extern_checkIfInNewTet/(double)CLOCKS_PER_SEC << endl; // timing
 #endif
 	if (outFile)
 		fprintf(outFile, "\n\n\n\n");
@@ -161,13 +161,13 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	integrandContainer.potentialField_ptr = &potentialField;
 	integrandContainer.faceTypeField_ptr = &faceType;
 	integrandContainer.vertexTypeField_ptr = &vertexType;
-	std::stringstream fileNameStream;
+	stringstream fileNameStream;
 //	fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
 //			<< "_vert" << node << ".p3d";
 	fileNameStream << "distFunc/distributionFunction_q" << charge << "_r"
 			<< nodePosition.norm() << "_vert" << node << ".p3d";
 	integrandContainer.outFile = NULL;
-	std::stringstream fileNameStreamOrbit;
+	stringstream fileNameStreamOrbit;
 	fileNameStreamOrbit << "orbits/orbits_q" << charge << "_r"
 			<< nodePosition.norm() << "_vert" << node << ".p3d";
 //	// TODO: don't hard-code output nodes
@@ -251,8 +251,8 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 	if (incomingNode>=0 && incomingNode<entities.size())
 		this->setField(entities[incomingNode], density[0]);
 	vect3d nodePosition = mesh_ptr->getCoordinates(entities[incomingNode]);
-//	std::cout << nodePosition.norm() << " " << density[0] << " " <<
-//			density[1] << std::endl;
+//	cout << nodePosition.norm() << " " << density[0] << " " <<
+//			density[1] << endl;
 	if (outFile)
 		fprintf(outFile, "%g %g %g\n", nodePosition.norm(), density[0], density[1]);
 	return status;
@@ -280,7 +280,7 @@ void DensityField::processDensityRequests(ElectricField electricField,
 }
 #endif
 
-CodeField::CodeField(Mesh *inputMesh_ptr, std::string inputName, int elementType)
+CodeField::CodeField(Mesh *inputMesh_ptr, string inputName, int elementType)
 		: Field<int>(inputMesh_ptr, inputName, elementType) {
 }
 
@@ -288,7 +288,7 @@ void CodeField::calcField(Field<int> faceTypeField) {
 	for (int i=0; i<entities.size(); i++) {
 		// TODO: this does not tag regions with an edge (but not whole face)
 		//       on the boundary...could do 2ndAdjacent through vertex
-		std::vector<entHandle> faces =
+		vector<entHandle> faces =
 				mesh_ptr->getAdjacentEntities(entities[i],iBase_FACE);
 		int elementType=0;
 		for (int j=0; j<faces.size(); j++) {
