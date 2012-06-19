@@ -46,18 +46,18 @@
 //             1 = intersect in unique point I1
 //             2 = are in the same plane
 int
-intersect_RayTriangle( std::vector<Eigen::Vector3d> R,
-		std::vector<Eigen::Vector3d> T, Eigen::Vector3d* I )
+intersect_RayTriangle( std::vector<vect3d> R,
+		std::vector<vect3d> T, vect3d* I )
 {
-    Eigen::Vector3d    u, v, n;             // triangle vectors
-    Eigen::Vector3d    dir, w0, w;          // ray vectors
+    vect3d    u, v, n;             // triangle vectors
+    vect3d    dir, w0, w;          // ray vectors
     float     r, a, b;             // params to calc ray-plane intersect
 
     // get triangle edge vectors and plane normal
     u = T[1] - T[0];
     v = T[2] - T[0];
     n = u.cross(v);             // cross product
-    if (n == Eigen::Vector3d(0.,0.,0.))            // triangle is degenerate
+    if (n == vect3d(0.,0.,0.))            // triangle is degenerate
         return -1;                 // do not deal with this case
 
     dir = R[1] - R[0];             // ray direction vector

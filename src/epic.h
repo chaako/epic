@@ -8,59 +8,7 @@
 #ifndef EPIC_H_
 #define EPIC_H_
 
-#define VOLUME_TOLERANCE 1.e-8
-#define LENGTH_TOLERANCE 1.e-10
-#define DELTA_LENGTH 1.e-10
-//#define DELTA_LENGTH 1.e-5
-
-#define WORKTAG 999999998
-#define DIETAG 999999999
-
-enum {
-	OUTSIDE_DOMAIN,
-};
-
-#include <map>
-#include <iostream>
-#include <iomanip>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
-#include "iMesh.h"
-#include <math.h>
-
-#include "Eigen/Dense"
-#include "cubature.h"
-//#include "cuba.h"
-
-#ifdef HAVE_MPI
-#include "mpi.h"
-#endif
-
-#include <numeric>
-#include <vector>
-#include <boost/array.hpp>
-#include <boost/numeric/odeint.hpp> // Not true boost library
-#include <set>
-//#include <type_traits> // Requires -std=c++0x compiler flag
-#include <boost/type_traits.hpp>
-//#include <sys/time.h>
-#include <time.h>
-//#include <boost/timer/timer.hpp>
-#include <algorithm>
-
-#include <vtkVersion.h>
-#include <vtkSmartPointer.h>
-#include <vtkCellArray.h>
-#include <vtkTetra.h>
-#include <vtkGenericCell.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtkPoints.h>
-#include <vtkCellType.h>
-#include <vtkDataSetMapper.h>
-#include <vtkCellTreeLocator.h>
-#include <vtkCellLocator.h>
+#include "typesAndDefinitions.h"
 
 #include "Mesh.h"
 #include "IntegrandContainer.h"
@@ -69,16 +17,14 @@ enum {
 #include "VelocityAndAcceleration.h"
 #include "Orbit.h"
 
-#define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
-
 class mMesh;
 int custom_importVTK(mMesh *, const char *);
 
 void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 		void *integrandContainer_ptr, unsigned fdim, double *fval);
 
-int intersect_RayTriangle(std::vector<Eigen::Vector3d> R,
-		std::vector<Eigen::Vector3d> T, Eigen::Vector3d* I);
+int intersect_RayTriangle(std::vector<vect3d> R,
+		std::vector<vect3d> T, vect3d* I);
 
 
 // External timing variables

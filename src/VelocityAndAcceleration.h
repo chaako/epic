@@ -8,9 +8,10 @@
 #ifndef VELOCITYANDACCELERATION_H_
 #define VELOCITYANDACCELERATION_H_
 
-#include <boost/array.hpp>
-#include "iMesh.h"
-#include "Eigen/Dense"
+#include "typesAndDefinitions.h"
+//#include <boost/array.hpp>
+//#include "iMesh.h"
+//#include "Eigen/Dense"
 
 #include "Mesh.h"
 #include "Field.h"

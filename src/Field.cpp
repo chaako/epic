@@ -9,18 +9,18 @@
 #include "Field.h"
 
 ElectricField::ElectricField(Mesh *inputMesh_ptr, std::string inputName)
-		: Field<Eigen::Vector3d>(inputMesh_ptr, inputName, iBase_VERTEX) {
+		: Field<vect3d>(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
 void ElectricField::calcField(PotentialField potentialField) {
 	for (int i=0; i<entities.size(); i++) {
-		std::vector<iBase_EntityHandle> superCellFaces =
+		std::vector<entHandle> superCellFaces =
 				mesh_ptr->getSuperCellFaces(entities[i]);
-		Eigen::Vector3d eField(0.,0.,0.);
-		Eigen::Vector3d point = mesh_ptr->getCoordinates(entities[i]);
+		vect3d eField(0.,0.,0.);
+		vect3d point = mesh_ptr->getCoordinates(entities[i]);
 		double volume=0;
 		for (int j=0; j<superCellFaces.size(); j++)  {
-			Eigen::Vector3d surfaceVector =
+			vect3d surfaceVector =
 					mesh_ptr->getSurfaceVector(superCellFaces[j], point);
 			double potential = potentialField.getAverageField(superCellFaces[j]);
 			volume += mesh_ptr->getTetVolume(point, superCellFaces[j]);
@@ -46,7 +46,7 @@ PotentialField::PotentialField(PotentialField potential, std::string inputName)
 
 void PotentialField::calcField() {
 	for (int i=0; i<entities.size(); i++) {
-		Eigen::Vector3d point = mesh_ptr->getCoordinates(entities[i]);
+		vect3d point = mesh_ptr->getCoordinates(entities[i]);
 		// TODO: Change this from just a test Coulomb field
 		double potential = -1./point.norm();
 		this->setField(entities[i], potential);
@@ -59,8 +59,8 @@ void PotentialField::calcField(DensityField ionDensity,
 	assert(electronDensity.mesh_ptr == mesh_ptr);
 	for (int i=0; i<entities.size(); i++) {
 		// TODO: remove this restriction on vertices
-		Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
-		Eigen::Vector3d xzPosition = nodePosition;
+		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
+		vect3d xzPosition = nodePosition;
 
 		double potential;
 		// TODO: don't hard-code boundary type and quasi-neutral operation
@@ -132,7 +132,7 @@ void DensityField::calcField(ElectricField electricField,
 	    double density = this->calculateDensity(node, electricField,
 				potentialField, faceType, vertexType, charge, &error);
 		this->setField(entities[node], density);
-		Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
+		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		std::cout << nodePosition.norm() << " " << density << " " << error << std::endl;
 		if (outFile)
 			fprintf(outFile, "%g %g %g\n", nodePosition.norm(), density, error);
@@ -153,7 +153,7 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType, double charge, double *error) {
 	double density=0.;
-	Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
+	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 	IntegrandContainer integrandContainer;
 	integrandContainer.mesh_ptr = mesh_ptr;
 	integrandContainer.node = entities[node];
@@ -250,7 +250,7 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 	int incomingNode = status.Get_tag();
 	if (incomingNode>=0 && incomingNode<entities.size())
 		this->setField(entities[incomingNode], density[0]);
-	Eigen::Vector3d nodePosition = mesh_ptr->getCoordinates(entities[incomingNode]);
+	vect3d nodePosition = mesh_ptr->getCoordinates(entities[incomingNode]);
 //	std::cout << nodePosition.norm() << " " << density[0] << " " <<
 //			density[1] << std::endl;
 	if (outFile)
@@ -288,7 +288,7 @@ void CodeField::calcField(Field<int> faceTypeField) {
 	for (int i=0; i<entities.size(); i++) {
 		// TODO: this does not tag regions with an edge (but not whole face)
 		//       on the boundary...could do 2ndAdjacent through vertex
-		std::vector<iBase_EntityHandle> faces =
+		std::vector<entHandle> faces =
 				mesh_ptr->getAdjacentEntities(entities[i],iBase_FACE);
 		int elementType=0;
 		for (int j=0; j<faces.size(); j++) {

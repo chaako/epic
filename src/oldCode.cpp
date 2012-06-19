@@ -4,8 +4,8 @@
 	int dim, num, ierr;
 	iMesh_Instance mesh;
 	iBase_EntitySetHandle root;
-	iBase_EntityHandle *ents0d = NULL;
-	iBase_EntityHandle *ents2d = NULL, *ents3d = NULL;
+	entHandle *ents0d = NULL;
+	entHandle *ents2d = NULL, *ents3d = NULL;
 	int ents0d_alloc = 0, ents0d_size;
 	int ents2d_alloc = 0, ents2d_size;
 	int ents3d_alloc = 0, ents3d_size;
@@ -30,14 +30,14 @@
 	CHECK("Problems getting root set");
 
 	// add vertices for orbit
-	iBase_EntityHandle vertices[4];
+	entHandle vertices[4];
 	int iVertex=0;
 	// make output a text file in Point3D format for VisIt
 	const char *fName = "orbitTest.p3d";
 	FILE* outFile = fopen(fName, "w");
 	fprintf(outFile, "# x y z density\n");
 	for (double ang=0; ang<2*M_PI; ang+=0.01) {
-		iBase_EntityHandle newVertex, newEdge, newRegion;
+		entHandle newVertex, newEdge, newRegion;
 		int creationStatus;
 		double x,y,z;
 		x = 2.*cos(ang);
@@ -123,9 +123,9 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
 		double eFieldX, eFieldY, eFieldZ;
 		iMesh_getVtxCoord(mesh, ents0d[iSelectedNode], &x, &y, &z, &ierr);
 		CHECK("Failure getting vertex coordinates");
-		iBase_EntityHandle currentTet=NULL;
-		Eigen::Vector3d currentPosition(x,y,z);
-		Eigen::Vector3d currentVelocity, zHat(0.,0.,1.);
+		entHandle currentTet=NULL;
+		vect3d currentPosition(x,y,z);
+		vect3d currentVelocity, zHat(0.,0.,1.);
 		double potential;
 		iMesh_getDblData(mesh, ents0d[iSelectedNode], potential_tag, &potential,
 				&ierr);
@@ -134,10 +134,10 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
 		currentVelocity /= currentVelocity.norm();
 		currentVelocity *= sqrt(-potential);
 		currentVelocity *= multiplier;
-		Eigen::Vector3d eField(0.,0.,0.);
-		int eField_alloc = sizeof(Eigen::Vector3d);
-		int eField_size = sizeof(Eigen::Vector3d);
-		vector<Eigen::Vector3d> eFields, vertexVectors;
+		vect3d eField(0.,0.,0.);
+		int eField_alloc = sizeof(vect3d);
+		int eField_size = sizeof(vect3d);
+		vector<vect3d> eFields, vertexVectors;
 		// TODO: initialize these in some better way
 		int nVertices=4;
 		eFields.reserve(nVertices);
@@ -163,7 +163,7 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
 			if (inNewTet) {
 				nNewTet++;
 				// determine which tet currentPosition is in
-				iBase_EntityHandle *entities = NULL;
+				entHandle *entities = NULL;
 				int entities_alloc = 0, entities_size;
 
 				if (currentTet) {
@@ -200,7 +200,7 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
 
 				// get coordinates and field at vertices
 				// TODO: unify with getVertexVectors
-				iBase_EntityHandle *vertices = NULL;
+				entHandle *vertices = NULL;
 				int vertices_alloc = 0, vertices_size;
 
 				iMesh_getEntAdj(mesh, currentTet, iBase_VERTEX, &vertices, &vertices_alloc,
@@ -233,7 +233,7 @@ int valueFromBoundaryCuba(const int *ndim, const double x[],
 			assert(vertexVectors.size()==nVertices);
 			std::vector<double> vertexWeights = getVertexWeights(currentPosition,
 					vertexVectors);
-			Eigen::Vector3d currentAcceleration(0.,0.,0.);
+			vect3d currentAcceleration(0.,0.,0.);
 			assert(eFields.size()==vertexWeights.size());
 			for (int i=0; i<vertexWeights.size(); i++) {
 				currentAcceleration += eFields[i]*vertexWeights[i];

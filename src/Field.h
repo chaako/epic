@@ -8,16 +8,17 @@
 #ifndef FIELD_H_
 #define FIELD_H_
 
-#include <stdio.h>
-//#include <type_traits> // Requires -std=c++0x compiler flag
-#include <boost/type_traits.hpp>
-
-#ifdef HAVE_MPI
-#include "mpi.h"
-#endif
-
-#include "iMesh.h"
-#include "Eigen/Dense"
+#include "typesAndDefinitions.h"
+//#include <stdio.h>
+////#include <type_traits> // Requires -std=c++0x compiler flag
+//#include <boost/type_traits.hpp>
+//
+//#ifdef HAVE_MPI
+//#include "mpi.h"
+//#endif
+//
+//#include "iMesh.h"
+//#include "Eigen/Dense"
 #include "Mesh.h"
 
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
@@ -30,26 +31,26 @@ public:
 	// TODO: Does an empty destructor cause a memory leak?
 	virtual ~Field() {}
 
-	T getField(Eigen::Vector3d position, iBase_EntityHandle *entity=NULL,
+	T getField(vect3d position, entHandle *entity=NULL,
 			int interpolationOrder=1);
-	T getField(iBase_EntityHandle node);
-	T getAverageField(iBase_EntityHandle element);
-	void setField(iBase_EntityHandle node, T field);
-	Eigen::VectorXd getErrorCoefficients(iBase_EntityHandle element,
+	T getField(entHandle node);
+	T getAverageField(entHandle element);
+	void setField(entHandle node, T field);
+	Eigen::VectorXd getErrorCoefficients(entHandle element,
 			int interpolationOrder);
 
 	Mesh *mesh_ptr;
 	std::string name;
 	iBase_TagHandle tag;
-	std::vector<iBase_EntityHandle> entities;
-	iBase_EntityHandle currentElement;
-	std::vector<iBase_EntityHandle> currentVertices;
+	std::vector<entHandle> entities;
+	entHandle currentElement;
+	std::vector<entHandle> currentVertices;
 	std::vector<T> currentFields;
-	iBase_EntityHandle currentInterpolationElement;
+	entHandle currentInterpolationElement;
 	Eigen::VectorXd currentErrorCoefficients;
 };
 
-class ElectricField : public Field<Eigen::Vector3d> {
+class ElectricField : public Field<vect3d> {
 public:
 	ElectricField(Mesh *inputMesh_ptr, std::string inputName);
 	virtual ~ElectricField() {}
@@ -139,7 +140,7 @@ Field<T>::Field(Mesh *inputMesh_ptr, std::string inputName,
 }
 
 template <class T>
-T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity,
+T Field<T>::getField(vect3d position, entHandle *entity,
 		int interpolationOrder) {
 	// TODO: this doesn't work for non-vertex fields
 	T field=T();
@@ -152,7 +153,7 @@ T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity,
 //		std::cout << this << " " << *entity << " " << currentElement << " " <<
 //				position.transpose() << std::endl;
 		// TODO: handle case with no entity hint
-		std::vector<iBase_EntityHandle> adjacentEntities =
+		std::vector<entHandle> adjacentEntities =
 				mesh_ptr->getAdjacentEntities(entities[0],iBase_REGION);
 		*entity = adjacentEntities[0];
 //		std::cout << this << " " << *entity << " " << currentElement << " " <<
@@ -186,7 +187,7 @@ T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity,
 //					" " << mesh_ptr->indexOfFaces[*entity] <<
 //					" " << mesh_ptr->indexOfElements[*entity] << std::endl;
 //		}
-		Eigen::Vector3d centroid(0.,0.,0.);
+		vect3d centroid(0.,0.,0.);
 		int dimension=mesh_ptr->getEntityDimension(*entity);
 		if (dimension!=iBase_REGION) {
 			// TODO: find adjacent element
@@ -194,7 +195,7 @@ T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity,
 			isElement = false;
 		} else {
 			isElement = true;
-			std::vector<Eigen::Vector3d> vVs =
+			std::vector<vect3d> vVs =
 					mesh_ptr->getVertexVectors(*entity);
 			centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
 		}
@@ -247,7 +248,7 @@ T Field<T>::getField(Eigen::Vector3d position, iBase_EntityHandle *entity,
 }
 
 template <class T>
-T Field<T>::getField(iBase_EntityHandle node) {
+T Field<T>::getField(entHandle node) {
 	T field;
 	T *field_ptr=&field;
 	int field_alloc = sizeof(T);
@@ -260,9 +261,9 @@ T Field<T>::getField(iBase_EntityHandle node) {
 }
 
 template <class T>
-T Field<T>::getAverageField(iBase_EntityHandle element) {
+T Field<T>::getAverageField(entHandle element) {
 	// TODO: this doesn't work for non-vertex fields
-	std::vector<iBase_EntityHandle> vertices =
+	std::vector<entHandle> vertices =
 			mesh_ptr->getAdjacentEntities(element, iBase_VERTEX);
 	T average=0;
 
@@ -275,7 +276,7 @@ T Field<T>::getAverageField(iBase_EntityHandle element) {
 }
 
 template <class T>
-void Field<T>::setField(iBase_EntityHandle node, T field) {
+void Field<T>::setField(entHandle node, T field) {
 	int ierr;
 	int field_size = sizeof(T);
 	iMesh_setData(mesh_ptr->meshInstance, node, tag, &field,
@@ -284,7 +285,7 @@ void Field<T>::setField(iBase_EntityHandle node, T field) {
 
 template <class T>
 Eigen::VectorXd Field<T>::getErrorCoefficients(
-		iBase_EntityHandle element, int interpolationOrder) {
+		entHandle element, int interpolationOrder) {
 	Eigen::VectorXd errorCoefficients;
 	if (element==currentInterpolationElement && element!=NULL) {
 		errorCoefficients = currentErrorCoefficients;
@@ -302,13 +303,13 @@ Eigen::VectorXd Field<T>::getErrorCoefficients(
 		}
 		// TODO: only dealing with doubles for now
 		if (boost::is_same<T,double>::value) {
-			std::vector<iBase_EntityHandle> surroundingVertices =
+			std::vector<entHandle> surroundingVertices =
 					mesh_ptr->surroundingVertsMap[element];
 			Eigen::MatrixXd evaluatedErrorBases(surroundingVertices.size(),
 					errorBasesSize);
 			Eigen::VectorXd interpolationError(surroundingVertices.size());
 			for (int i=0; i<surroundingVertices.size(); i++) {
-				Eigen::Vector3d position =
+				vect3d position =
 						mesh_ptr->getCoordinates(surroundingVertices[i]);
 				Eigen::Vector4d linearBasisFunctions =
 						mesh_ptr->evaluateLinearBasisFunctions(

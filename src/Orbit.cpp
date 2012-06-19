@@ -8,12 +8,12 @@
 #include "epic.h"
 #include "Orbit.h"
 
-//Orbit::Orbit(Eigen::Vector3d inputPosition, Eigen::Vector3d inputVelocity,
-//		iBase_EntityHandle inputElement) {
+//Orbit::Orbit(vect3d inputPosition, vect3d inputVelocity,
+//		entHandle inputElement) {
 //}
 
-Orbit::Orbit(Mesh *inputMesh_ptr, iBase_EntityHandle inputNode,
-		Eigen::Vector3d inputVelocity, double inputCharge) {
+Orbit::Orbit(Mesh *inputMesh_ptr, entHandle inputNode,
+		vect3d inputVelocity, double inputCharge) {
 	mesh_ptr = inputMesh_ptr;
 	initialNode = inputNode;
 	// TODO: perhaps find a random adjacent tet rather than give node
@@ -30,23 +30,23 @@ Orbit::~Orbit() {
 void Orbit::integrate(ElectricField& electricField,
 		PotentialField& potentialField,
 		Field<int>& faceTypeField, CodeField& vertexTypeField, FILE *outFile) {
-	Eigen::Vector3d eField = electricField.getField(initialNode);
+	vect3d eField = electricField.getField(initialNode);
 	int nVertices=4;
-	std::vector<Eigen::Vector3d> eFields(nVertices), vertexVectors(nVertices);
-	std::vector<iBase_EntityHandle> vertices(nVertices);
+	std::vector<vect3d> eFields(nVertices), vertexVectors(nVertices);
+	std::vector<entHandle> vertices(nVertices);
 	// TODO: need some clever way to set tMax and/or detect trapped orbits
 	double dt=std::min(0.01,0.01/initialVelocity.norm()), tMax=100;
-	Eigen::Vector3d currentPosition = initialPosition;
-	Eigen::Vector3d currentVelocity = initialVelocity;
+	vect3d currentPosition = initialPosition;
+	vect3d currentVelocity = initialVelocity;
 	// TODO: shouldn't hard-code quasi-neutral operation
 	double phiSurface = -4;
 	vertexType = vertexTypeField.getField(initialNode);
-	Eigen::Vector3d vertexNormalVector;
-	Eigen::Vector3d initialNormalVelocity;
+	vect3d vertexNormalVector;
+	vect3d initialNormalVelocity;
 	if (vertexType==4 && charge<0.) {
 		vertexNormalVector =
 				mesh_ptr->getVertexNormalVector(initialNode, faceTypeField);
-		Eigen::Vector3d coords = mesh_ptr->getCoordinates(initialNode);
+		vect3d coords = mesh_ptr->getCoordinates(initialNode);
 		initialNormalVelocity =
 				currentVelocity.dot(vertexNormalVector)*vertexNormalVector;
 		// TODO: could do something like below to get distribution at surface
@@ -77,7 +77,7 @@ void Orbit::integrate(ElectricField& electricField,
 	bool firstStep=true;
 	for (double t=0; t<tMax; t+=dt) {
 		nSteps++;
-		Eigen::Vector3d previousPosition = currentPosition;
+		vect3d previousPosition = currentPosition;
 		currentPosition += dt*currentVelocity;
 //		clock_t startClock = clock(); // timing
 		if (!firstStep)
@@ -91,18 +91,18 @@ void Orbit::integrate(ElectricField& electricField,
 //			if  (vertexVectors.size()==nVertices)
 //				isTet = true;
 			clock_t startClock = clock(); // timing
-			iBase_EntityHandle previousElement = currentElement;
+			entHandle previousElement = currentElement;
 			currentElement = mesh_ptr->findTet(previousPosition,
 					currentPosition, previousElement, &foundTet, isTet);
 			clock_t endClock = clock(); // timing
 			extern_findTet += endClock-startClock; // timing
 			// TODO: should handle failure to find tet in some way
 			if (foundTet==false) {
-				iBase_EntityHandle faceCrossed = mesh_ptr->findFaceCrossed(
+				entHandle faceCrossed = mesh_ptr->findFaceCrossed(
 						previousElement, previousPosition, currentPosition);
 				// TODO: grazing orbits don't enter domain in first time-step
 				int faceType;
-				Eigen::Vector3d normalVector, normalVelocity;
+				vect3d normalVector, normalVelocity;
 				if (faceCrossed!=NULL) {
 					faceType = faceTypeField.getField(faceCrossed);
 					normalVector = mesh_ptr->getNormalVector(faceCrossed,
@@ -147,7 +147,7 @@ void Orbit::integrate(ElectricField& electricField,
 		assert(vertexVectors.size()==nVertices);
 		std::vector<double> vertexWeights = mesh_ptr->getVertexWeights(currentPosition,
 				vertexVectors);
-		Eigen::Vector3d currentAcceleration(0.,0.,0.);
+		vect3d currentAcceleration(0.,0.,0.);
 		assert(eFields.size()==vertexWeights.size());
 		for (int i=0; i<vertexWeights.size(); i++) {
 			currentAcceleration += charge*eFields[i]*vertexWeights[i];
@@ -157,7 +157,7 @@ void Orbit::integrate(ElectricField& electricField,
 				currentPosition.norm();
 		currentVelocity += dt*currentAcceleration;
 //		double potential = potentialField.getField(currentPosition, currentElement);
-//		Eigen::Vector3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
+//		vect3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
 //		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
 //		if (outFile) {
 //			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
@@ -176,17 +176,17 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //	double dt=std::min(0.005,0.005/initialVelocity.norm()), tMax=100;
 	double dt=std::min(0.01,0.01/initialVelocity.norm()), tMax=100;
 //	double dt=std::min(0.02,0.02/initialVelocity.norm()), tMax=100;
-	Eigen::Vector3d currentPosition = initialPosition;
-	Eigen::Vector3d currentVelocity = initialVelocity;
+	vect3d currentPosition = initialPosition;
+	vect3d currentVelocity = initialVelocity;
 	// TODO: shouldn't hard-code quasi-neutral operation
 	double phiSurface = -4;
 	vertexType = vertexTypeField.getField(initialNode);
-	Eigen::Vector3d vertexNormalVector;
-	Eigen::Vector3d initialNormalVelocity;
+	vect3d vertexNormalVector;
+	vect3d initialNormalVelocity;
 	if (vertexType==4 && charge<0.) {
 		vertexNormalVector =
 				mesh_ptr->getVertexNormalVector(initialNode, faceTypeField);
-		Eigen::Vector3d coords = mesh_ptr->getCoordinates(initialNode);
+		vect3d coords = mesh_ptr->getCoordinates(initialNode);
 		initialNormalVelocity =
 				currentVelocity.dot(vertexNormalVector)*vertexNormalVector;
 		// TODO: could do something like below to get distribution at surface
@@ -228,11 +228,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //	currentPosition -= currentVelocity*dt/2.;
 	for (double t=0.; t<tMax; t+=dt) {
 		nSteps++;
-		Eigen::Vector3d previousPosition = currentPosition;
-		Eigen::Vector3d previousVelocity = currentVelocity;
-		iBase_EntityHandle previousElement = currentElement;
+		vect3d previousPosition = currentPosition;
+		vect3d previousVelocity = currentVelocity;
+		entHandle previousElement = currentElement;
 //		currentPosition += dt*currentVelocity;
-//		Eigen::Vector3d currentAcceleration(0.,0.,0.);
+//		vect3d currentAcceleration(0.,0.,0.);
 //		// TODO: replace this hack
 //		if (t==0.) {
 //			currentElement = mesh_ptr->findTet(previousPosition,
@@ -270,8 +270,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //							&currentElement, 1);
 //				// TODO: hard-coding dimension here...
 //				for (int i=0; i<3; i++) {
-//					Eigen::Vector3d perturbedPosition = currentPosition +
-//							Eigen::Vector3d::Unit(i)*DELTA_LENGTH;
+//					vect3d perturbedPosition = currentPosition +
+//							vect3d::Unit(i)*DELTA_LENGTH;
 //					double perturbedPotential = potentialField.getField(
 //							perturbedPosition, &currentElement, interpolationOrder);
 //					// TODO: track down why perturbedPotential sometimes is NaN
@@ -312,11 +312,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		if (foundTet==false) {
 			// TODO: if near vertex could leave domain through non-boundary face
 			//       by crossing sliver of other tet in one time-step
-			iBase_EntityHandle faceCrossed = mesh_ptr->findFaceCrossed(
+			entHandle faceCrossed = mesh_ptr->findFaceCrossed(
 					previousElement, previousPosition, currentPosition);
 			// TODO: grazing orbits don't enter domain in first time-step
 			int faceType;
-			Eigen::Vector3d normalVector(0.,0.,0.), normalVelocity(0.,0.,0.);
+			vect3d normalVector(0.,0.,0.), normalVelocity(0.,0.,0.);
 			if (faceCrossed!=NULL) {
 				faceType = faceTypeField.getField(faceCrossed);
 				normalVector = mesh_ptr->getNormalVector(faceCrossed,
@@ -324,7 +324,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				normalVelocity =
 						currentVelocity.dot(normalVector)*normalVector;
 				finalPotential = 0.;
-				std::vector<iBase_EntityHandle> vertices =
+				std::vector<entHandle> vertices =
 						mesh_ptr->getVertices(faceCrossed);
 				for (int i=0; i<vertices.size(); i++) {
 					// TODO: should use point where left domain here
@@ -367,7 +367,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 ////		currentAcceleration = -charge*currentPosition/
 ////				pow(currentPosition.norm(),3.);
 //		currentVelocity += dt*currentAcceleration;
-//		Eigen::Vector3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
+//		vect3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
 //		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
 		if (foundTet) {
 			potential = potentialField.getField(currentPosition,

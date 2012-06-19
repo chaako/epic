@@ -45,7 +45,7 @@ Mesh::Mesh(std::string inputMeshFile) {
 	adjacentTetsToFaceMap = getAdjacentsMap(iBase_FACE, iBase_REGION);
 
 	// store vertex coordinates for fast access
-	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >::iterator iter;
+	std::map<entHandle,std::vector<entHandle> >::iterator iter;
 	for (iter=adjacentVertsMap.begin(); iter!=adjacentVertsMap.end(); ++iter) {
 		vertexVectorsMap[iter->first] = Mesh::getVertexVectors(iter->first, false);
 		assert(vertexVectorsMap[iter->first].size()==4);
@@ -99,7 +99,7 @@ void Mesh::save(std::string outputMeshFile) {
 	int options_len = 0;
 	int ierr;
 	// destroy eField tag since VisIt doesn't understand
-	iBase_EntityHandle *ents0d = NULL;
+	entHandle *ents0d = NULL;
 	int ents0d_alloc = 0, ents0d_size;
 	iBase_TagHandle eField_tag;
 	std::string tagName = "eField";
@@ -121,12 +121,12 @@ void Mesh::save(std::string outputMeshFile) {
 			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
 	CHECK("Couldn't get vertex entities");
 	for (int i = 0; i < ents0d_size; i++) {
-		std::vector<iBase_EntityHandle> superCellFaces =
+		std::vector<entHandle> superCellFaces =
 				this->getSuperCellFaces(ents0d[i]);
-		Eigen::Vector3d eField(0.,0.,0.);
-		Eigen::Vector3d *eField_ptr = &eField;
-		int eField_alloc = sizeof(Eigen::Vector3d);
-		int eField_size = sizeof(Eigen::Vector3d);
+		vect3d eField(0.,0.,0.);
+		vect3d *eField_ptr = &eField;
+		int eField_alloc = sizeof(vect3d);
+		int eField_size = sizeof(vect3d);
 		iMesh_getData(meshInstance, ents0d[i], eField_tag, &eField_ptr,
 				&eField_alloc, &eField_size, &ierr);
 		CHECK("Failure getting eField tag");
@@ -148,41 +148,41 @@ void Mesh::save(std::string outputMeshFile) {
 	CHECK("Save failed");
 }
 
-std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
+std::map<entHandle,std::vector<entHandle> >
 Mesh::getSurroundingVerticesMap() {
-	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
+	std::map<entHandle,std::vector<entHandle> >
 	surroundingVerticesMap;
 	// TODO: should handle case where adjacentTetsMap isn't available yet
 	assert(adjacentTetsMap.begin()!=adjacentTetsMap.end());
-	for(std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >::iterator
+	for(std::map<entHandle,std::vector<entHandle> >::iterator
 			adjacentTets = adjacentTetsMap.begin();
 			adjacentTets != adjacentTetsMap.end();
 			adjacentTets++) {
-		iBase_EntityHandle element = adjacentTets->first;
-		std::set<iBase_EntityHandle> surroundingVerticesSet;
-		for (std::vector<iBase_EntityHandle>::iterator adjacentTet =
+		entHandle element = adjacentTets->first;
+		std::set<entHandle> surroundingVerticesSet;
+		for (std::vector<entHandle>::iterator adjacentTet =
 				adjacentTets->second.begin();
 				adjacentTet!=adjacentTets->second.end(); ++adjacentTet) {
-			std::vector<iBase_EntityHandle> adjacentVertices =
+			std::vector<entHandle> adjacentVertices =
 					getAdjacentEntities(*adjacentTet, iBase_VERTEX);
-			for (std::vector<iBase_EntityHandle>::iterator vertex =
+			for (std::vector<entHandle>::iterator vertex =
 					adjacentVertices.begin(); vertex!=adjacentVertices.end();
 					++vertex) {
 				surroundingVerticesSet.insert(*vertex);
 			}
 		}
 		// Remove the vertices of the tet itself
-		std::vector<iBase_EntityHandle> vertices =
+		std::vector<entHandle> vertices =
 				getAdjacentEntities(element, iBase_VERTEX);
-//		std::vector<iBase_EntityHandle>& vec = adjacentTets->second;
+//		std::vector<entHandle>& vec = adjacentTets->second;
 		int initialSize = surroundingVerticesSet.size();
-		for (std::vector<iBase_EntityHandle>::iterator vertex =
+		for (std::vector<entHandle>::iterator vertex =
 				vertices.begin(); vertex!=vertices.end(); ++vertex) {
 			surroundingVerticesSet.erase(*vertex);
 //			// Compact elements!=*vertex to front of vector and remove remaining
 //			vec.erase(std::remove(vec.begin(), vec.end(), *vertex), vec.end());
 		}
-		std::vector<iBase_EntityHandle> surroundingVertices(
+		std::vector<entHandle> surroundingVertices(
 				surroundingVerticesSet.begin(), surroundingVerticesSet.end());
 //		std::cout << element << std::endl;
 //		std::cout << surroundingVerticesSet.size() << " " <<
@@ -193,11 +193,11 @@ Mesh::getSurroundingVerticesMap() {
 	return surroundingVerticesMap;
 }
 
-std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> >
+std::map<entHandle,std::vector<entHandle> >
 Mesh::getAdjacentsMap(int keyEntityType, int valueEntityType,
 		int bridgeEntityType) {
-	std::map<iBase_EntityHandle,std::vector<iBase_EntityHandle> > adjacentsMap;
-	iBase_EntityHandle *ents3d = NULL;
+	std::map<entHandle,std::vector<entHandle> > adjacentsMap;
+	entHandle *ents3d = NULL;
 	int ents3d_alloc = 0, ents3d_size;
 	int ierr;
 	iMesh_getEntities(meshInstance, rootEntitySet, keyEntityType,
@@ -205,7 +205,7 @@ Mesh::getAdjacentsMap(int keyEntityType, int valueEntityType,
 			&ents3d, &ents3d_alloc, &ents3d_size, &ierr);
 	CHECK("Couldn't get entities");
 	for(int i=0; i<ents3d_size; i++) {
-		iBase_EntityHandle *entities = NULL;
+		entHandle *entities = NULL;
 		int entities_alloc = 0, entities_size;
 		if (bridgeEntityType>=0) {
 			iMesh_getEnt2ndAdj(meshInstance, ents3d[i], bridgeEntityType,
@@ -218,7 +218,7 @@ Mesh::getAdjacentsMap(int keyEntityType, int valueEntityType,
 					&entities_size, &ierr);
 			CHECK("Getting adjacency failed");
 		}
-		std::vector<iBase_EntityHandle> handles;
+		std::vector<entHandle> handles;
 		for (int j=0; j<entities_size; j++) {
 			handles.push_back(entities[j]);
 		}
@@ -232,8 +232,8 @@ Mesh::getAdjacentsMap(int keyEntityType, int valueEntityType,
 	return adjacentsMap;
 }
 
-Eigen::Vector3d Mesh::getCoordinates(iBase_EntityHandle node, bool useMap) {
-	Eigen::Vector3d coordinates(0.,0.,0.);
+vect3d Mesh::getCoordinates(entHandle node, bool useMap) {
+	vect3d coordinates(0.,0.,0.);
 	double x,y,z;
 	int ierr;
 	iMesh_getVtxCoord(meshInstance, node, &x, &y, &z, &ierr);
@@ -242,18 +242,18 @@ Eigen::Vector3d Mesh::getCoordinates(iBase_EntityHandle node, bool useMap) {
 	return coordinates;
 }
 
-iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
-		Eigen::Vector3d position,
-		iBase_EntityHandle adjacentTet, bool *tetFound, bool isTet) {
-	iBase_EntityHandle tet;
-	iBase_EntityHandle *entities = NULL;
+entHandle Mesh::findTet(vect3d oldPosition,
+		vect3d position,
+		entHandle adjacentTet, bool *tetFound, bool isTet) {
+	entHandle tet;
+	entHandle *entities = NULL;
 	int entities_alloc=0, entities_size=0;
 	int ierr;
-	std::vector<iBase_EntityHandle> ents;
-	std::vector<iBase_EntityHandle> faces;
+	std::vector<entHandle> ents;
+	std::vector<entHandle> faces;
 
 	if (isTet) {
-		iBase_EntityHandle faceCrossed = this->findFaceCrossed(
+		entHandle faceCrossed = this->findFaceCrossed(
 				adjacentTet, oldPosition, position);
 		if (faceCrossed) {
 			ents = adjacentTetsToFaceMap[faceCrossed];
@@ -324,24 +324,24 @@ iBase_EntityHandle Mesh::findTet(Eigen::Vector3d oldPosition,
 	return tet;
 }
 
-//iBase_EntityHandle Mesh::findStartingTet(Eigen::Vector3d const &position,
-//		Eigen::Vector3d const &velocity, iBase_EntityHandle vertex) {
-//	iBase_EntityHandle startingTet=NULL;
-//	Eigen::Vector3d perturbedPosition =
+//entHandle Mesh::findStartingTet(vect3d const &position,
+//		vect3d const &velocity, entHandle vertex) {
+//	entHandle startingTet=NULL;
+//	vect3d perturbedPosition =
 //			position + DELTA_LENGTH*velocity/velocity.norm();
 //
 //	return startingTet;
 //}
 
-std::vector<iBase_EntityHandle> Mesh::getEntities(int dimension) {
+std::vector<entHandle> Mesh::getEntities(int dimension) {
 	int ierr;
-	iBase_EntityHandle *ents = NULL;
+	entHandle *ents = NULL;
 	int ents_alloc = 0, ents_size;
 	iMesh_getEntities(meshInstance, rootEntitySet,
 			dimension, iMesh_ALL_TOPOLOGIES,
 			&ents, &ents_alloc, &ents_size, &ierr);
 	CHECK("Couldn't get vertex entities");
-	std::vector<iBase_EntityHandle> elements(ents_size);
+	std::vector<entHandle> elements(ents_size);
 	for (int i = 0; i < ents_size; i++) {
 		elements[i] = ents[i];
 	}
@@ -350,22 +350,22 @@ std::vector<iBase_EntityHandle> Mesh::getEntities(int dimension) {
 	return elements;
 }
 
-std::vector<iBase_EntityHandle> Mesh::getVertices(
-		iBase_EntityHandle element) {
+std::vector<entHandle> Mesh::getVertices(
+		entHandle element) {
 	return this->getAdjacentEntities(element, iBase_VERTEX);
 }
 
-std::vector<iBase_EntityHandle> Mesh::getAdjacentEntities(
-		iBase_EntityHandle element, int dimension) {
+std::vector<entHandle> Mesh::getAdjacentEntities(
+		entHandle element, int dimension) {
 	int ierr;
-	iBase_EntityHandle *elements = NULL;
+	entHandle *elements = NULL;
 	int elements_alloc = 0, elements_size;
 
 	iMesh_getEntAdj(meshInstance, element, dimension,
 			&elements, &elements_alloc, &elements_size, &ierr);
 	CHECK("Getting vertices adjacent to entity failed");
 
-	std::vector<iBase_EntityHandle> elementHandles(elements_size);
+	std::vector<entHandle> elementHandles(elements_size);
 	for (int i=0; i<elements_size; i++) {
 		elementHandles[i] = elements[i];
 	}
@@ -375,8 +375,8 @@ std::vector<iBase_EntityHandle> Mesh::getAdjacentEntities(
 	return elementHandles;
 }
 
-iBase_EntityHandle Mesh::getRandomVertex() {
-	iBase_EntityHandle *ents0d = NULL;
+entHandle Mesh::getRandomVertex() {
+	entHandle *ents0d = NULL;
 	int ents0d_alloc = 0, ents0d_size;
 	int ierr;
 
@@ -394,7 +394,7 @@ iBase_EntityHandle Mesh::getRandomVertex() {
 	return ents0d[iSelectedNode];
 }
 
-int Mesh::getEntityDimension(iBase_EntityHandle entity) {
+int Mesh::getEntityDimension(entHandle entity) {
 	int ierr;
 	int dimension;
 	iMesh_getEntType(meshInstance, entity, &dimension, &ierr);
@@ -402,12 +402,12 @@ int Mesh::getEntityDimension(iBase_EntityHandle entity) {
 	return dimension;
 }
 
-std::vector<Eigen::Vector3d> Mesh::getVertexVectors(iBase_EntityHandle entity,
+std::vector<vect3d> Mesh::getVertexVectors(entHandle entity,
 		bool useMap) {
 	int dimension = this->getEntityDimension(entity);
 	int nVerts = dimension + 1;
-	std::vector<Eigen::Vector3d> vertexVectors(nVerts);
-	std::vector<iBase_EntityHandle> vertices(nVerts);
+	std::vector<vect3d> vertexVectors(nVerts);
+	std::vector<entHandle> vertices(nVerts);
 	if (dimension == 3) {
 		vertices = adjacentVertsMap[entity];
 	} else {
@@ -425,15 +425,15 @@ std::vector<Eigen::Vector3d> Mesh::getVertexVectors(iBase_EntityHandle entity,
 	return vertexVectors;
 }
 
-bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition,
-		iBase_EntityHandle element) {
-	std::vector<Eigen::Vector3d> vertexVectors = this->getVertexVectors(element);
+bool Mesh::checkIfInTet(vect3d currentPosition,
+		entHandle element) {
+	std::vector<vect3d> vertexVectors = this->getVertexVectors(element);
 
 	return this->checkIfInTet(currentPosition, vertexVectors);
 }
 
-bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition,
-		std::vector<Eigen::Vector3d> vertexVectors) {
+bool Mesh::checkIfInTet(vect3d currentPosition,
+		std::vector<vect3d> vertexVectors) {
 //	double tetVolume = this->getTetVolume(vertexVectors);
 //	if (tetVolume<VOLUME_TOLERANCE)
 //		return false;
@@ -453,13 +453,13 @@ bool Mesh::checkIfInTet(Eigen::Vector3d currentPosition,
 	return inElement;
 }
 
-bool Mesh::checkIfIntersectsTriangle(Eigen::Vector3d previousPosition,
-		Eigen::Vector3d currentPosition,
-		std::vector<Eigen::Vector3d> vertexVectors) {
-	std::vector<Eigen::Vector3d> ray(2);
+bool Mesh::checkIfIntersectsTriangle(vect3d previousPosition,
+		vect3d currentPosition,
+		std::vector<vect3d> vertexVectors) {
+	std::vector<vect3d> ray(2);
 	ray[0] = previousPosition;
 	ray[1] = currentPosition;
-	Eigen::Vector3d intersectionPoint;
+	vect3d intersectionPoint;
 	int intersectionStatus =
 			intersect_RayTriangle(ray, vertexVectors, &intersectionPoint);
 	if (intersectionStatus == 1) {
@@ -469,11 +469,11 @@ bool Mesh::checkIfIntersectsTriangle(Eigen::Vector3d previousPosition,
 	}
 }
 
-//std::vector<Eigen::Vector3d> Mesh::getEdgeVectors(
-//		std::vector<Eigen::Vector3d> vertexVectors) {
+//std::vector<vect3d> Mesh::getEdgeVectors(
+//		std::vector<vect3d> vertexVectors) {
 //	int nVerts = vertexVectors.size();
 //	int nEdges=nVerts-1;
-//	std::vector<Eigen::Vector3d> edgeVectors(nEdges);
+//	std::vector<vect3d> edgeVectors(nEdges);
 //	switch (nVerts) {
 //	case 4:
 //		edgeVectors[2] = vertexVectors[3]-vertexVectors[0];
@@ -488,16 +488,16 @@ bool Mesh::checkIfIntersectsTriangle(Eigen::Vector3d previousPosition,
 //}
 
 
-iBase_EntityHandle Mesh::findFaceCrossed(iBase_EntityHandle previousElement,
-		Eigen::Vector3d previousPosition, Eigen::Vector3d currentPosition) {
-	iBase_EntityHandle faceCrossed=NULL;
-	std::vector<iBase_EntityHandle> adjacentFaces =
+entHandle Mesh::findFaceCrossed(entHandle previousElement,
+		vect3d previousPosition, vect3d currentPosition) {
+	entHandle faceCrossed=NULL;
+	std::vector<entHandle> adjacentFaces =
 			adjacentFacesMap[previousElement];
-//	std::vector<iBase_EntityHandle> adjacentFaces =
+//	std::vector<entHandle> adjacentFaces =
 //			getAdjacentEntities(previousElement,iBase_FACE);
 
 	for (int i=0; i<adjacentFaces.size(); i++) {
-		std::vector<Eigen::Vector3d> vertexVectors =
+		std::vector<vect3d> vertexVectors =
 				this->getVertexVectors(adjacentFaces[i], true);
 		bool intersectsTriangle = this->checkIfIntersectsTriangle(previousPosition,
 				currentPosition, vertexVectors);
@@ -524,24 +524,24 @@ iBase_TagHandle Mesh::createTagHandle(std::string tagName, int size, int type) {
 	return tag;
 }
 
-Eigen::Vector3d Mesh::getSurfaceVector(iBase_EntityHandle face,
-		Eigen::Vector3d point) {
-	std::vector<Eigen::Vector3d> vertexVectors =
+vect3d Mesh::getSurfaceVector(entHandle face,
+		vect3d point) {
+	std::vector<vect3d> vertexVectors =
 			this->getVertexVectors(face);
 	assert(3 == vertexVectors.size());
-	std::vector<Eigen::Vector3d> edgeVectors(vertexVectors.size()-1);
+	std::vector<vect3d> edgeVectors(vertexVectors.size()-1);
 
 	edgeVectors[0] = vertexVectors[1]-vertexVectors[0];
 	edgeVectors[1] = vertexVectors[2]-vertexVectors[0];
 
-	Eigen::Vector3d surfaceVector = edgeVectors[0].cross(edgeVectors[1])/2.;
-	Eigen::Vector3d referenceVector = point - vertexVectors[0];
-	if (point==Eigen::Vector3d(0.,0.,0.) ||
+	vect3d surfaceVector = edgeVectors[0].cross(edgeVectors[1])/2.;
+	vect3d referenceVector = point - vertexVectors[0];
+	if (point==vect3d(0.,0.,0.) ||
 			fabs(referenceVector.dot(surfaceVector))<LENGTH_TOLERANCE) {
-		std::vector<iBase_EntityHandle> tets =
+		std::vector<entHandle> tets =
 				this->getAdjacentEntities(face,iBase_REGION);
 		// TODO: handle interior faces with two adjacent tets?
-		std::vector<Eigen::Vector3d> tetVertexVectors =
+		std::vector<vect3d> tetVertexVectors =
 				this->getVertexVectors(tets[0]);
 		int nPoints=0;
 		for (int i=0; i<tetVertexVectors.size(); i++) {
@@ -557,7 +557,7 @@ Eigen::Vector3d Mesh::getSurfaceVector(iBase_EntityHandle face,
 		}
 		assert(nPoints==1);
 	}
-	assert(point!=Eigen::Vector3d(0.,0.,0.));
+	assert(point!=vect3d(0.,0.,0.));
 	referenceVector = point - vertexVectors[0];
 
 	if (referenceVector.dot(surfaceVector)<0)
@@ -566,44 +566,44 @@ Eigen::Vector3d Mesh::getSurfaceVector(iBase_EntityHandle face,
 	return surfaceVector;
 }
 
-Eigen::Vector3d Mesh::getNormalVector(iBase_EntityHandle face,
-		Eigen::Vector3d point) {
-	Eigen::Vector3d surfaceVector = this->getSurfaceVector(face, point);
+vect3d Mesh::getNormalVector(entHandle face,
+		vect3d point) {
+	vect3d surfaceVector = this->getSurfaceVector(face, point);
 	return surfaceVector/surfaceVector.norm();
 }
 
-Eigen::Vector3d Mesh::getVertexNormalVector(iBase_EntityHandle vertex,
+vect3d Mesh::getVertexNormalVector(entHandle vertex,
 		Field<int> faceTypeField) {
-	std::vector<iBase_EntityHandle> faces =
+	std::vector<entHandle> faces =
 			this->getAdjacentEntities(vertex, iBase_FACE);
 	// TODO: could pre-allocate normalVectors
-	std::vector<Eigen::Vector3d> normalVectors;
-	std::vector<iBase_EntityHandle>::iterator faceIter = faces.begin();
+	std::vector<vect3d> normalVectors;
+	std::vector<entHandle>::iterator faceIter = faces.begin();
 	for (; faceIter!=faces.end(); ++faceIter) {
 		int faceType = faceTypeField.getField(*faceIter);
 		if (faceType>0) {
-			Eigen::Vector3d normalVector =
+			vect3d normalVector =
 					this->getNormalVector(*faceIter);
 			normalVectors.push_back(normalVector);
 		}
 	}
-	Eigen::Vector3d normalVector(0.,0.,0.);
-	std::vector<Eigen::Vector3d>::iterator normalIter =
+	vect3d normalVector(0.,0.,0.);
+	std::vector<vect3d>::iterator normalIter =
 			normalVectors.begin();
 	for (; normalIter!=normalVectors.end(); ++normalIter) {
 		normalVector += *normalIter;
 	}
 	normalVector /= normalVector.norm();
-	Eigen::Vector3d testCoord = this->getCoordinates(vertex);
+	vect3d testCoord = this->getCoordinates(vertex);
 	return normalVector;
 }
 
-std::vector<iBase_EntityHandle> Mesh::getSuperCellFaces(
-		iBase_EntityHandle vertex) {
+std::vector<entHandle> Mesh::getSuperCellFaces(
+		entHandle vertex) {
 	int ierr;
-	iBase_EntityHandle *faces = NULL;
+	entHandle *faces = NULL;
 	int faces_alloc = 0, faces_size;
-	std::vector<iBase_EntityHandle> superCellFaces;
+	std::vector<entHandle> superCellFaces;
 	iBase_TagHandle code_tag;
 
 	// TODO: cleaner way than hard-coding cell_code here?
@@ -616,7 +616,7 @@ std::vector<iBase_EntityHandle> Mesh::getSuperCellFaces(
 			&faces_size, &ierr);
 	CHECK("Failure in getEnt2ndAdj");
 	for (int i = 0; i < faces_size; i++) {
-		iBase_EntityHandle *vertices = NULL;
+		entHandle *vertices = NULL;
 		int vertices_alloc = 0, vertices_size;
 		bool onSuperCellSurface = true;
 		int cell_code = 0;
@@ -648,17 +648,17 @@ std::vector<iBase_EntityHandle> Mesh::getSuperCellFaces(
 	return superCellFaces;
 }
 
-double Mesh::getTetVolume(Eigen::Vector3d point, iBase_EntityHandle face) {
-	std::vector<Eigen::Vector3d> vertexVectors =
+double Mesh::getTetVolume(vect3d point, entHandle face) {
+	std::vector<vect3d> vertexVectors =
 			this->getVertexVectors(face);
 	vertexVectors.push_back(point);
 
 	return getTetVolume(vertexVectors);
 }
 
-double Mesh::getTetVolume(std::vector<Eigen::Vector3d> vertexVectors) {
+double Mesh::getTetVolume(std::vector<vect3d> vertexVectors) {
 	int nEdges=3;
-	std::vector<Eigen::Vector3d> edgeVectors(nEdges);
+	std::vector<vect3d> edgeVectors(nEdges);
 
 	int nVertices=4;
 	assert(vertexVectors.size() == nVertices);
@@ -672,13 +672,13 @@ double Mesh::getTetVolume(std::vector<Eigen::Vector3d> vertexVectors) {
 			)/6.;
 }
 
-std::vector<double> Mesh::getTetSubVolumes(Eigen::Vector3d point,
-		std::vector<Eigen::Vector3d> vertexVectors) {
+std::vector<double> Mesh::getTetSubVolumes(vect3d point,
+		std::vector<vect3d> vertexVectors) {
 	int nVertices=4;
 	assert(vertexVectors.size()==nVertices);
 	std::vector<double> subVolumes(nVertices);
 	for (int i=0; i<vertexVectors.size(); i++) {
-		Eigen::Vector3d tmpVertex = vertexVectors[i];
+		vect3d tmpVertex = vertexVectors[i];
 		vertexVectors[i] = point;
 		double volume = this->getTetVolume(vertexVectors);
 		subVolumes[i] = volume;
@@ -687,8 +687,8 @@ std::vector<double> Mesh::getTetSubVolumes(Eigen::Vector3d point,
 	return subVolumes;
 }
 
-std::vector<double> Mesh::getVertexWeights(Eigen::Vector3d point,
-		std::vector<Eigen::Vector3d> vertexVectors) {
+std::vector<double> Mesh::getVertexWeights(vect3d point,
+		std::vector<vect3d> vertexVectors) {
 	std::vector<double> subVolumes = this->getTetSubVolumes(point,
 			vertexVectors);
 	double totalVolume = this->getTetVolume(vertexVectors);
@@ -698,14 +698,14 @@ std::vector<double> Mesh::getVertexWeights(Eigen::Vector3d point,
 	return subVolumes;
 }
 
-Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(Eigen::Vector3d position,
-		iBase_EntityHandle element) {
+Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(vect3d position,
+		entHandle element) {
 	Eigen::Vector4d basisFunctions;
 	if (element==previousCoordsToBasisElement && element!=NULL) {
 		Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
 		basisFunctions = previousCoordsToBasis*paddedPosition;
 	} else {
-		std::vector<Eigen::Vector3d> vVs = this->getVertexVectors(element);
+		std::vector<vect3d> vVs = this->getVertexVectors(element);
 		basisFunctions = this->evaluateLinearBasisFunctions(position,vVs);
 		// TODO: need to set this after evalLinBasFuncs call since it
 		//       sets it to NULL, but not clean code
@@ -714,8 +714,8 @@ Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(Eigen::Vector3d position,
 	return basisFunctions;
 }
 
-Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(Eigen::Vector3d position,
-		std::vector<Eigen::Vector3d> vVs) {
+Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(vect3d position,
+		std::vector<vect3d> vVs) {
 	// TODO: should replace 4 here with unified number across functions
 	assert(vVs.size()==4);
 	Eigen::Vector4d basisFunctions;
@@ -818,12 +818,12 @@ vtkSmartPointer<vtkUnstructuredGrid> Mesh::createVtkMesh() {
 
 	vtkSmartPointer<vtkPoints> points =
 			vtkSmartPointer<vtkPoints>::New();
-	std::vector<iBase_EntityHandle> vertices =
+	std::vector<entHandle> vertices =
 			this->getEntities(iBase_VERTEX);
 	points->SetNumberOfPoints(vertices.size());
-	std::map<iBase_EntityHandle,int> indexOfVertex;
+	std::map<entHandle,int> indexOfVertex;
 	for(int i=0; i<vertices.size(); i++) {
-		Eigen::Vector3d vV = this->getCoordinates(vertices[i]);
+		vect3d vV = this->getCoordinates(vertices[i]);
 		points->InsertPoint(i, vV[0], vV[1], vV[2]);
 		indexOfVertex[vertices[i]] = i;
 	}
@@ -835,7 +835,7 @@ vtkSmartPointer<vtkUnstructuredGrid> Mesh::createVtkMesh() {
 	vtkSmartPointer<vtkTetra> tetra =
 			vtkSmartPointer<vtkTetra>::New();
 	for (int i=0; i<vtkToIMesh.size(); i++) {
-		std::vector<iBase_EntityHandle> verts =
+		std::vector<entHandle> verts =
 				this->getAdjacentEntities(vtkToIMesh[i],
 						iBase_VERTEX);
 		tetra->GetPointIds()->SetId(0, indexOfVertex[verts[0]]);

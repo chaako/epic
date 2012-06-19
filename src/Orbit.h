@@ -8,14 +8,16 @@
 #ifndef ORBIT_H_
 #define ORBIT_H_
 
+#include "typesAndDefinitions.h"
+
 class ElectricField;
 
 class Orbit {
 public:
-//	Orbit(Eigen::Vector3d inputPosition, Eigen::Vector3d inputVelocity,
-//			iBase_EntityHandle inputNode=NULL);
-	Orbit(Mesh *inputMesh, iBase_EntityHandle inputNode,
-			Eigen::Vector3d inputVelocity, double inputCharge=1.);
+//	Orbit(vect3d inputPosition, vect3d inputVelocity,
+//			entHandle inputNode=NULL);
+	Orbit(Mesh *inputMesh, entHandle inputNode,
+			vect3d inputVelocity, double inputCharge=1.);
 	~Orbit();
 	void integrate(ElectricField& electricField,
 			PotentialField& potentialField,
@@ -26,12 +28,12 @@ public:
 			Field<int>& faceType, CodeField& vertexTypeField,
 			FILE *outFile=NULL);
 	Mesh *mesh_ptr;
-	iBase_EntityHandle initialNode;
-	iBase_EntityHandle currentElement;
-	Eigen::Vector3d initialPosition;
-	Eigen::Vector3d initialVelocity;
-	Eigen::Vector3d finalPosition;
-	Eigen::Vector3d finalVelocity;
+	entHandle initialNode;
+	entHandle currentElement;
+	vect3d initialPosition;
+	vect3d initialVelocity;
+	vect3d finalPosition;
+	vect3d finalVelocity;
 	bool negativeEnergy;
 	int vertexType;
 	int finalFaceType;

@@ -8,8 +8,9 @@
 #ifndef STEPPER_H_
 #define STEPPER_H_
 
-#include <boost/array.hpp>
-#include "Eigen/Dense"
+#include "typesAndDefinitions.h"
+//#include <boost/array.hpp>
+//#include "Eigen/Dense"
 
 template<int N> class VelocityVerletStepper{
 public:

@@ -91,10 +91,10 @@ int main(int argc, char *argv[]) {
 
 //	// Integrate a circular test orbit
 //	{
-//		iBase_EntityHandle node = ionDensity.entities[2540];
+//		entHandle node = ionDensity.entities[2540];
 //		double nodePotential = potential.getField(node);
-//		Eigen::Vector3d position = mesh.getCoordinates(node);
-//		Eigen::Vector3d velocity, zHat(0.,0.,1.);
+//		vect3d position = mesh.getCoordinates(node);
+//		vect3d velocity, zHat(0.,0.,1.);
 //		velocity = position.cross(zHat);
 //		velocity /= velocity.norm();
 //		velocity *= sqrt(-nodePotential);

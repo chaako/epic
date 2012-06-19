@@ -20,7 +20,7 @@ public:
 	virtual ~IntegrandContainer();
 
 	Mesh *mesh_ptr;
-	iBase_EntityHandle node;
+	entHandle node;
 	ElectricField *electricField_ptr;
 	PotentialField *potentialField_ptr;
 	Field<int> *faceTypeField_ptr;
