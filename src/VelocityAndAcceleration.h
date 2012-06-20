@@ -21,7 +21,7 @@ public:
 	typedef boost::array<Eigen::Matrix<double,N,1>, 2> state_type;
 
 	VelocityAndAcceleration(PotentialField &inputPotentialField,
-			double inputCharge, iBase_EntityHandle initialNode) :
+			double inputCharge, entHandle initialNode) :
 		potentialField(inputPotentialField),
 		charge(inputCharge)
 	{
@@ -34,16 +34,14 @@ public:
 //		int dimension=potentialField.mesh_ptr->getEntityDimension(currentElement);
 //		assert(dimension==3);
 //		if (!foundTet)
-//			// TODO: not really guaranteed that OUTSIDE_DOMAIN is defined...
 //			throw int(OUTSIDE_DOMAIN);
-		// TODO: interpolationOrder shouldn't be set here
-		interpolationOrder = 1;
+		interpolationOrder = INTERPOLATIONORDER;
 	}
 
 	// TODO: should perhaps be consistent about ptrs vs refs
 	PotentialField& potentialField;
 	double charge;
-	iBase_EntityHandle currentElement;
+	entHandle currentElement;
 	bool foundTet;
 	int interpolationOrder;
 

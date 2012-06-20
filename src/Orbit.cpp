@@ -260,7 +260,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 							currentElement, &foundTet);
 				}
 //				// TODO: set order through input parameter?
-//				int interpolationOrder = 1;
+//				int interpolationOrder = INTERPOLATIONORDER;
 ////				currentAcceleration = charge*
 ////						electricField.getField(currentPosition, &currentElement);
 //				potential = potentialField.getField(currentPosition, &currentElement,

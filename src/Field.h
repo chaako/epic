@@ -32,7 +32,7 @@ public:
 	virtual ~Field() {}
 
 	T getField(vect3d position, entHandle *entity=NULL,
-			int interpolationOrder=1);
+			int interpolationOrder=INTERPOLATIONORDER);
 	T getField(entHandle node);
 	T getAverageField(entHandle element);
 	void setField(entHandle node, T field);

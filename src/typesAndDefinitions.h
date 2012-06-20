@@ -66,8 +66,10 @@ enum {
 #include <vtkCellTreeLocator.h>
 #include <vtkCellLocator.h>
 
-const int nDim=3;
-typedef Eigen::Matrix<double,nDim,1> vect3d;
+const int NDIM=3;
+const int INTERPOLATIONORDER=1;
+// Matrix gives better pretty printing than Vector3d in gdb
+typedef Eigen::Matrix<double,NDIM,1> vect3d;
 typedef iBase_EntityHandle entHandle;
 
 

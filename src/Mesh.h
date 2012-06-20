@@ -77,9 +77,9 @@ public:
 	vector<double> getVertexWeights(vect3d point,
 			vector<vect3d> vertexVectors);
 	Eigen::VectorXd getErrorCoefficients(vect3d position,
-			entHandle element, int interpolationOrder=1);
+			entHandle element, int interpolationOrder=INTERPOLATIONORDER);
 	Eigen::VectorXd getErrorCoefficients(vect3d position,
-			vector<vect3d> vVs, int interpolationOrder=1);
+			vector<vect3d> vVs, int interpolationOrder=INTERPOLATIONORDER);
 	Eigen::Vector4d evaluateLinearBasisFunctions(vect3d position,
 			entHandle element);
 	Eigen::Vector4d evaluateLinearBasisFunctions(vect3d position,

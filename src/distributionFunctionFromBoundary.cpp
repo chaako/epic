@@ -5,7 +5,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 	assert(ndim==3);
 	assert(fdim==1);
 	Mesh *mesh_ptr = ((IntegrandContainer*)integrandContainer_ptr)->mesh_ptr;
-	iBase_EntityHandle node =
+	entHandle node =
 			((IntegrandContainer*)integrandContainer_ptr)->node;
 	ElectricField *electricField_ptr =
 			((IntegrandContainer*)integrandContainer_ptr)->electricField_ptr;
@@ -17,7 +17,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 			((IntegrandContainer*)integrandContainer_ptr)->vertexTypeField_ptr;
 	double charge = ((IntegrandContainer*)integrandContainer_ptr)->charge;
 	FILE *orbitOutFile = ((IntegrandContainer*)integrandContainer_ptr)->orbitOutFile;
-	Eigen::Vector3d velocity;
+	vect3d velocity;
 	double v = sqrt(-4.*log((1.+x[0])/2.));
 	double theta = acos(x[1]);
 	double phi = (1.+x[2])*M_PI;
@@ -26,19 +26,19 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 	velocity[2] = v*cos(theta);
 	// TODO: shouldn't hard-code taking advantage of symmetry, but rather
 	//       get the preferred z-axis (now rHat) from the mesh (i.e. specified elsewhere)
-	Eigen::Vector3d position = mesh_ptr->getCoordinates(node);
-	Eigen::Vector3d rHat = position/position.norm();
+	vect3d position = mesh_ptr->getCoordinates(node);
+	vect3d rHat = position/position.norm();
 //	std::cout << (velocity-rHat).norm() << std::endl;
 //	std::cout << "rHat = " << rHat[0] << ", " << rHat[1] << ", " << rHat[2] << std::endl;
 	double beta = acos(rHat[2]);
 	double alpha = atan2(rHat[0],-rHat[1]);
 //	std::cout << "vel = " << velocity[0] << ", " << velocity[1] <<
 //			", " << velocity[2] << std::endl;
-	velocity = Eigen::AngleAxisd(-alpha, Eigen::Vector3d::UnitZ()) *
+	velocity = Eigen::AngleAxisd(-alpha, vect3d::UnitZ()) *
 			velocity;
-	velocity = Eigen::AngleAxisd(-beta, Eigen::Vector3d::UnitX()) *
+	velocity = Eigen::AngleAxisd(-beta, vect3d::UnitX()) *
 			velocity;
-//	std::cout << (velocity-Eigen::Vector3d::UnitZ()).norm() << std::endl << std::endl;
+//	std::cout << (velocity-vect3d::UnitZ()).norm() << std::endl << std::endl;
 //	std::cout << "rotVel = " << velocity[0] << ", " << velocity[1] <<
 //			", " << velocity[2] << std::endl;
 
