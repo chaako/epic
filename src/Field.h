@@ -35,6 +35,10 @@ public:
 			int interpolationOrder=INTERPOLATIONORDER);
 	T getField(entHandle node);
 	T getAverageField(entHandle element);
+	void evalFieldAndDeriv(T *fieldValue,
+			Eigen::Matrix<T,NDIM,1> *fieldDeriv,
+			vect3d position, entHandle *entity=NULL,
+			int interpolationOrder=INTERPOLATIONORDER);
 	void setField(entHandle node, T field);
 	Eigen::VectorXd getErrorCoefficients(entHandle element,
 			int interpolationOrder);
@@ -245,6 +249,141 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 //	cout << field << endl;
 	*entity = currentElement;
 	return field;
+}
+
+template <class T>
+void Field<T>::evalFieldAndDeriv(T *fieldValue,
+		Eigen::Matrix<T,NDIM,1> *fieldDeriv,
+		vect3d position, entHandle *entity,
+		int interpolationOrder) {
+	bool inElement=false;
+	Eigen::Vector4d linearBasisFunctions;
+	Eigen::VectorXd errorBases, errorCoefficients;
+//	cout << this << " " << *entity << " " << currentElement << " " <<
+//			position.transpose() << endl;
+	if (*entity==NULL) {
+//		cout << this << " " << *entity << " " << currentElement << " " <<
+//				position.transpose() << endl;
+		// TODO: handle case with no entity hint
+		vector<entHandle> adjacentEntities =
+				mesh_ptr->getAdjacentEntities(entities[0],iBase_REGION);
+		*entity = adjacentEntities[0];
+//		cout << this << " " << *entity << " " << currentElement << " " <<
+//				position.transpose() << endl << endl;
+	} else if (*entity==currentElement) {
+//		int dimension=mesh_ptr->getEntityDimension(*entity);
+//		if (dimension==iBase_REGION) {
+		// TODO: should probably reset currentElement somehow at beginning
+		//       of each orbit to prevent data from an old field being used
+		//       (probably very unlikely since end tet of one orbit would have
+		//       to be start tet of the next)
+			inElement=true;
+			// TODO: should replace use of linear coeffs with fast checkIfInTet
+			linearBasisFunctions =
+					mesh_ptr->evaluateLinearBasisFunctions(position, currentElement);
+			for (int i=0; i<linearBasisFunctions.rows(); i++)
+				if (linearBasisFunctions[i]<0.)
+					inElement=false;
+//		} else {
+//			cout << currentElement << ": " << dimension << " " <<
+//					position.transpose() <<
+//					" " << position.norm() << endl;
+//		}
+	}
+	bool isElement;
+	if (!inElement) {
+//		if (currentElement==NULL) {
+//			cout << this << " " << *entity << " " << currentElement << " " <<
+//					position.transpose() << endl;
+//			cout << " " << mesh_ptr->indexOfVertices[*entity] <<
+//					" " << mesh_ptr->indexOfFaces[*entity] <<
+//					" " << mesh_ptr->indexOfElements[*entity] << endl;
+//		}
+		vect3d centroid(0.,0.,0.);
+		int dimension=mesh_ptr->getEntityDimension(*entity);
+		if (dimension!=iBase_REGION) {
+			// TODO: find adjacent element
+	//		*entity = entities[0];
+			isElement = false;
+		} else {
+			isElement = true;
+			vector<vect3d> vVs =
+					mesh_ptr->getVertexVectors(*entity);
+			centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+		}
+		currentElement = *entity;
+		bool foundTet=false;
+		currentElement = mesh_ptr->findTet(centroid,
+				position, currentElement, &foundTet, isElement);
+		// TODO: failure to find tet doesn't really mean outside domain yet
+		if (!foundTet)
+			throw int(OUTSIDE_DOMAIN);
+		// TODO: should ensure order of handles and vectors is same
+		currentVertices = mesh_ptr->getVertices(currentElement);
+		for (int i=0;i<currentVertices.size();i++) {
+			currentFields[i] = this->getField(currentVertices[i]);
+		}
+	}
+	linearBasisFunctions =
+			mesh_ptr->evaluateLinearBasisFunctions(position, currentElement);
+	if (interpolationOrder==2) {
+		errorBases =
+				mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions);
+	} else if (interpolationOrder==3) {
+		errorBases =
+				mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions);
+	}
+	*fieldValue *= 0.;
+	assert(currentFields.size()==linearBasisFunctions.rows());
+	for (int i=0;i<linearBasisFunctions.rows();i++) {
+		*fieldValue += linearBasisFunctions[i]*currentFields[i];
+	}
+	if (interpolationOrder>1) {
+		errorCoefficients = this->getErrorCoefficients(
+				currentElement, interpolationOrder);
+//		cout << errorBases.rows() << " " << errorCoefficients.rows() <<
+//				" " << errorBases.cols() << " " << errorCoefficients.cols() <<
+//				endl;
+		assert(errorBases.rows()==errorCoefficients.rows());
+//		cout << errorCoefficients.transpose() << endl;
+//		cout << errorBases.transpose() << endl << endl;
+//		cout << field << endl;
+//		cout << errorCoefficients.dot(errorBases) << endl;
+		*fieldValue += errorCoefficients.dot(errorBases);
+//		for (int i=0;i<errorBases.rows();i++) {
+//			field += errorCoefficients[i]*errorBases[i];
+//		}
+	}
+//	cout << field << endl;
+	*entity = currentElement;
+
+	for (int j=0; j<NDIM; j++) {
+		vect3d perturbedPosition = position +
+				vect3d::Unit(j)*DELTA_LENGTH;
+		linearBasisFunctions =
+				mesh_ptr->evaluateLinearBasisFunctions(perturbedPosition,
+						currentElement);
+		if (interpolationOrder==2) {
+			errorBases =
+					mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions);
+		} else if (interpolationOrder==3) {
+			errorBases =
+					mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions);
+		}
+		// TODO: Too obscure to temp. use fieldDeriv for perturbed field?
+		(*fieldDeriv)[j] *=0;
+		for (int i=0;i<linearBasisFunctions.rows();i++) {
+			(*fieldDeriv)[j] += linearBasisFunctions[i]*currentFields[i];
+		}
+		if (interpolationOrder>1) {
+			errorCoefficients = this->getErrorCoefficients(
+					currentElement, interpolationOrder);
+			assert(errorBases.rows()==errorCoefficients.rows());
+			(*fieldDeriv)[j] += errorCoefficients.dot(errorBases);
+		}
+		(*fieldDeriv)[j] -= *fieldValue;
+		(*fieldDeriv)[j] /= DELTA_LENGTH;
+	}
 }
 
 template <class T>

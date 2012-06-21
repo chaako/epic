@@ -53,16 +53,20 @@ public:
 		// TODO: for efficiency should find way to only calc accel when needed
 //		if (x[0]!=currentPosition) {
 			currentPosition = x[0];
-			potential = potentialField.getField(x[0], &currentElement,
+			potentialField.evalFieldAndDeriv(&potential, &currentAcceleration,
+					x[0], &currentElement,
 					interpolationOrder);
-			for (int i=0; i<N; i++) {
-				Eigen::Matrix<double,N,1> perturbedPosition = x[0] +
-						Eigen::Matrix<double,N,1>::Unit(i)*DELTA_LENGTH;
-				double perturbedPotential = potentialField.getField(
-						perturbedPosition, &currentElement, interpolationOrder);
-				currentAcceleration[i] =
-						-charge*(perturbedPotential-potential)/DELTA_LENGTH;
-			}
+			currentAcceleration *= -charge;
+//			potential = potentialField.getField(x[0], &currentElement,
+//					interpolationOrder);
+//			for (int i=0; i<N; i++) {
+//				Eigen::Matrix<double,N,1> perturbedPosition = x[0] +
+//						Eigen::Matrix<double,N,1>::Unit(i)*DELTA_LENGTH;
+//				double perturbedPotential = potentialField.getField(
+//						perturbedPosition, &currentElement, interpolationOrder);
+//				currentAcceleration[i] =
+//						-charge*(perturbedPotential-potential)/DELTA_LENGTH;
+//			}
 //		}
 		dxdt[0] = currentVelocity;
 		dxdt[1] = currentAcceleration;
