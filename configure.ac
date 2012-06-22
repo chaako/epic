@@ -36,6 +36,7 @@ AC_PROG_RANLIB
 #AX_PROG_CXX_MPI
 #AC_LANG_POP(C++)
 AC_CONFIG_FILES(Makefile src/Makefile fmdb/Makefile eigen/Makefile \
-cuba/Makefile cubature/Makefile boost/Makefile odeint/Makefile vtk/Makefile)
+cuba/Makefile cubature/Makefile boost/Makefile odeint/Makefile vtk/Makefile \
+cmake/Makefile)
 AC_OUTPUT
 
