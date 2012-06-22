@@ -19,8 +19,10 @@ public:
     static unsigned short order(){return 2;} // Assuming a(x,v)=a(x)
 
     template<class OdeSystem>
-//    void do_step(OdeSystem odeSystem, state_type &x, double t, double dt) const {
-	void do_step(OdeSystem &odeSystem, state_type &x, double t, double dt) {
+//    void do_step(OdeSystem odeSystem, state_type &x, double t,
+//    		state_type &xOut, double dt) {
+	void do_step(OdeSystem odeSystem, state_type &x, double t, double dt) {
+//	void do_step(O deSystem &odeSystem, state_type &x, double t, double dt) {
     	state_type dxdt;
 //    	// Store input x so that can reset state if exception thrown
 //    	state_type xIn;
@@ -38,16 +40,31 @@ public:
 //			x[1] += dt/2. * dxdt[1];
 
 			// Advance position half timestep
-//			odeSystem(x, dxdt);
-//			x[0] += dt/2. * dxdt[0];
-			x[0] += dt/2. * x[1];
+			boost::unwrap_ref(odeSystem)(x, dxdt);
+//    		odeSystem(x, dxdt);
+			x[0] += dt/2. * dxdt[0];
+//			x[0] += dt/2. * x[1];
 			// Advance velocity
-			odeSystem(x, dxdt);
+			boost::unwrap_ref(odeSystem)(x, dxdt);
+//    		odeSystem(x, dxdt);
 			x[1] += dt * dxdt[1];
 			// Advance position half timestep
-//			odeSystem(x, dxdt);
-//			x[0] += dt/2. * dxdt[0];
-			x[0] += dt/2. * x[1];
+			boost::unwrap_ref(odeSystem)(x, dxdt);
+//    		odeSystem(x, dxdt);
+			x[0] += dt/2. * dxdt[0];
+//			x[0] += dt/2. * x[1];
+
+//			xOut[0] = x[0];
+//			xOut[1] = x[1];
+//			// Advance position half timestep
+//    		boost::unwrap_ref(odeSystem)(xOut, dxdt);
+//			xOut[0] += dt/2. * dxdt[0];
+//			// Advance velocity
+//    		boost::unwrap_ref(odeSystem)(xOut, dxdt);
+//			xOut[1] += dt * dxdt[1];
+//			// Advance position half timestep
+//    		boost::unwrap_ref(odeSystem)(xOut, dxdt);
+//			xOut[0] += dt/2. * dxdt[0];
 
 //			// Advance position
 //			odeSystem(x, dxdt);

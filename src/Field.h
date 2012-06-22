@@ -47,11 +47,18 @@ public:
 	string name;
 	iBase_TagHandle tag;
 	vector<entHandle> entities;
+
 	entHandle currentElement;
 	vector<entHandle> currentVertices;
 	vector<T> currentFields;
 	entHandle currentInterpolationElement;
 	Eigen::VectorXd currentErrorCoefficients;
+
+	entHandle previousElement;
+	vector<entHandle> previousVertices;
+	vector<T> previousFields;
+	entHandle previousInterpolationElement;
+	Eigen::VectorXd previousErrorCoefficients;
 };
 
 class ElectricField : public Field<vect3d> {
@@ -141,6 +148,10 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 	int nVertices = 4;
 	currentFields = vector<T>(nVertices);
 	currentInterpolationElement = NULL;
+
+	previousElement = NULL;
+	previousFields = vector<T>(nVertices);
+	previousInterpolationElement = NULL;
 }
 
 template <class T>
@@ -277,18 +288,27 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 		//       of each orbit to prevent data from an old field being used
 		//       (probably very unlikely since end tet of one orbit would have
 		//       to be start tet of the next)
+//			inElement = mesh_ptr->checkIfInTet(position, currentElement);
 			inElement=true;
 			// TODO: should replace use of linear coeffs with fast checkIfInTet
 			linearBasisFunctions =
 					mesh_ptr->evaluateLinearBasisFunctions(position, currentElement);
 			for (int i=0; i<linearBasisFunctions.rows(); i++)
-				if (linearBasisFunctions[i]<0.)
+				if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE)
 					inElement=false;
 //		} else {
 //			cout << currentElement << ": " << dimension << " " <<
 //					position.transpose() <<
 //					" " << position.norm() << endl;
 //		}
+//	} else if (*entity==previousElement) {
+//			inElement=true;
+//			// TODO: should replace use of linear coeffs with fast checkIfInTet
+//			linearBasisFunctions =
+//					mesh_ptr->evaluateLinearBasisFunctions(position, previousElement);
+//			for (int i=0; i<linearBasisFunctions.rows(); i++)
+//				if (linearBasisFunctions[i]<0.)
+//					inElement=false;
 	}
 	bool isElement;
 	if (!inElement) {
@@ -356,6 +376,9 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 	}
 //	cout << field << endl;
 	*entity = currentElement;
+
+	// TODO: remove this check and cast (just for debugging)
+	assert(!isnan((double)*fieldValue));
 
 	for (int j=0; j<NDIM; j++) {
 		vect3d perturbedPosition = position +

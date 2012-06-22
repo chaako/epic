@@ -34,6 +34,7 @@ enum {
 #include <numeric>
 #include <vector>
 #include <boost/array.hpp>
+#include <boost/ref.hpp>
 #include <boost/numeric/odeint.hpp> // Not true boost library
 #include <set>
 //#include <type_traits> // Requires -std=c++0x compiler flag

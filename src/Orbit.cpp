@@ -214,13 +214,14 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	bool endLoop=false;
 	bool foundTet=false;
 
-	// TODO: hard-coding dimensionality
-	const int nDim=3;
-	boost::array<Eigen::Matrix<double,nDim,1>, 2> positionAndVelocity;
+	boost::array<Eigen::Matrix<double,NDIM,1>, 2> positionAndVelocity;
+	boost::array<Eigen::Matrix<double,NDIM,1>, 2> positionAndVelocityOut;
 //	positionAndVelocity[0] = currentPosition;
 //	positionAndVelocity[1] = currentVelocity;
-	VelocityVerletStepper<nDim> timestepper;
-	VelocityAndAcceleration<nDim> velocityAndAcceleration(potentialField,
+	VelocityVerletStepper<NDIM> timestepper;
+//	boost::numeric::odeint::runge_kutta4<boost::array<vect3d,2> >
+//		timestepper;
+	VelocityAndAcceleration<NDIM> velocityAndAcceleration(potentialField,
 			charge, initialNode);
 	foundTet = velocityAndAcceleration.foundTet;
 
@@ -228,6 +229,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //	currentPosition -= currentVelocity*dt/2.;
 	for (double t=0.; t<tMax; t+=dt) {
 		nSteps++;
+		assert(!isnan(currentPosition.norm()));
 		vect3d previousPosition = currentPosition;
 		vect3d previousVelocity = currentVelocity;
 		entHandle previousElement = currentElement;
@@ -250,7 +252,15 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 			try {
 				positionAndVelocity[0] = currentPosition;
 				positionAndVelocity[1] = currentVelocity;
-				timestepper.do_step(velocityAndAcceleration, positionAndVelocity, t, dt);
+				timestepper.do_step(boost::ref(velocityAndAcceleration), positionAndVelocity, t, dt);
+//				// TODO: figure out why inout arg leads to problems
+//				//		 (Eigen not liking certain optimization tricks in odeint?.
+				//		 Actually, just missing initialization)
+//				timestepper.do_step(boost::ref(velocityAndAcceleration),
+//						positionAndVelocity, t, positionAndVelocityOut, dt);
+//				positionAndVelocity[0] = positionAndVelocityOut[0];
+//				positionAndVelocity[1] = positionAndVelocityOut[1];
+//				timestepper.do_step(velocityAndAcceleration, positionAndVelocity, t, dt);
 				currentPosition = positionAndVelocity[0];
 				currentVelocity = positionAndVelocity[1];
 				currentElement = velocityAndAcceleration.currentElement;
@@ -295,8 +305,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				switch (signal) {
 				case OUTSIDE_DOMAIN:
 					foundTet = false;
-					currentPosition = positionAndVelocity[0];
-					currentVelocity = positionAndVelocity[1];
+					// TODO: not guaranteed that outside domain (since different than stepper)
+					// TODO: Revisit this in magnetized case
+					currentPosition += dt*currentVelocity;
+//					currentPosition = positionAndVelocity[0];
+//					currentVelocity = positionAndVelocity[1];
 					break;
 				default:
 					// TODO: handle other exceptions?
@@ -387,8 +400,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		if (endLoop)
 			break;
 	}
-//	cout << "Final radius=" << currentPosition.norm() << endl;
-//	cout << "nSteps=" << nSteps << endl;
+//	cout << "Final radius=" << currentPosition.norm() << " nSteps=" <<
+//			nSteps << "faceType =" << finalFaceType << endl;
 	finalPosition = currentPosition;
 	// TODO: correct for time-step offset?
 	finalVelocity = currentVelocity;

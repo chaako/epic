@@ -26,8 +26,13 @@ public:
 		charge(inputCharge)
 	{
 		currentPosition=potentialField.mesh_ptr->getCoordinates(initialNode);
-		currentVelocity*=0.;
-		currentAcceleration*=0.;
+		for (int i=0; i<NDIM; i++) {
+			currentVelocity[i] = 0.;
+			currentAcceleration[i] = 0.;
+		}
+		// TODO: determine if NaN*0=NaN is a problem with uninitalized memory (it appears so...)
+//		currentVelocity*=0.;
+//		currentAcceleration*=0.;
 		foundTet = false;
 		currentElement = potentialField.mesh_ptr->findTet(currentPosition,
 				currentPosition, initialNode, &foundTet, false);
@@ -45,7 +50,7 @@ public:
 	bool foundTet;
 	int interpolationOrder;
 
-	void operator()(const state_type& x, state_type& dxdt) {
+	void operator()(const state_type& x, state_type& dxdt, double t=-1.) {
 		// TODO: need DELTA_LENGTH...make header hierarchy?
 		double potential;
 //		std::cout << currentPosition.transpose() << std::endl;

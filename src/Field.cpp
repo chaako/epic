@@ -170,16 +170,16 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	stringstream fileNameStreamOrbit;
 	fileNameStreamOrbit << "orbits/orbits_q" << charge << "_r"
 			<< nodePosition.norm() << "_vert" << node << ".p3d";
+	integrandContainer.orbitOutFile = NULL;
 //	// TODO: don't hard-code output nodes
-//	if (node==0) {
+//	if (node<5) {
+////	if (node==0) {
 ////	if (node==5 || node==2540) {
 //		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
 //		fprintf(integrandContainer.outFile, "x y z f\n");
 //		integrandContainer.orbitOutFile =
 //				fopen(fileNameStreamOrbit.str().c_str(), "w");
 //		fprintf(integrandContainer.orbitOutFile, "x y z energy\n");
-//	} else {
-		integrandContainer.orbitOutFile = NULL;
 //	}
 	integrandContainer.charge = charge;
 	int vdim=3;
@@ -193,6 +193,7 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 //	if (node==5 || node==2540)
 //	if (node%1000==42)
 //	if (node==0)
+//	if (node<5)
 	adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
 			vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
 	if (integrandContainer.outFile)

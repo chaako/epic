@@ -446,8 +446,8 @@ bool Mesh::checkIfInTet(vect3d currentPosition,
 			currentPosition, vertexVectors);
 	bool inElement=true;
 	for (int i=0; i<linearBasisFunctions.rows(); i++) {
-		//		if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE)
-				if (linearBasisFunctions[i]<0.)
+				if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE)
+//				if (linearBasisFunctions[i]<0.)
 					inElement=false;
 	}
 	return inElement;
