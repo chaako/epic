@@ -53,7 +53,7 @@ enum {
 
 #include "Eigen/Dense"
 #include "cubature.h"
-//#include "cuba.h"
+#include "cuba.h"
 
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>

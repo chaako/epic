@@ -134,6 +134,9 @@ void DensityField::calcField(ElectricField electricField,
 		this->setField(entities[node], density);
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		cout << nodePosition.norm() << " " << density << " " << error << endl;
+		// TODO: figure out why Vegas causes repeated output (optimization problem?)
+		//		 It seems Vegas spawns child processes (four per call)...disabled forking
+		//		 to prevent
 		if (outFile)
 			fprintf(outFile, "%g %g %g\n", nodePosition.norm(), density, error);
 	}
@@ -194,8 +197,18 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 //	if (node%1000==42)
 //	if (node==0)
 //	if (node<5)
-	adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
-			vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
+//	adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
+//			vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
+	int actualNumberOfOrbits=0;
+	int failureType=0;
+	double probabilityThatTrueError=0.;
+	// TODO: Turn off smoothing flag bit
+	// TODO: Figure out why nbatch>1 changes calcField timing
+	Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
+			(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
+			numberOfOrbits, numberOfOrbits, 100, 100, 1000, 0,
+			NULL, &actualNumberOfOrbits, &failureType,
+			&density, error, &probabilityThatTrueError);
 	if (integrandContainer.outFile)
 		fclose(integrandContainer.outFile);
 	if (integrandContainer.orbitOutFile)

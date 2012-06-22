@@ -1,0 +1,11 @@
+--- configure.ac	2012-06-22 16:44:31.480779524 -0400
++++ configureNoFork.ac	2012-06-22 16:44:25.713854664 -0400
+@@ -28,7 +28,7 @@
+ 
+ AC_CHECK_FUNCS([powl])
+ AC_CHECK_FUNCS([erf])
+-AC_CHECK_FUNCS([fork])
++#AC_CHECK_FUNCS([fork])
+ AC_CHECK_FUNCS([shmget])
+ AC_CHECK_FUNCS([getloadavg])
+ 

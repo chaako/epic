@@ -142,9 +142,12 @@ int main(int argc, char *argv[]) {
 		mesh.save(argv[2]);
 
 	if (mpiId == 0) {
-		fclose(densityFile);
-		fclose(density_electronsFile);
-		fclose(potentialFile);
+		if (densityFile)
+			fclose(densityFile);
+		if (density_electronsFile)
+			fclose(density_electronsFile);
+		if (potentialFile)
+			fclose(potentialFile);
 	}
 
 #ifdef HAVE_MPI

@@ -71,3 +71,19 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 				"%f %f %f %f\n", x[0], x[1], x[2], *fval);
 	}
 }
+
+
+int distributionFunctionFromBoundaryCuba(const int *ndim, const double x[],
+  const int *ncomp, double f[], void *integrandContainer_ptr) {
+	assert(*ndim==3);
+	assert(*ncomp==1);
+	double y[3];
+	for (int i=0; i<*ndim; i++) {
+		y[i] = 2.*x[i]-1;
+	}
+	distributionFunctionFromBoundary((unsigned)*ndim, y,
+			integrandContainer_ptr, *ncomp, f);
+	*f *= pow(2.,(double)*ndim);
+
+	return 0;
+}
