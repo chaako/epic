@@ -1,6 +1,6 @@
 all: VTK/install/lib/vtk-5.10/libvtkFiltering.so
 
-VTK/bin/libvtkFiltering.so:
+VTK/install/lib/vtk-5.10/libvtkFiltering.so:
 	tar -xf vtk-5.10.0.tar.gz
 	cd VTK && mkdir install && \
 	cmake -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=./install/ \
