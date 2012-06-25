@@ -1,11 +1,21 @@
---- configure.ac	2012-06-22 16:44:31.480779524 -0400
-+++ configureNoFork.ac	2012-06-22 16:44:25.713854664 -0400
-@@ -28,7 +28,7 @@
+--- configure	2011-12-22 07:47:42.000000000 -0500
++++ ../../Cuba-3.0/configure	2012-06-22 16:55:12.052432423 -0400
+@@ -3330,17 +3330,7 @@
+ fi
+ done
  
- AC_CHECK_FUNCS([powl])
- AC_CHECK_FUNCS([erf])
--AC_CHECK_FUNCS([fork])
+-for ac_func in fork
+-do :
+-  ac_fn_c_check_func "$LINENO" "fork" "ac_cv_func_fork"
+-if test "x$ac_cv_func_fork" = xyes; then :
+-  cat >>confdefs.h <<_ACEOF
+-#define HAVE_FORK 1
+-_ACEOF
+-
+-fi
+-done
+-
 +#AC_CHECK_FUNCS([fork])
- AC_CHECK_FUNCS([shmget])
- AC_CHECK_FUNCS([getloadavg])
- 
+ for ac_func in shmget
+ do :
+   ac_fn_c_check_func "$LINENO" "shmget" "ac_cv_func_shmget"

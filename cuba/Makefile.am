@@ -2,7 +2,7 @@ all: Cuba-3.0/libcuba.a
 
 Cuba-3.0/libcuba.a:
 	tar -xf Cuba-3.0.tar.gz
-	cd Cuba-3.0 && patch < ../configure.patch && autoreconf && \
+	cd Cuba-3.0 && patch < ../configure.patch && \
 	./configure CFLAGS="-DNDIM=3 -DNCOMP=1" && make lib
 # The patch disables fork detection and thus threading in cuba...
 # setting CUBACORES didn't do the trick

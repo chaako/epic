@@ -54,6 +54,7 @@ eigen/eigen-eigen-13a11181fc5a/
 eigen/printers.pyc
 odeint/headmyshoulder-odeint-v2-47dbdac/
 vtk/VTK/
+cmake/cmake-2.8.8/
 
 # Profiling output
 gmon.out
