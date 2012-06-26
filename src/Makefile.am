@@ -18,7 +18,7 @@ epic_CXXFLAGS += -DHAVE_MPI
 endif
 epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lrt \
 			-L ../vtk/VTK/install/lib/vtk-5.10/ \
-			-lMapReduceMPI -lmpistubs -lvtkalglib -lvtkCharts -lvtkCommon -lvtkDICOMParser \
+			-lLSDyna -lMapReduceMPI -lvtkalglib -lvtkCharts -lvtkCommon -lvtkDICOMParser \
 			-lvtkexoIIc -lvtkexpat -lvtkFiltering -lvtkfreetype -lvtkftgl -lvtkGenericFiltering \
 			-lvtkGeovis -lvtkGraphics -lvtkhdf5 -lvtkhdf5_hl -lvtkHybrid -lvtkImaging \
 			-lvtkInfovis -lvtkIO -lvtkjpeg -lvtklibxml2 -lvtkmetaio -lvtkNetCDF -lvtkNetCDF_cxx \
