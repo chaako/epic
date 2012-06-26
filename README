@@ -11,6 +11,9 @@ mpi wrapper to be detected correctly.
 At present, need to set library path to run, e.g.:
 export LD_LIBRARY_PATH+=:/home/chaako/epic/fmdb/fmdbSerial/lib:/home/chaako/epic/vtk/VTK/install/lib/vtk-5.10/:
 
+The fmdb includes use absolute paths, so if the epic dir is moved fmdb
+should be rebuilt.
+
 
 Mesh notes:
 
