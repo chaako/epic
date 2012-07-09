@@ -13,9 +13,6 @@ epic_CXXFLAGS = $(AM_CXXFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUti
               -I ../cuba/Cuba-3.0/ \
               -I ../boost/boost_1_49_0/ -I ../odeint/headmyshoulder-odeint-v2-47dbdac/ \
               -I ../vtk/VTK/install/include/vtk-5.10/ -Wno-deprecated
-if USE_MPI
-epic_CXXFLAGS += -DHAVE_MPI
-endif
 epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lrt \
 			-L ../vtk/VTK/install/lib/vtk-5.10/ \
 			-lLSDyna -lMapReduceMPI -lvtkalglib -lvtkCharts -lvtkCommon -lvtkDICOMParser \
@@ -24,8 +21,10 @@ epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lrt \
 			-lvtkInfovis -lvtkIO -lvtkjpeg -lvtklibxml2 -lvtkmetaio -lvtkNetCDF -lvtkNetCDF_cxx \
 			-lvtkpng -lvtkproj4 -lvtkRendering -lvtksqlite -lvtksys -lvtktiff -lvtkverdict \
 			-lvtkViews -lvtkVolumeRendering -lvtkWidgets -lvtkzlib
-#			-L ../cuba/Cuba-3.0/ -lcuba
-#epic_LDFLAGS = $(AM_LDFLAGS) -lrt -pg \
-#				$(FMDB_LIBDIR)/libFMDB.a $(FMDB_LIBDIR)/libSCORECModel.a \
-#				$(FMDB_LIBDIR)/libmeshModel.a $(FMDB_LIBDIR)/libSCORECUtil.a
+if USE_MPI
+epic_CXXFLAGS += -DHAVE_MPI
+else
+epic_LDFLAGS += -lmpistubs
+endif
+
 epic_LDADD   = ../cubature/libcubature.a ../cuba/Cuba-3.0/libcuba.a
