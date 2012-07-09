@@ -56,14 +56,17 @@ Mesh::Mesh(string inputMeshFile) {
 	allVertices = this->getEntities(iBase_VERTEX);
 	for(int i=0; i<allVertices.size(); i++) {
 		indexOfVertices[allVertices[i]] = i;
+		indexOfEntity[allVertices[i]] = i;
 	}
 	allFaces = this->getEntities(iBase_FACE);
 	for(int i=0; i<allFaces.size(); i++) {
 		indexOfFaces[allFaces[i]] = i;
+		indexOfEntity[allFaces[i]] = i;
 	}
 	allElements = this->getEntities(iBase_REGION);
 	for(int i=0; i<allElements.size(); i++) {
 		indexOfElements[allElements[i]] = i;
+		indexOfEntity[allElements[i]] = i;
 	}
 
 	vtkMesh_ptr = this->createVtkMesh();

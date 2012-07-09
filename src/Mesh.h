@@ -111,6 +111,8 @@ public:
 	map<entHandle,int> indexOfFaces;
 	map<entHandle,int> indexOfElements;
 
+	map<entHandle,int> indexOfEntity;
+
 	entHandle previousCoordsToBasisElement;
 	Eigen::Matrix4d previousCoordsToBasis;
 

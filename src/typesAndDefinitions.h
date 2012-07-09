@@ -20,6 +20,7 @@ const int DIETAG=999999999;
 
 enum {
 	OUTSIDE_DOMAIN,
+	FAILURE_GETTING_FIELD,
 };
 
 #include <map>

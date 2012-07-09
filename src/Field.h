@@ -31,9 +31,13 @@ public:
 	// TODO: Does an empty destructor cause a memory leak?
 	virtual ~Field() {}
 
+	T& operator[](entHandle& entity);
+	T& operator[](int& entityIndex);
+
 	T getField(vect3d position, entHandle *entity=NULL,
 			int interpolationOrder=INTERPOLATIONORDER);
 	T getField(entHandle node);
+	T getFieldFromMeshDB(entHandle entityHandle);
 	T getAverageField(entHandle element);
 	void evalFieldAndDeriv(T *fieldValue,
 			Eigen::Matrix<T,NDIM,1> *fieldDeriv,
@@ -47,6 +51,7 @@ public:
 	string name;
 	iBase_TagHandle tag;
 	vector<entHandle> entities;
+	vector<T> values;
 
 	entHandle currentElement;
 	vector<entHandle> currentVertices;
@@ -143,6 +148,21 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 	// TODO: consider more transparent handling of exiting tag here
 	tag = mesh_ptr->getTagHandle(name);
 	entities = mesh_ptr->getEntities(entityDimension);
+	values = vector<T>(entities.size());
+	int numberOfUninitializedFields=0;
+	int numberOfInitializedFields=0;
+	for (int i=0; i<entities.size(); i++) {
+		try {
+			values[i] = this->getFieldFromMeshDB(entities[i]);
+			numberOfInitializedFields++;
+		} catch (int FAILURE_GETTING_FIELD) {
+			numberOfUninitializedFields++;
+		}
+	}
+	cout << "The field '" << name << "' was created with " <<
+			numberOfInitializedFields << " values set from mesh DB, and " <<
+			numberOfUninitializedFields << " uninitialized values" << endl;
+
 	currentElement = NULL;
 	// TODO: nVertices should be standardized across functions
 	int nVertices = 4;
@@ -152,6 +172,22 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 	previousElement = NULL;
 	previousFields = vector<T>(nVertices);
 	previousInterpolationElement = NULL;
+}
+
+template <class T>
+T& Field<T>::operator[](entHandle& entityHandle) {
+	// TODO: The pointers (handles) may be to consectutive memory,
+	//       in which case there may be a faster way (linear interpolation?)
+	//       to find the index (and then just check entities[index])
+	int entityIndex = mesh_ptr->indexOfEntity[entityHandle];
+//	cout << "field[" << entityHandle << "] called" << endl;
+	return this->operator[](entityIndex);
+}
+
+template <class T>
+T& Field<T>::operator[](int& entityIndex) {
+//	cout << "field[" << entityIndex << "] called" << endl;
+	return this->values[entityIndex];
 }
 
 template <class T>
@@ -420,6 +456,22 @@ T Field<T>::getField(entHandle node) {
 			&field_alloc, &field_size, &ierr);
 	CHECK("Failure getting field");
 	return field;
+//	return this->operator[](node);
+}
+
+template <class T>
+T Field<T>::getFieldFromMeshDB(entHandle entityHandle) {
+	T field;
+	T *field_ptr=&field;
+	int field_alloc = sizeof(T);
+	int field_size = sizeof(T);
+	int ierr;
+	iMesh_getData(mesh_ptr->meshInstance, entityHandle, tag, &field_ptr,
+			&field_alloc, &field_size, &ierr);
+//	CHECK("Failure getting field");
+	if (ierr != iBase_SUCCESS)
+		throw FAILURE_GETTING_FIELD;
+	return field;
 }
 
 template <class T>
@@ -439,6 +491,7 @@ T Field<T>::getAverageField(entHandle element) {
 
 template <class T>
 void Field<T>::setField(entHandle node, T field) {
+	this->operator[](node) = field;
 	int ierr;
 	int field_size = sizeof(T);
 	iMesh_setData(mesh_ptr->meshInstance, node, tag, &field,
