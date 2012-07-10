@@ -41,10 +41,12 @@ public:
 	T getAverageField(entHandle element);
 	void evalFieldAndDeriv(T *fieldValue,
 			Eigen::Matrix<T,NDIM,1> *fieldDeriv,
-			vect3d position, entHandle *entity=NULL,
+			vect3d position, int *entityIndex=-1,
 			int interpolationOrder=INTERPOLATIONORDER);
 	void setField(entHandle node, T field);
 	Eigen::VectorXd getErrorCoefficients(entHandle element,
+			int interpolationOrder);
+	Eigen::VectorXd getErrorCoefficients(int elementIndex,
 			int interpolationOrder);
 
 	Mesh *mesh_ptr;
@@ -52,6 +54,10 @@ public:
 	iBase_TagHandle tag;
 	vector<entHandle> &entities;
 	vector<T> values;
+
+	int currentRegionIndex;
+	vector<int> currentVerticesIndices;
+	int currentInterpolationElementIndex;
 
 	entHandle currentElement;
 	vector<entHandle> currentVertices;
@@ -164,9 +170,13 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 			numberOfInitializedFields << " values set from mesh DB, and " <<
 			numberOfUninitializedFields << " uninitialized values" << endl;
 
-	currentElement = NULL;
 	// TODO: nVertices should be standardized across functions
 	int nVertices = 4;
+	currentRegionIndex=-1;
+	currentVerticesIndices = vector<int>(nVertices);
+	currentInterpolationElementIndex = -1;
+
+	currentElement = NULL;
 	currentFields = vector<T>(nVertices);
 	currentInterpolationElement = NULL;
 
@@ -302,87 +312,47 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 template <class T>
 void Field<T>::evalFieldAndDeriv(T *fieldValue,
 		Eigen::Matrix<T,NDIM,1> *fieldDeriv,
-		vect3d position, entHandle *entity,
+		vect3d position, int *entityIndex,
 		int interpolationOrder) {
 	bool inElement=false;
 	Eigen::Vector4d linearBasisFunctions;
 	Eigen::VectorXd errorBases, errorCoefficients;
-//	cout << this << " " << *entity << " " << currentElement << " " <<
-//			position.transpose() << endl;
-	if (*entity==NULL) {
-//		cout << this << " " << *entity << " " << currentElement << " " <<
-//				position.transpose() << endl;
+	if (*entityIndex<0) {
 		// TODO: handle case with no entity hint
 		vector<entHandle> adjacentEntities =
 				mesh_ptr->getAdjacentEntities(entities[0],iBase_REGION);
-		*entity = adjacentEntities[0];
-//		cout << this << " " << *entity << " " << currentElement << " " <<
-//				position.transpose() << endl << endl;
-	} else if (*entity==currentElement) {
-//		int dimension=mesh_ptr->getEntityDimension(*entity);
-//		if (dimension==iBase_REGION) {
-		// TODO: should probably reset currentElement somehow at beginning
-		//       of each orbit to prevent data from an old field being used
-		//       (probably very unlikely since end tet of one orbit would have
-		//       to be start tet of the next)
-//			inElement = mesh_ptr->checkIfInTet(position, currentElement);
+		*entityIndex = mesh_ptr->indicesOfEntities[adjacentEntities[0]];
+	} else if (*entityIndex==currentRegionIndex) {
 			inElement=true;
 			// TODO: should replace use of linear coeffs with fast checkIfInTet
 			linearBasisFunctions =
-					mesh_ptr->evaluateLinearBasisFunctions(position, currentElement);
+					mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex);
 			for (int i=0; i<linearBasisFunctions.rows(); i++)
 				if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE)
 					inElement=false;
-//		} else {
-//			cout << currentElement << ": " << dimension << " " <<
-//					position.transpose() <<
-//					" " << position.norm() << endl;
-//		}
-//	} else if (*entity==previousElement) {
-//			inElement=true;
-//			// TODO: should replace use of linear coeffs with fast checkIfInTet
-//			linearBasisFunctions =
-//					mesh_ptr->evaluateLinearBasisFunctions(position, previousElement);
-//			for (int i=0; i<linearBasisFunctions.rows(); i++)
-//				if (linearBasisFunctions[i]<0.)
-//					inElement=false;
 	}
-	bool isElement;
+	currentRegionIndex = *entityIndex;
 	if (!inElement) {
-//		if (currentElement==NULL) {
-//			cout << this << " " << *entity << " " << currentElement << " " <<
-//					position.transpose() << endl;
-//			cout << " " << mesh_ptr->indexOfVertices[*entity] <<
-//					" " << mesh_ptr->indexOfFaces[*entity] <<
-//					" " << mesh_ptr->indexOfElements[*entity] << endl;
-//		}
 		vect3d centroid(0.,0.,0.);
-		int dimension=mesh_ptr->getEntityDimension(*entity);
-		if (dimension!=iBase_REGION) {
-			// TODO: find adjacent element
-	//		*entity = entities[0];
-			isElement = false;
-		} else {
-			isElement = true;
-			vector<vect3d> vVs =
-					mesh_ptr->getVertexVectors(*entity);
-			centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
-		}
-		currentElement = *entity;
+		vector<vect3d> vVs =
+				mesh_ptr->getVertexVectors(currentRegionIndex, iBase_REGION);
+		centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+		currentElement = mesh_ptr->entitiesVectors[iBase_REGION][currentRegionIndex];
 		bool foundTet=false;
 		currentElement = mesh_ptr->findTet(centroid,
-				position, currentElement, &foundTet, isElement);
+				position, currentElement, &foundTet);
 		// TODO: failure to find tet doesn't really mean outside domain yet
 		if (!foundTet)
 			throw int(OUTSIDE_DOMAIN);
-		// TODO: should ensure order of handles and vectors is same
-		currentVertices = mesh_ptr->getVertices(currentElement);
-		for (int i=0;i<currentVertices.size();i++) {
-			currentFields[i] = this->getField(currentVertices[i]);
+		currentRegionIndex = mesh_ptr->indicesOfEntities[currentElement];
+		currentVerticesIndices = mesh_ptr->
+				adjacentEntitiesVectors[iBase_REGION][currentRegionIndex][iBase_VERTEX];
+		for (int i=0;i<currentVerticesIndices.size();i++) {
+			currentFields[i] = this->operator[](currentVerticesIndices[i]);
 		}
 	}
 	linearBasisFunctions =
-			mesh_ptr->evaluateLinearBasisFunctions(position, currentElement);
+			mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex);
 	if (interpolationOrder==2) {
 		errorBases =
 				mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions);
@@ -397,22 +367,11 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 	}
 	if (interpolationOrder>1) {
 		errorCoefficients = this->getErrorCoefficients(
-				currentElement, interpolationOrder);
-//		cout << errorBases.rows() << " " << errorCoefficients.rows() <<
-//				" " << errorBases.cols() << " " << errorCoefficients.cols() <<
-//				endl;
+				currentRegionIndex, interpolationOrder);
 		assert(errorBases.rows()==errorCoefficients.rows());
-//		cout << errorCoefficients.transpose() << endl;
-//		cout << errorBases.transpose() << endl << endl;
-//		cout << field << endl;
-//		cout << errorCoefficients.dot(errorBases) << endl;
 		*fieldValue += errorCoefficients.dot(errorBases);
-//		for (int i=0;i<errorBases.rows();i++) {
-//			field += errorCoefficients[i]*errorBases[i];
-//		}
 	}
-//	cout << field << endl;
-	*entity = currentElement;
+	*entityIndex = currentRegionIndex;
 
 	// TODO: remove this check and cast (just for debugging)
 	assert(!isnan((double)*fieldValue));
@@ -422,7 +381,7 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 				vect3d::Unit(j)*DELTA_LENGTH;
 		linearBasisFunctions =
 				mesh_ptr->evaluateLinearBasisFunctions(perturbedPosition,
-						currentElement);
+						currentRegionIndex);
 		if (interpolationOrder==2) {
 			errorBases =
 					mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions);
@@ -437,7 +396,7 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 		}
 		if (interpolationOrder>1) {
 			errorCoefficients = this->getErrorCoefficients(
-					currentElement, interpolationOrder);
+					currentRegionIndex, interpolationOrder);
 			assert(errorBases.rows()==errorCoefficients.rows());
 			(*fieldDeriv)[j] += errorCoefficients.dot(errorBases);
 		}
@@ -574,6 +533,86 @@ Eigen::VectorXd Field<T>::getErrorCoefficients(
 		}
 		currentErrorCoefficients = errorCoefficients;
 		currentInterpolationElement = element;
+	}
+	return errorCoefficients;
+}
+
+template <class T>
+Eigen::VectorXd Field<T>::getErrorCoefficients(
+		int elementIndex, int interpolationOrder) {
+	Eigen::VectorXd errorCoefficients;
+	if (elementIndex==currentInterpolationElementIndex &&
+			elementIndex>=0) {
+		errorCoefficients = currentErrorCoefficients;
+	} else {
+		// TODO: do this more elegantly?
+		int errorBasesSize;
+		if (interpolationOrder==2) {
+			errorBasesSize = 6;
+		} else if (interpolationOrder==3) {
+			errorBasesSize = 16;
+//			errorBasesSize = 22;
+		} else {
+			// TODO: specify exception
+			throw;
+		}
+		// TODO: only dealing with doubles for now
+		if (boost::is_same<T,double>::value) {
+			vector<int> &surroundingVertices =
+					mesh_ptr->verticesSurroundingRegions[elementIndex];
+			Eigen::MatrixXd evaluatedErrorBases(surroundingVertices.size(),
+					errorBasesSize);
+			Eigen::VectorXd interpolationError(surroundingVertices.size());
+			for (int i=0; i<surroundingVertices.size(); i++) {
+				vect3d &position = mesh_ptr->
+						verticesPositions[surroundingVertices[i]];
+				Eigen::Vector4d linearBasisFunctions =
+						mesh_ptr->evaluateLinearBasisFunctions(
+								position, elementIndex);
+				Eigen::VectorXd errorBases;
+				// TODO: make wrapper to take care of order selection
+				if (interpolationOrder==2) {
+					errorBases = mesh_ptr->evaluateQuadraticErrorBases(
+							linearBasisFunctions);
+				} else if (interpolationOrder==3) {
+					errorBases = mesh_ptr->evaluateCubicErrorBases(
+							linearBasisFunctions);
+				} else {
+					// TODO: specify exception
+					throw;
+				}
+				// TODO: could probably use block operations here
+				assert(errorBases.rows()==evaluatedErrorBases.cols());
+				for (int j=0;j<errorBases.rows();j++) {
+					evaluatedErrorBases(i,j) = errorBases[j];
+				}
+				T fieldValue = this->operator[](surroundingVertices[i]);
+				T interpolatedField;
+				interpolatedField *= 0.;
+				// TODO: could get fields even if element!=currentElement
+				assert(elementIndex==currentRegionIndex);
+				assert(currentFields.size()==linearBasisFunctions.rows());
+				// TODO: could make this loop a function
+				for (int j=0;j<linearBasisFunctions.rows();j++) {
+					interpolatedField +=
+							linearBasisFunctions[j]*currentFields[j];
+				}
+				interpolationError[i] = fieldValue - interpolatedField;
+			}
+			Eigen::MatrixXd leastSquaresMatrix =
+					evaluatedErrorBases.transpose()*evaluatedErrorBases;
+			Eigen::VectorXd leastSquaresVector =
+					evaluatedErrorBases.transpose()*interpolationError;
+			// TODO: could perhapse store intermediate matrix if solve is expensive
+			errorCoefficients =
+					leastSquaresMatrix.colPivHouseholderQr().solve(
+							leastSquaresVector);
+		} else {
+			// TODO: specify exception
+			throw;
+		}
+		currentErrorCoefficients = errorCoefficients;
+		currentInterpolationElementIndex = elementIndex;
 	}
 	return errorCoefficients;
 }

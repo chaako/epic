@@ -54,6 +54,7 @@ public:
 	int getEntityDimension(entHandle entity);
 	vector<vect3d> getVertexVectors(entHandle entity,
 			bool useMap=true);
+	vector<vect3d> getVertexVectors(int index, int dimension);
 	bool checkIfInTet(vect3d currentPosition,
 			entHandle element);
 	bool checkIfInTet(vect3d currentPosition,
@@ -78,14 +79,13 @@ public:
 			vector<vect3d> vertexVectors) ;
 	vector<double> getVertexWeights(vect3d point,
 			vector<vect3d> vertexVectors);
-	Eigen::VectorXd getErrorCoefficients(vect3d position,
-			entHandle element, int interpolationOrder=INTERPOLATIONORDER);
-	Eigen::VectorXd getErrorCoefficients(vect3d position,
-			vector<vect3d> vVs, int interpolationOrder=INTERPOLATIONORDER);
 	Eigen::Vector4d evaluateLinearBasisFunctions(vect3d position,
 			entHandle element);
 	Eigen::Vector4d evaluateLinearBasisFunctions(vect3d position,
 			vector<vect3d> vVs);
+	Eigen::Vector4d evaluateLinearBasisFunctions(vect3d position,
+			int regionIndex);
+	Eigen::Matrix4d calculatePositionToBasesMatrix(vector<vect3d> vVs);
 	Eigen::VectorXd evaluateQuadraticErrorBases(
 			Eigen::Vector4d linearBasisFunctions);
 	Eigen::VectorXd evaluateCubicErrorBases(
@@ -109,6 +109,11 @@ public:
 
 	// adjacentEntities[dimension][index][adjacentDimension][adjacentIndices]
 	vector<vector<vector<vector<int> > > > adjacentEntitiesVectors;
+
+	vector<vector<int> > verticesSurroundingRegions;
+
+	vector<vect3d> verticesPositions;
+	vector<Eigen::Matrix4d> positionsToBases;
 
 //	vector<entHandle> allVertices;
 //	vector<entHandle> allFaces;

@@ -74,6 +74,30 @@ Mesh::Mesh(string inputMeshFile) {
 		}
 	}
 
+	for (int i=0; i<entitiesVectors[iBase_VERTEX].size(); i++) {
+		vect3d position =
+				this->getCoordinates(entitiesVectors[iBase_VERTEX][i]);
+		verticesPositions.push_back(position);
+	}
+
+	for (int i=0; i<entitiesVectors[iBase_REGION].size(); i++) {
+		entHandle regionHandle = entitiesVectors[iBase_REGION][i];
+		vector<entHandle> &surroundingVerts =
+				surroundingVertsMap[regionHandle];
+//		cout << surroundingVerts.size() << endl;
+		vector<int> surroundingVertices(surroundingVerts.size());
+		for (int j=0; j<surroundingVerts.size(); j++) {
+			surroundingVertices[j] = indicesOfEntities[surroundingVerts[j]];
+		}
+		verticesSurroundingRegions.push_back(surroundingVertices);
+//		cout << verticesSurroundingRegions[i].size() << endl << endl;
+
+		vector<vect3d> vVs = this->getVertexVectors(regionHandle);
+		positionsToBases.push_back(
+				this->calculatePositionToBasesMatrix(vVs));
+	}
+
+
 //	cout << entitiesVectors[3][adjacentEntitiesVectors[2][15][3][1]] << " " <<
 //			adjacentEntitiesVectors[2][15][3][1] << endl;
 //	cout << (this->getAdjacentEntities(entitiesVectors[2][15],3))[1] << endl;
@@ -466,6 +490,20 @@ vector<vect3d> Mesh::getVertexVectors(entHandle entity,
 	return vertexVectors;
 }
 
+vector<vect3d> Mesh::getVertexVectors(int index,
+		int dimension) {
+	int nVerts = dimension + 1;
+	vector<vect3d> vertexVectors(nVerts);
+	vector<int> &vertices =
+			adjacentEntitiesVectors[dimension][index][iBase_VERTEX];
+	assert(vertexVectors.size()==vertices.size());
+	for (int i=0; i<vertices.size(); i++) {
+		vertexVectors[i] = verticesPositions[vertices[i]];
+	}
+
+	return vertexVectors;
+}
+
 bool Mesh::checkIfInTet(vect3d currentPosition,
 		entHandle element) {
 	vector<vect3d> vertexVectors = this->getVertexVectors(element);
@@ -760,13 +798,7 @@ Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(vect3d position,
 	// TODO: should replace 4 here with unified number across functions
 	assert(vVs.size()==4);
 	Eigen::Vector4d basisFunctions;
-	Eigen::Matrix4d basisToCoords;
-	basisToCoords <<
-			1.,			1.,			1.,			1.,
-			vVs[0][0],	vVs[1][0],	vVs[2][0],	vVs[3][0],
-			vVs[0][1],	vVs[1][1],	vVs[2][1],	vVs[3][1],
-			vVs[0][2],	vVs[1][2],	vVs[2][2],	vVs[3][2];
-	Eigen::Matrix4d coordsToBasis = basisToCoords.inverse();
+	Eigen::Matrix4d coordsToBasis = this->calculatePositionToBasesMatrix(vVs);
 	Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
 	basisFunctions = coordsToBasis*paddedPosition;
 	// TODO: have to set handle to NULL to prevent changing of matrix
@@ -775,6 +807,28 @@ Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(vect3d position,
 	previousCoordsToBasis = coordsToBasis;
 
 	return basisFunctions;
+}
+
+Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(vect3d position,
+		int regionIndex) {
+	Eigen::Vector4d basisFunctions;
+	Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
+	basisFunctions = positionsToBases[regionIndex]*paddedPosition;
+
+	return basisFunctions;
+}
+
+Eigen::Matrix4d Mesh::calculatePositionToBasesMatrix(vector<vect3d> vVs) {
+	// TODO: should replace 4 here with unified number across functions
+	assert(vVs.size()==4);
+	Eigen::Matrix4d basisToCoords;
+	basisToCoords <<
+			1.,			1.,			1.,			1.,
+			vVs[0][0],	vVs[1][0],	vVs[2][0],	vVs[3][0],
+			vVs[0][1],	vVs[1][1],	vVs[2][1],	vVs[3][1],
+			vVs[0][2],	vVs[1][2],	vVs[2][2],	vVs[3][2];
+	Eigen::Matrix4d coordsToBasis = basisToCoords.inverse();
+	return coordsToBasis;
 }
 
 Eigen::VectorXd Mesh::evaluateQuadraticErrorBases(

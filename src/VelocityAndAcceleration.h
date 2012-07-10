@@ -36,6 +36,8 @@ public:
 		foundTet = false;
 		currentElement = potentialField.mesh_ptr->findTet(currentPosition,
 				currentPosition, initialNode, &foundTet, false);
+		currentRegionIndex =
+				potentialField.mesh_ptr->indicesOfEntities[currentElement];
 //		int dimension=potentialField.mesh_ptr->getEntityDimension(currentElement);
 //		assert(dimension==3);
 //		if (!foundTet)
@@ -47,6 +49,7 @@ public:
 	PotentialField& potentialField;
 	double charge;
 	entHandle currentElement;
+	int currentRegionIndex;
 	bool foundTet;
 	int interpolationOrder;
 
@@ -59,8 +62,10 @@ public:
 //		if (x[0]!=currentPosition) {
 			currentPosition = x[0];
 			potentialField.evalFieldAndDeriv(&potential, &currentAcceleration,
-					x[0], &currentElement,
+					x[0], &currentRegionIndex,
 					interpolationOrder);
+			currentElement = potentialField.mesh_ptr->
+					entitiesVectors[iBase_REGION][currentRegionIndex];
 			currentAcceleration *= -charge;
 //			potential = potentialField.getField(x[0], &currentElement,
 //					interpolationOrder);

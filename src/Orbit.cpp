@@ -382,13 +382,13 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //		currentVelocity += dt*currentAcceleration;
 //		vect3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
 //		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
-		if (foundTet) {
-			potential = potentialField.getField(currentPosition,
-					&velocityAndAcceleration.currentElement,
-					velocityAndAcceleration.interpolationOrder);
-		} else {
+//		if (foundTet) {
+//			potential = potentialField.getField(currentPosition,
+//					&velocityAndAcceleration.currentElement,
+//					velocityAndAcceleration.interpolationOrder);
+//		} else {
 			potential = 0.;
-		}
+//		}
 		double energy = 1./2.*pow(currentVelocity.norm(),2.) + charge*potential;
 		if (outFile) {
 //			fprintf(outFile, "%f %f %f %p\n", currentPosition[0], currentPosition[1],
