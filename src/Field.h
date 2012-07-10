@@ -50,7 +50,7 @@ public:
 	Mesh *mesh_ptr;
 	string name;
 	iBase_TagHandle tag;
-	vector<entHandle> entities;
+	vector<entHandle> &entities;
 	vector<T> values;
 
 	entHandle currentElement;
@@ -127,7 +127,8 @@ public:
 // gcc doesn't implement the export keyword, so define template functions here
 template <class T>
 Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
-		int entityDimension) {
+		int entityDimension) : entities(
+				inputMesh_ptr->entitiesVectors[entityDimension]) {
 	mesh_ptr = inputMesh_ptr;
 	name = inputName;
 	int ierr;
@@ -147,7 +148,7 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 	tag = mesh_ptr->createTagHandle(name, size, type);
 	// TODO: consider more transparent handling of exiting tag here
 	tag = mesh_ptr->getTagHandle(name);
-	entities = mesh_ptr->getEntities(entityDimension);
+//	entities = mesh_ptr->getEntities(entityDimension);
 	values = vector<T>(entities.size());
 	int numberOfUninitializedFields=0;
 	int numberOfInitializedFields=0;
@@ -179,7 +180,7 @@ T& Field<T>::operator[](entHandle& entityHandle) {
 	// TODO: The pointers (handles) may be to consectutive memory,
 	//       in which case there may be a faster way (linear interpolation?)
 	//       to find the index (and then just check entities[index])
-	int entityIndex = mesh_ptr->indexOfEntity[entityHandle];
+	int entityIndex = mesh_ptr->indicesOfEntities[entityHandle];
 //	cout << "field[" << entityHandle << "] called" << endl;
 	return this->operator[](entityIndex);
 }

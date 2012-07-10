@@ -41,6 +41,8 @@ public:
 	vector<entHandle> getVertices(entHandle element);
 	vector<entHandle> getAdjacentEntities(entHandle element,
 			int dimension);
+	vector<int> getAdjacentEntitiesIndices(int entityIndex, int dimension,
+			int adjacentsDimension);
 	vector<entHandle> getEntities(int dimension);
 	entHandle getRandomVertex();
 	vector<entHandle> getFaces(entHandle element);
@@ -103,15 +105,21 @@ public:
 //	iBase_EntitySetHandle surfaceEntitySet;
 //	iBase_EntitySetHandle volumeEntitySet;
 
-	vector<entHandle> allVertices;
-	vector<entHandle> allFaces;
-	vector<entHandle> allElements;
+	vector<vector<entHandle> > entitiesVectors;
 
-	map<entHandle,int> indexOfVertices;
-	map<entHandle,int> indexOfFaces;
-	map<entHandle,int> indexOfElements;
+	// adjacentEntities[dimension][index][adjacentDimension][adjacentIndices]
+	vector<vector<vector<vector<int> > > > adjacentEntitiesVectors;
 
-	map<entHandle,int> indexOfEntity;
+//	vector<entHandle> allVertices;
+//	vector<entHandle> allFaces;
+//	vector<entHandle> allElements;
+//
+//	map<entHandle,int> indexOfVertices;
+//	map<entHandle,int> indexOfFaces;
+//	map<entHandle,int> indexOfElements;
+
+	map<entHandle,int> indicesOfEntities;
+	map<entHandle,int> dimensionsOfEntities;
 
 	entHandle previousCoordsToBasisElement;
 	Eigen::Matrix4d previousCoordsToBasis;

@@ -53,21 +53,46 @@ Mesh::Mesh(string inputMeshFile) {
 
 	previousCoordsToBasisElement = NULL;
 
-	allVertices = this->getEntities(iBase_VERTEX);
-	for(int i=0; i<allVertices.size(); i++) {
-		indexOfVertices[allVertices[i]] = i;
-		indexOfEntity[allVertices[i]] = i;
+	for (int i=0; i<=NDIM; i++) {
+		entitiesVectors.push_back(this->getEntities(i));
+		for (int j=0; j<entitiesVectors[i].size(); j++) {
+			indicesOfEntities[entitiesVectors[i][j]] = j;
+			dimensionsOfEntities[entitiesVectors[i][j]] = i;
+		}
 	}
-	allFaces = this->getEntities(iBase_FACE);
-	for(int i=0; i<allFaces.size(); i++) {
-		indexOfFaces[allFaces[i]] = i;
-		indexOfEntity[allFaces[i]] = i;
+
+	// Can't combine this loop with above because getAdjacentEntitiesIndices
+	// uses indicesOfEntities
+	for (int i=0; i<=NDIM; i++) {
+		adjacentEntitiesVectors.push_back(
+				vector<vector<vector<int> > >(entitiesVectors[i].size()));
+		for (int j=0; j<entitiesVectors[i].size(); j++) {
+			for (int k=0; k<=NDIM; k++) {
+				adjacentEntitiesVectors[i][j].push_back(
+						this->getAdjacentEntitiesIndices(j,i,k));
+			}
+		}
 	}
-	allElements = this->getEntities(iBase_REGION);
-	for(int i=0; i<allElements.size(); i++) {
-		indexOfElements[allElements[i]] = i;
-		indexOfEntity[allElements[i]] = i;
-	}
+
+//	cout << entitiesVectors[3][adjacentEntitiesVectors[2][15][3][1]] << " " <<
+//			adjacentEntitiesVectors[2][15][3][1] << endl;
+//	cout << (this->getAdjacentEntities(entitiesVectors[2][15],3))[1] << endl;
+
+//	allVertices = this->getEntities(iBase_VERTEX);
+//	for(int i=0; i<allVertices.size(); i++) {
+//		indexOfVertices[allVertices[i]] = i;
+//		indexOfEntity[allVertices[i]] = i;
+//	}
+//	allFaces = this->getEntities(iBase_FACE);
+//	for(int i=0; i<allFaces.size(); i++) {
+//		indexOfFaces[allFaces[i]] = i;
+//		indexOfEntity[allFaces[i]] = i;
+//	}
+//	allElements = this->getEntities(iBase_REGION);
+//	for(int i=0; i<allElements.size(); i++) {
+//		indexOfElements[allElements[i]] = i;
+//		indexOfEntity[allElements[i]] = i;
+//	}
 
 	vtkMesh_ptr = this->createVtkMesh();
 	vtkCellTree_ptr = vtkSmartPointer<vtkCellTreeLocator>::New();
@@ -376,6 +401,19 @@ vector<entHandle> Mesh::getAdjacentEntities(
 	elements_alloc = 0;
 
 	return elementHandles;
+}
+
+vector<int> Mesh::getAdjacentEntitiesIndices(int entityIndex, int dimension,
+		int adjacentsDimension) {
+	entHandle entityHandle = entitiesVectors[dimension][entityIndex];
+	vector<entHandle> adjacentEntities = this->getAdjacentEntities(
+			entityHandle, adjacentsDimension);
+	vector<int> adjacentEntitiesIndices(adjacentEntities.size());
+	for (int i=0; i<adjacentEntities.size(); i++) {
+		adjacentEntitiesIndices[i] = indicesOfEntities[adjacentEntities[i]];
+	}
+
+	return adjacentEntitiesIndices;
 }
 
 entHandle Mesh::getRandomVertex() {
