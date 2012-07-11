@@ -84,13 +84,19 @@ Mesh::Mesh(string inputMeshFile) {
 		entHandle regionHandle = entitiesVectors[iBase_REGION][i];
 		vector<entHandle> &surroundingVerts =
 				surroundingVertsMap[regionHandle];
-//		cout << surroundingVerts.size() << endl;
 		vector<int> surroundingVertices(surroundingVerts.size());
 		for (int j=0; j<surroundingVerts.size(); j++) {
 			surroundingVertices[j] = indicesOfEntities[surroundingVerts[j]];
 		}
 		verticesSurroundingRegions.push_back(surroundingVertices);
-//		cout << verticesSurroundingRegions[i].size() << endl << endl;
+
+		vector<entHandle> &surroundingRegs =
+				adjacentTetsMap[regionHandle];
+		vector<int> surroundingRegions(surroundingRegs.size());
+		for (int j=0; j<surroundingRegs.size(); j++) {
+			surroundingRegions[j] = indicesOfEntities[surroundingRegs[j]];
+		}
+		regionsSurroundingRegions.push_back(surroundingRegions);
 
 		vector<vect3d> vVs = this->getVertexVectors(regionHandle);
 		positionsToBases.push_back(
@@ -376,6 +382,71 @@ entHandle Mesh::findTet(vect3d oldPosition,
 	return tet;
 }
 
+int Mesh::findTet(vect3d oldPosition,
+		vect3d position,
+		int adjacentTetIndex, bool *tetFound, bool isTet) {
+	int tetIndex;
+	vector<int> ents;
+	vector<int> faces;
+
+	if (isTet) {
+		int faceCrossedIndex = this->findFaceCrossed(
+				adjacentTetIndex, oldPosition, position);
+		if (faceCrossedIndex>=0) {
+			ents = adjacentEntitiesVectors[iBase_FACE][faceCrossedIndex][iBase_REGION];
+			for (int i=0; i<ents.size(); i++) {
+				if (this->checkIfInTet(position, ents[i])) {
+					tetIndex = ents[i];
+					*tetFound = true;
+					return tetIndex;
+				}
+			}
+		}
+		ents = regionsSurroundingRegions[adjacentTetIndex];
+	} else {
+		// TODO: should no longer get here
+		cout << "findTet was passed non-region entity: " << adjacentTetIndex << endl;
+		ents = regionsSurroundingRegions[0];
+	}
+
+	for (int i=0; i<ents.size(); i++) {
+		if (Mesh::checkIfInTet(position, ents[i])) {
+			tetIndex = ents[i];
+			// TODO: could throw error if tetFound is false rather than pass
+			*tetFound = true;
+			break;
+		}
+	}
+	if (!*tetFound) {
+		double pos[3];
+		pos[0] = position[0];
+		pos[1] = position[1];
+		pos[2] = position[2];
+		double pcoords[3], weights[3];
+		vtkSmartPointer<vtkGenericCell> cell =
+				vtkSmartPointer<vtkGenericCell>::New();
+		vtkIdType cellId = vtkCellTree_ptr->FindCell(pos,0,
+				cell, pcoords, weights);
+//		cout << "In cell " << cellId << endl;
+		if (cellId>=0) {
+			// TODO: assuming vtkIdType is int and ordering is same as in entitiesVectors
+			if (this->checkIfInTet(position, cellId)) {
+				*tetFound = true;
+			} else {
+//				throw;
+			}
+		} else {
+//			throw int(OUTSIDE_DOMAIN);
+		}
+	}
+	if (!*tetFound) {
+//		tet = adjacentTet;
+		tetIndex = ents[0];
+	}
+
+	return tetIndex;
+}
+
 //entHandle Mesh::findStartingTet(vect3d const &position,
 //		vect3d const &velocity, entHandle vertex) {
 //	entHandle startingTet=NULL;
@@ -505,6 +576,13 @@ vector<vect3d> Mesh::getVertexVectors(int index,
 }
 
 bool Mesh::checkIfInTet(vect3d currentPosition,
+		int elementIndex) {
+	vector<vect3d> vertexVectors = this->getVertexVectors(elementIndex, iBase_REGION);
+
+	return this->checkIfInTet(currentPosition, vertexVectors);
+}
+
+bool Mesh::checkIfInTet(vect3d currentPosition,
 		entHandle element) {
 	vector<vect3d> vertexVectors = this->getVertexVectors(element);
 
@@ -585,6 +663,24 @@ entHandle Mesh::findFaceCrossed(entHandle previousElement,
 	}
 
 	return faceCrossed;
+}
+
+int Mesh::findFaceCrossed(int previousElementIndex,
+		vect3d previousPosition, vect3d currentPosition) {
+	int faceCrossedIndex=-1;
+	vector<int> &adjacentFaces =
+			adjacentEntitiesVectors[iBase_REGION][previousElementIndex][iBase_FACE];
+
+	for (int i=0; i<adjacentFaces.size(); i++) {
+		vector<vect3d> vertexVectors =
+				this->getVertexVectors(adjacentFaces[i], iBase_FACE);
+		bool intersectsTriangle = this->checkIfIntersectsTriangle(previousPosition,
+				currentPosition, vertexVectors);
+		if (intersectsTriangle)
+			faceCrossedIndex = adjacentFaces[i];
+	}
+
+	return faceCrossedIndex;
 }
 
 iBase_TagHandle Mesh::getTagHandle(string tagName) {

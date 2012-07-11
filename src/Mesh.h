@@ -36,6 +36,8 @@ public:
 	vect3d getCoordinates(entHandle node, bool useMap=false);
 	entHandle findTet(vect3d oldPosition, vect3d position,
 			entHandle adjacentTet, bool *tetFound, bool isTet=true);
+	int findTet(vect3d oldPosition, vect3d position,
+			int adjacentTetIndex, bool *tetFound, bool isTet=true);
 //	entHandle findStartingTet(vect3d const &position,
 //			vect3d const &velocity, entHandle vertex);
 	vector<entHandle> getVertices(entHandle element);
@@ -58,11 +60,15 @@ public:
 	bool checkIfInTet(vect3d currentPosition,
 			entHandle element);
 	bool checkIfInTet(vect3d currentPosition,
+			int elementIndex);
+	bool checkIfInTet(vect3d currentPosition,
 			vector<vect3d> vertexVectors);
 	bool checkIfIntersectsTriangle(vect3d previousPosition,
 			vect3d currentPosition,
 			vector<vect3d> vertexVectors);
 	entHandle findFaceCrossed(entHandle previousElement,
+			vect3d previousPosition, vect3d currentPosition);
+	int findFaceCrossed(int previousElementIndex,
 			vect3d previousPosition, vect3d currentPosition);
 	iBase_TagHandle getTagHandle(string tagName);
 	iBase_TagHandle createTagHandle(string tagName, int size, int type);
@@ -111,6 +117,7 @@ public:
 	vector<vector<vector<vector<int> > > > adjacentEntitiesVectors;
 
 	vector<vector<int> > verticesSurroundingRegions;
+	vector<vector<int> > regionsSurroundingRegions;
 
 	vector<vect3d> verticesPositions;
 	vector<Eigen::Matrix4d> positionsToBases;

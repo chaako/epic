@@ -337,14 +337,13 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 		vector<vect3d> vVs =
 				mesh_ptr->getVertexVectors(currentRegionIndex, iBase_REGION);
 		centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
-		currentElement = mesh_ptr->entitiesVectors[iBase_REGION][currentRegionIndex];
+//		currentElement = mesh_ptr->entitiesVectors[iBase_REGION][currentRegionIndex];
 		bool foundTet=false;
-		currentElement = mesh_ptr->findTet(centroid,
-				position, currentElement, &foundTet);
+		currentRegionIndex = mesh_ptr->findTet(centroid,
+				position, currentRegionIndex, &foundTet);
 		// TODO: failure to find tet doesn't really mean outside domain yet
 		if (!foundTet)
 			throw int(OUTSIDE_DOMAIN);
-		currentRegionIndex = mesh_ptr->indicesOfEntities[currentElement];
 		currentVerticesIndices = mesh_ptr->
 				adjacentEntitiesVectors[iBase_REGION][currentRegionIndex][iBase_VERTEX];
 		for (int i=0;i<currentVerticesIndices.size();i++) {
