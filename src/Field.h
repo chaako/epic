@@ -41,7 +41,7 @@ public:
 	T getAverageField(entHandle element);
 	void evalFieldAndDeriv(T *fieldValue,
 			Eigen::Matrix<T,NDIM,1> *fieldDeriv,
-			vect3d position, int *entityIndex=-1,
+			const vect3d &position, int *entityIndex=-1,
 			int interpolationOrder=INTERPOLATIONORDER);
 	void setField(entHandle node, T field);
 	Eigen::VectorXd getErrorCoefficients(entHandle element,
@@ -58,6 +58,10 @@ public:
 	int currentRegionIndex;
 	vector<int> currentVerticesIndices;
 	int currentInterpolationElementIndex;
+//	vect3d currentPosition;
+	Eigen::Vector4d currentLinearBasisFunctions;
+//	Eigen::VectorXd currentErrorBases;
+//	int currentInterpolationOrder;
 
 	entHandle currentElement;
 	vector<entHandle> currentVertices;
@@ -166,15 +170,16 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 			numberOfUninitializedFields++;
 		}
 	}
-	cout << "The field '" << name << "' was created with " <<
-			numberOfInitializedFields << " values set from mesh DB, and " <<
-			numberOfUninitializedFields << " uninitialized values" << endl;
+//	cout << "The field '" << name << "' was created with " <<
+//			numberOfInitializedFields << " values set from mesh DB, and " <<
+//			numberOfUninitializedFields << " uninitialized values" << endl;
 
 	// TODO: nVertices should be standardized across functions
 	int nVertices = 4;
 	currentRegionIndex=-1;
 	currentVerticesIndices = vector<int>(nVertices);
 	currentInterpolationElementIndex = -1;
+	currentLinearBasisFunctions = Eigen::Vector4d(0.,0.,0.,0.);
 
 	currentElement = NULL;
 	currentFields = vector<T>(nVertices);
@@ -312,11 +317,19 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 template <class T>
 void Field<T>::evalFieldAndDeriv(T *fieldValue,
 		Eigen::Matrix<T,NDIM,1> *fieldDeriv,
-		vect3d position, int *entityIndex,
+		const vect3d &position, int *entityIndex,
 		int interpolationOrder) {
 	bool inElement=false;
-	Eigen::Vector4d linearBasisFunctions;
-	Eigen::VectorXd errorBases, errorCoefficients;
+//	Eigen::Vector4d &linearBasisFunctions = currentLinearBasisFunctions;
+	Eigen::Vector4d linearBasisFunctions(0.,0.,0.,0.);
+	int nErrorBases;
+	if (interpolationOrder==2) {
+		nErrorBases = N_BASES_QUADRATIC;
+	} else if (interpolationOrder==3) {
+		nErrorBases = N_BASES_CUBIC;
+	}
+	Eigen::VectorXd errorBases(nErrorBases);
+	Eigen::VectorXd errorCoefficients(nErrorBases);
 	if (*entityIndex<0) {
 		// TODO: handle case with no entity hint
 		vector<entHandle> adjacentEntities =
@@ -325,8 +338,8 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 	} else if (*entityIndex==currentRegionIndex) {
 			inElement=true;
 			// TODO: should replace use of linear coeffs with fast checkIfInTet
-			linearBasisFunctions =
-					mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex);
+			mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex,
+					&linearBasisFunctions);
 			for (int i=0; i<linearBasisFunctions.rows(); i++)
 				if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE)
 					inElement=false;
@@ -350,8 +363,8 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 			currentFields[i] = this->operator[](currentVerticesIndices[i]);
 		}
 	}
-	linearBasisFunctions =
-			mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex);
+	mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex,
+			&linearBasisFunctions);
 	if (interpolationOrder==2) {
 		errorBases =
 				mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions);
@@ -359,6 +372,7 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 		errorBases =
 				mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions);
 	}
+	// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
 	*fieldValue *= 0.;
 	assert(currentFields.size()==linearBasisFunctions.rows());
 	for (int i=0;i<linearBasisFunctions.rows();i++) {
@@ -378,15 +392,14 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 	for (int j=0; j<NDIM; j++) {
 		vect3d perturbedPosition = position +
 				vect3d::Unit(j)*DELTA_LENGTH;
-		linearBasisFunctions =
-				mesh_ptr->evaluateLinearBasisFunctions(perturbedPosition,
-						currentRegionIndex);
+		mesh_ptr->evaluateLinearBasisFunctions(perturbedPosition,
+				currentRegionIndex, &linearBasisFunctions);
 		if (interpolationOrder==2) {
-			errorBases =
-					mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions);
+			mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions,
+					&errorBases);
 		} else if (interpolationOrder==3) {
-			errorBases =
-					mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions);
+			mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions,
+					&errorBases);
 		}
 		// TODO: Too obscure to temp. use fieldDeriv for perturbed field?
 		(*fieldDeriv)[j] *=0;

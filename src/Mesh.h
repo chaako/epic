@@ -91,11 +91,19 @@ public:
 			vector<vect3d> vVs);
 	Eigen::Vector4d evaluateLinearBasisFunctions(vect3d position,
 			int regionIndex);
+	void evaluateLinearBasisFunctions(const vect3d &position,
+			int regionIndex, Eigen::Vector4d *basisFunctions);
 	Eigen::Matrix4d calculatePositionToBasesMatrix(vector<vect3d> vVs);
 	Eigen::VectorXd evaluateQuadraticErrorBases(
 			Eigen::Vector4d linearBasisFunctions);
+	void evaluateQuadraticErrorBases(
+			Eigen::Vector4d linearBasisFunctions,
+			Eigen::VectorXd *quadraticBasisFunctions);
 	Eigen::VectorXd evaluateCubicErrorBases(
 			Eigen::Vector4d linearBasisFunctions);
+	void evaluateCubicErrorBases(
+			Eigen::Vector4d linearBasisFunctions,
+			Eigen::VectorXd *cubicBasisFunctions);
 
 	vtkSmartPointer<vtkUnstructuredGrid> createVtkMesh();
 

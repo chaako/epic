@@ -18,6 +18,9 @@ const double DELTA_LENGTH=1.e-10;
 const int WORKTAG=999999998;
 const int DIETAG=999999999;
 
+const int N_BASES_QUADRATIC=6;
+const int N_BASES_CUBIC=22;
+
 enum {
 	OUTSIDE_DOMAIN,
 	FAILURE_GETTING_FIELD,

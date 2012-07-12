@@ -667,6 +667,8 @@ entHandle Mesh::findFaceCrossed(entHandle previousElement,
 
 int Mesh::findFaceCrossed(int previousElementIndex,
 		vect3d previousPosition, vect3d currentPosition) {
+	// TODO: which linearBasisFunction is negative tells you which face was
+	//       crossed (face opposite vertex with negative weight)
 	int faceCrossedIndex=-1;
 	vector<int> &adjacentFaces =
 			adjacentEntitiesVectors[iBase_REGION][previousElementIndex][iBase_FACE];
@@ -908,10 +910,15 @@ Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(vect3d position,
 Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(vect3d position,
 		int regionIndex) {
 	Eigen::Vector4d basisFunctions;
-	Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
-	basisFunctions = positionsToBases[regionIndex]*paddedPosition;
-
+	this->evaluateLinearBasisFunctions(position, regionIndex,
+			&basisFunctions);
 	return basisFunctions;
+}
+
+void Mesh::evaluateLinearBasisFunctions(const vect3d &position,
+		int regionIndex, Eigen::Vector4d *basisFunctions) {
+	Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
+	*basisFunctions = positionsToBases[regionIndex]*paddedPosition;
 }
 
 Eigen::Matrix4d Mesh::calculatePositionToBasesMatrix(vector<vect3d> vVs) {
@@ -931,60 +938,76 @@ Eigen::VectorXd Mesh::evaluateQuadraticErrorBases(
 		Eigen::Vector4d linearBasisFunctions) {
 	assert(linearBasisFunctions.rows()==4);
 	Eigen::VectorXd quadraticBasisFunctions(6);
-	quadraticBasisFunctions[0] =
-			linearBasisFunctions[0]*linearBasisFunctions[1];
-	quadraticBasisFunctions[1] =
-			linearBasisFunctions[0]*linearBasisFunctions[2];
-	quadraticBasisFunctions[2] =
-			linearBasisFunctions[0]*linearBasisFunctions[3];
-	quadraticBasisFunctions[3] =
-			linearBasisFunctions[1]*linearBasisFunctions[2];
-	quadraticBasisFunctions[4] =
-			linearBasisFunctions[1]*linearBasisFunctions[3];
-	quadraticBasisFunctions[5] =
-			linearBasisFunctions[2]*linearBasisFunctions[3];
+	this->evaluateQuadraticErrorBases(linearBasisFunctions,
+			&quadraticBasisFunctions);
 	return quadraticBasisFunctions;
+}
+
+void Mesh::evaluateQuadraticErrorBases(
+		Eigen::Vector4d linearBasisFunctions,
+		Eigen::VectorXd *quadraticBasisFunctions) {
+	assert(linearBasisFunctions.rows()==4);
+	(*quadraticBasisFunctions)[0] =
+			linearBasisFunctions[0]*linearBasisFunctions[1];
+	(*quadraticBasisFunctions)[1] =
+			linearBasisFunctions[0]*linearBasisFunctions[2];
+	(*quadraticBasisFunctions)[2] =
+			linearBasisFunctions[0]*linearBasisFunctions[3];
+	(*quadraticBasisFunctions)[3] =
+			linearBasisFunctions[1]*linearBasisFunctions[2];
+	(*quadraticBasisFunctions)[4] =
+			linearBasisFunctions[1]*linearBasisFunctions[3];
+	(*quadraticBasisFunctions)[5] =
+			linearBasisFunctions[2]*linearBasisFunctions[3];
 }
 
 Eigen::VectorXd Mesh::evaluateCubicErrorBases(
 		Eigen::Vector4d linearBasisFunctions) {
 	Eigen::VectorXd cubicBasisFunctions(16);
+	this->evaluateCubicErrorBases(linearBasisFunctions,
+			&cubicBasisFunctions);
+	return cubicBasisFunctions;
+}
+
+void Mesh::evaluateCubicErrorBases(
+		Eigen::Vector4d linearBasisFunctions,
+		Eigen::VectorXd *cubicBasisFunctions) {
 //	Eigen::VectorXd cubicBasisFunctions(22);
 	// TODO: replace below with some sort of loop?
-	cubicBasisFunctions[0] = linearBasisFunctions[0]*
+	(*cubicBasisFunctions)[0] = linearBasisFunctions[0]*
 			linearBasisFunctions[0]*linearBasisFunctions[1];
-	cubicBasisFunctions[1] = linearBasisFunctions[0]*
+	(*cubicBasisFunctions)[1] = linearBasisFunctions[0]*
 			linearBasisFunctions[0]*linearBasisFunctions[2];
-	cubicBasisFunctions[2] = linearBasisFunctions[0]*
+	(*cubicBasisFunctions)[2] = linearBasisFunctions[0]*
 			linearBasisFunctions[0]*linearBasisFunctions[3];
-	cubicBasisFunctions[3] = linearBasisFunctions[0]*
+	(*cubicBasisFunctions)[3] = linearBasisFunctions[0]*
 			linearBasisFunctions[1]*linearBasisFunctions[2];
-	cubicBasisFunctions[4] = linearBasisFunctions[0]*
+	(*cubicBasisFunctions)[4] = linearBasisFunctions[0]*
 			linearBasisFunctions[1]*linearBasisFunctions[3];
-	cubicBasisFunctions[5] = linearBasisFunctions[0]*
+	(*cubicBasisFunctions)[5] = linearBasisFunctions[0]*
 			linearBasisFunctions[2]*linearBasisFunctions[3];
 
-	cubicBasisFunctions[6] = linearBasisFunctions[1]*
+	(*cubicBasisFunctions)[6] = linearBasisFunctions[1]*
 			linearBasisFunctions[0]*linearBasisFunctions[1];
-	cubicBasisFunctions[7] = linearBasisFunctions[1]*
+	(*cubicBasisFunctions)[7] = linearBasisFunctions[1]*
 			linearBasisFunctions[1]*linearBasisFunctions[2];
-	cubicBasisFunctions[8] = linearBasisFunctions[1]*
+	(*cubicBasisFunctions)[8] = linearBasisFunctions[1]*
 			linearBasisFunctions[1]*linearBasisFunctions[3];
-	cubicBasisFunctions[9] = linearBasisFunctions[1]*
+	(*cubicBasisFunctions)[9] = linearBasisFunctions[1]*
 			linearBasisFunctions[2]*linearBasisFunctions[3];
 
-	cubicBasisFunctions[10] = linearBasisFunctions[2]*
+	(*cubicBasisFunctions)[10] = linearBasisFunctions[2]*
 			linearBasisFunctions[0]*linearBasisFunctions[2];
-	cubicBasisFunctions[11] = linearBasisFunctions[2]*
+	(*cubicBasisFunctions)[11] = linearBasisFunctions[2]*
 			linearBasisFunctions[1]*linearBasisFunctions[2];
-	cubicBasisFunctions[12] = linearBasisFunctions[2]*
+	(*cubicBasisFunctions)[12] = linearBasisFunctions[2]*
 			linearBasisFunctions[2]*linearBasisFunctions[3];
 
-	cubicBasisFunctions[13] = linearBasisFunctions[3]*
+	(*cubicBasisFunctions)[13] = linearBasisFunctions[3]*
 			linearBasisFunctions[0]*linearBasisFunctions[3];
-	cubicBasisFunctions[14] = linearBasisFunctions[3]*
+	(*cubicBasisFunctions)[14] = linearBasisFunctions[3]*
 			linearBasisFunctions[1]*linearBasisFunctions[3];
-	cubicBasisFunctions[15] = linearBasisFunctions[3]*
+	(*cubicBasisFunctions)[15] = linearBasisFunctions[3]*
 			linearBasisFunctions[2]*linearBasisFunctions[3];
 
 //	cubicBasisFunctions[16] =
@@ -1000,7 +1023,6 @@ Eigen::VectorXd Mesh::evaluateCubicErrorBases(
 //	cubicBasisFunctions[21] =
 //			linearBasisFunctions[2]*linearBasisFunctions[3];
 
-	return cubicBasisFunctions;
 }
 
 vtkSmartPointer<vtkUnstructuredGrid> Mesh::createVtkMesh() {
