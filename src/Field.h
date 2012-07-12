@@ -58,8 +58,11 @@ public:
 	int currentRegionIndex;
 	vector<int> currentVerticesIndices;
 	int currentInterpolationElementIndex;
-//	vect3d currentPosition;
-	Eigen::Vector4d currentLinearBasisFunctions;
+	int currentInterpolationOrder;
+	vect3d currentPosition;
+	T currentFieldValue;
+	Eigen::Matrix<T,NDIM,1> currentFieldDerivatives;
+//	Eigen::Vector4d currentLinearBasisFunctions;
 //	Eigen::VectorXd currentErrorBases;
 //	int currentInterpolationOrder;
 
@@ -179,7 +182,11 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 	currentRegionIndex=-1;
 	currentVerticesIndices = vector<int>(nVertices);
 	currentInterpolationElementIndex = -1;
-	currentLinearBasisFunctions = Eigen::Vector4d(0.,0.,0.,0.);
+	currentInterpolationOrder = -1;
+	currentPosition = vect3d(0.,0.,0.);
+	currentFieldValue = T();
+	currentFieldDerivatives = Eigen::Matrix<T,NDIM,1>(T(),T(),T());
+//	currentLinearBasisFunctions = Eigen::Vector4d(0.,0.,0.,0.);
 
 	currentElement = NULL;
 	currentFields = vector<T>(nVertices);
@@ -319,101 +326,111 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 		Eigen::Matrix<T,NDIM,1> *fieldDeriv,
 		const vect3d &position, int *entityIndex,
 		int interpolationOrder) {
-	bool inElement=false;
-//	Eigen::Vector4d &linearBasisFunctions = currentLinearBasisFunctions;
-	Eigen::Vector4d linearBasisFunctions(0.,0.,0.,0.);
-	int nErrorBases;
-	if (interpolationOrder==2) {
-		nErrorBases = N_BASES_QUADRATIC;
-	} else if (interpolationOrder==3) {
-		nErrorBases = N_BASES_CUBIC;
-	}
-	Eigen::VectorXd errorBases(nErrorBases);
-	Eigen::VectorXd errorCoefficients(nErrorBases);
-	if (*entityIndex<0) {
-		// TODO: handle case with no entity hint
-		vector<entHandle> adjacentEntities =
-				mesh_ptr->getAdjacentEntities(entities[0],iBase_REGION);
-		*entityIndex = mesh_ptr->indicesOfEntities[adjacentEntities[0]];
-	} else if (*entityIndex==currentRegionIndex) {
-			inElement=true;
-			// TODO: should replace use of linear coeffs with fast checkIfInTet
-			mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex,
-					&linearBasisFunctions);
-			for (int i=0; i<linearBasisFunctions.rows(); i++)
-				if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE)
-					inElement=false;
-	}
-	currentRegionIndex = *entityIndex;
-	if (!inElement) {
-		vect3d centroid(0.,0.,0.);
-		vector<vect3d> vVs =
-				mesh_ptr->getVertexVectors(currentRegionIndex, iBase_REGION);
-		centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
-//		currentElement = mesh_ptr->entitiesVectors[iBase_REGION][currentRegionIndex];
-		bool foundTet=false;
-		currentRegionIndex = mesh_ptr->findTet(centroid,
-				position, currentRegionIndex, &foundTet);
-		// TODO: failure to find tet doesn't really mean outside domain yet
-		if (!foundTet)
-			throw int(OUTSIDE_DOMAIN);
-		currentVerticesIndices = mesh_ptr->
-				adjacentEntitiesVectors[iBase_REGION][currentRegionIndex][iBase_VERTEX];
-		for (int i=0;i<currentVerticesIndices.size();i++) {
-			currentFields[i] = this->operator[](currentVerticesIndices[i]);
-		}
-	}
-	mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex,
-			&linearBasisFunctions);
-	if (interpolationOrder==2) {
-		errorBases =
-				mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions);
-	} else if (interpolationOrder==3) {
-		errorBases =
-				mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions);
-	}
-	// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
-	*fieldValue *= 0.;
-	assert(currentFields.size()==linearBasisFunctions.rows());
-	for (int i=0;i<linearBasisFunctions.rows();i++) {
-		*fieldValue += linearBasisFunctions[i]*currentFields[i];
-	}
-	if (interpolationOrder>1) {
-		errorCoefficients = this->getErrorCoefficients(
-				currentRegionIndex, interpolationOrder);
-		assert(errorBases.rows()==errorCoefficients.rows());
-		*fieldValue += errorCoefficients.dot(errorBases);
-	}
-	*entityIndex = currentRegionIndex;
-
-	// TODO: remove this check and cast (just for debugging)
-	assert(!isnan((double)*fieldValue));
-
-	for (int j=0; j<NDIM; j++) {
-		vect3d perturbedPosition = position +
-				vect3d::Unit(j)*DELTA_LENGTH;
-		mesh_ptr->evaluateLinearBasisFunctions(perturbedPosition,
-				currentRegionIndex, &linearBasisFunctions);
+	if (position==currentPosition &&
+			interpolationOrder==currentInterpolationOrder) {
+		*fieldValue = currentFieldValue;
+		*fieldDeriv = currentFieldDerivatives;
+	} else {
+		bool inElement=false;
+//		Eigen::Vector4d &linearBasisFunctions = currentLinearBasisFunctions;
+		Eigen::Vector4d linearBasisFunctions(0.,0.,0.,0.);
+		int nErrorBases;
 		if (interpolationOrder==2) {
-			mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions,
-					&errorBases);
+			nErrorBases = N_BASES_QUADRATIC;
 		} else if (interpolationOrder==3) {
-			mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions,
-					&errorBases);
+			nErrorBases = N_BASES_CUBIC;
 		}
-		// TODO: Too obscure to temp. use fieldDeriv for perturbed field?
-		(*fieldDeriv)[j] *=0;
+		Eigen::VectorXd errorBases(nErrorBases);
+		Eigen::VectorXd errorCoefficients(nErrorBases);
+		if (*entityIndex<0) {
+			// TODO: handle case with no entity hint
+			vector<entHandle> adjacentEntities =
+					mesh_ptr->getAdjacentEntities(entities[0],iBase_REGION);
+			*entityIndex = mesh_ptr->indicesOfEntities[adjacentEntities[0]];
+		} else if (*entityIndex==currentRegionIndex) {
+				inElement=true;
+				// TODO: should replace use of linear coeffs with fast checkIfInTet
+				mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex,
+						&linearBasisFunctions);
+				for (int i=0; i<linearBasisFunctions.rows(); i++)
+					if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE)
+						inElement=false;
+		}
+		currentRegionIndex = *entityIndex;
+		if (!inElement) {
+			vect3d centroid(0.,0.,0.);
+			vector<vect3d> vVs =
+					mesh_ptr->getVertexVectors(currentRegionIndex, iBase_REGION);
+			centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+//			currentElement = mesh_ptr->entitiesVectors[iBase_REGION][currentRegionIndex];
+			bool foundTet=false;
+			currentRegionIndex = mesh_ptr->findTet(centroid,
+					position, currentRegionIndex, &foundTet);
+			// TODO: failure to find tet doesn't really mean outside domain yet
+			if (!foundTet)
+				throw int(OUTSIDE_DOMAIN);
+			currentVerticesIndices = mesh_ptr->
+					adjacentEntitiesVectors[iBase_REGION][currentRegionIndex][iBase_VERTEX];
+			for (int i=0;i<currentVerticesIndices.size();i++) {
+				currentFields[i] = this->operator[](currentVerticesIndices[i]);
+			}
+		}
+		mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex,
+				&linearBasisFunctions);
+		if (interpolationOrder==2) {
+			errorBases =
+					mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions);
+		} else if (interpolationOrder==3) {
+			errorBases =
+					mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions);
+		}
+		// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
+		*fieldValue *= 0.;
+		assert(currentFields.size()==linearBasisFunctions.rows());
 		for (int i=0;i<linearBasisFunctions.rows();i++) {
-			(*fieldDeriv)[j] += linearBasisFunctions[i]*currentFields[i];
+			*fieldValue += linearBasisFunctions[i]*currentFields[i];
 		}
 		if (interpolationOrder>1) {
 			errorCoefficients = this->getErrorCoefficients(
 					currentRegionIndex, interpolationOrder);
 			assert(errorBases.rows()==errorCoefficients.rows());
-			(*fieldDeriv)[j] += errorCoefficients.dot(errorBases);
+			*fieldValue += errorCoefficients.dot(errorBases);
 		}
-		(*fieldDeriv)[j] -= *fieldValue;
-		(*fieldDeriv)[j] /= DELTA_LENGTH;
+		*entityIndex = currentRegionIndex;
+
+		// TODO: remove this check and cast (just for debugging)
+		assert(!isnan((double)*fieldValue));
+
+		for (int j=0; j<NDIM; j++) {
+			vect3d perturbedPosition = position +
+					vect3d::Unit(j)*DELTA_LENGTH;
+			mesh_ptr->evaluateLinearBasisFunctions(perturbedPosition,
+					currentRegionIndex, &linearBasisFunctions);
+			if (interpolationOrder==2) {
+				mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions,
+						&errorBases);
+			} else if (interpolationOrder==3) {
+				mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions,
+						&errorBases);
+			}
+			// TODO: Too obscure to temp. use fieldDeriv for perturbed field?
+			(*fieldDeriv)[j] *=0;
+			for (int i=0;i<linearBasisFunctions.rows();i++) {
+				(*fieldDeriv)[j] += linearBasisFunctions[i]*currentFields[i];
+			}
+			if (interpolationOrder>1) {
+				errorCoefficients = this->getErrorCoefficients(
+						currentRegionIndex, interpolationOrder);
+				assert(errorBases.rows()==errorCoefficients.rows());
+				(*fieldDeriv)[j] += errorCoefficients.dot(errorBases);
+			}
+			(*fieldDeriv)[j] -= *fieldValue;
+			(*fieldDeriv)[j] /= DELTA_LENGTH;
+		}
+		currentInterpolationOrder = interpolationOrder;
+		currentPosition = position;
+		currentFieldValue = *fieldValue;
+		currentFieldDerivatives = *fieldDeriv;
 	}
 }
 

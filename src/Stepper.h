@@ -40,19 +40,19 @@ public:
 //			x[1] += dt/2. * dxdt[1];
 
 			// Advance position half timestep
-			boost::unwrap_ref(odeSystem)(x, dxdt);
+//			boost::unwrap_ref(odeSystem)(x, dxdt);
 //    		odeSystem(x, dxdt);
-			x[0] += dt/2. * dxdt[0];
-//			x[0] += dt/2. * x[1];
+//			x[0] += dt/2. * dxdt[0];
+			x[0] += dt/2. * x[1];
 			// Advance velocity
 			boost::unwrap_ref(odeSystem)(x, dxdt);
 //    		odeSystem(x, dxdt);
 			x[1] += dt * dxdt[1];
 			// Advance position half timestep
-			boost::unwrap_ref(odeSystem)(x, dxdt);
+//			boost::unwrap_ref(odeSystem)(x, dxdt);
 //    		odeSystem(x, dxdt);
-			x[0] += dt/2. * dxdt[0];
-//			x[0] += dt/2. * x[1];
+//			x[0] += dt/2. * dxdt[0];
+			x[0] += dt/2. * x[1];
 
 //			xOut[0] = x[0];
 //			xOut[1] = x[1];
