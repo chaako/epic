@@ -72,7 +72,7 @@ enum {
 #include <vtkCellLocator.h>
 
 const int NDIM=3;
-const int INTERPOLATIONORDER=1;
+const int INTERPOLATIONORDER=2;
 // Matrix gives better pretty printing than Vector3d in gdb
 typedef Eigen::Matrix<double,NDIM,1> vect3d;
 typedef iBase_EntityHandle entHandle;

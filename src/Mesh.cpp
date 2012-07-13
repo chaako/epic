@@ -98,11 +98,38 @@ Mesh::Mesh(string inputMeshFile) {
 		}
 		regionsSurroundingRegions.push_back(surroundingRegions);
 
+		vector<int> &regionVertices =
+				adjacentEntitiesVectors[iBase_REGION][i][iBase_VERTEX];
+		vector<int> oppositeRegions(regionVertices.size());
+		vector<int> &regionFaces =
+				adjacentEntitiesVectors[iBase_REGION][i][iBase_FACE];
+		for (int k=0; k<regionVertices.size(); k++) {
+			int oppositeFace = -1;
+			for (int j=0; j<regionFaces.size(); j++) {
+				vector<int> &faceVertices =
+						adjacentEntitiesVectors[iBase_FACE][regionFaces[j]][iBase_VERTEX];
+				bool correctFace=true;
+				for (int l=0; l<faceVertices.size(); l++) {
+					if (faceVertices[l]==regionVertices[k])
+						correctFace=false;
+				}
+				if (correctFace)
+					oppositeFace = regionFaces[j];
+			}
+			vector<int> &faceRegions =
+					adjacentEntitiesVectors[iBase_FACE][oppositeFace][iBase_REGION];
+			if (faceRegions.size()==2) {
+				oppositeRegions[k] = (faceRegions[0]!=i) ? faceRegions[0] : faceRegions[1];
+			} else {
+				oppositeRegions[k] = faceRegions[0];
+			}
+		}
+		regionsOppositeVertices.push_back(oppositeRegions);
+
 		vector<vect3d> vVs = this->getVertexVectors(regionHandle);
 		positionsToBases.push_back(
 				this->calculatePositionToBasesMatrix(vVs));
 	}
-
 
 //	cout << entitiesVectors[3][adjacentEntitiesVectors[2][15][3][1]] << " " <<
 //			adjacentEntitiesVectors[2][15][3][1] << endl;
@@ -300,6 +327,7 @@ vect3d Mesh::getCoordinates(entHandle node, bool useMap) {
 	return coordinates;
 }
 
+// TODO: eliminate code duplication with index-version
 entHandle Mesh::findTet(vect3d oldPosition,
 		vect3d position,
 		entHandle adjacentTet, bool *tetFound, bool isTet) {
@@ -390,18 +418,33 @@ int Mesh::findTet(vect3d oldPosition,
 	vector<int> faces;
 
 	if (isTet) {
-		int faceCrossedIndex = this->findFaceCrossed(
-				adjacentTetIndex, oldPosition, position);
-		if (faceCrossedIndex>=0) {
-			ents = adjacentEntitiesVectors[iBase_FACE][faceCrossedIndex][iBase_REGION];
-			for (int i=0; i<ents.size(); i++) {
-				if (this->checkIfInTet(position, ents[i])) {
-					tetIndex = ents[i];
-					*tetFound = true;
-					return tetIndex;
-				}
-			}
+		int vertexWithNegativeWeight=-1;
+		this->checkIfInTet(position, adjacentTetIndex,
+				&vertexWithNegativeWeight);
+		int possibleNewRegionIndex;
+		if (vertexWithNegativeWeight>=0) {
+			possibleNewRegionIndex =
+					this->regionsOppositeVertices[adjacentTetIndex][vertexWithNegativeWeight];
+		} else {
+			possibleNewRegionIndex = adjacentTetIndex;
 		}
+		if (this->checkIfInTet(position, possibleNewRegionIndex)) {
+			tetIndex = possibleNewRegionIndex;
+			*tetFound = true;
+			return tetIndex;
+		}
+//		int faceCrossedIndex = this->findFaceCrossed(
+//				adjacentTetIndex, oldPosition, position);
+//		if (faceCrossedIndex>=0) {
+//			ents = adjacentEntitiesVectors[iBase_FACE][faceCrossedIndex][iBase_REGION];
+//			for (int i=0; i<ents.size(); i++) {
+//				if (this->checkIfInTet(position, ents[i])) {
+//					tetIndex = ents[i];
+//					*tetFound = true;
+//					return tetIndex;
+//				}
+//			}
+//		}
 		ents = regionsSurroundingRegions[adjacentTetIndex];
 	} else {
 		// TODO: should no longer get here
@@ -565,21 +608,26 @@ vector<vect3d> Mesh::getVertexVectors(int index,
 		int dimension) {
 	int nVerts = dimension + 1;
 	vector<vect3d> vertexVectors(nVerts);
-	vector<int> &vertices =
-			adjacentEntitiesVectors[dimension][index][iBase_VERTEX];
-	assert(vertexVectors.size()==vertices.size());
-	for (int i=0; i<vertices.size(); i++) {
-		vertexVectors[i] = verticesPositions[vertices[i]];
-	}
-
+	this->getVertexVectors(index, dimension, &vertexVectors);
 	return vertexVectors;
 }
 
+void Mesh::getVertexVectors(int index,
+		int dimension, vector<vect3d> *vertexVectors) {
+	int nVerts = dimension + 1;
+	vector<int> &vertices =
+			adjacentEntitiesVectors[dimension][index][iBase_VERTEX];
+	assert(vertexVectors->size()==vertices.size());
+	for (int i=0; i<vertices.size(); i++) {
+		(*vertexVectors)[i] = verticesPositions[vertices[i]];
+	}
+}
+
 bool Mesh::checkIfInTet(vect3d currentPosition,
-		int elementIndex) {
+		int elementIndex, int *nodeWithNegativeWeight) {
 	vector<vect3d> vertexVectors = this->getVertexVectors(elementIndex, iBase_REGION);
 
-	return this->checkIfInTet(currentPosition, vertexVectors);
+	return this->checkIfInTet(currentPosition, vertexVectors, nodeWithNegativeWeight);
 }
 
 bool Mesh::checkIfInTet(vect3d currentPosition,
@@ -590,7 +638,7 @@ bool Mesh::checkIfInTet(vect3d currentPosition,
 }
 
 bool Mesh::checkIfInTet(vect3d currentPosition,
-		vector<vect3d> vertexVectors) {
+		vector<vect3d> vertexVectors, int *nodeWithNegativeWeight) {
 //	double tetVolume = this->getTetVolume(vertexVectors);
 //	if (tetVolume<VOLUME_TOLERANCE)
 //		return false;
@@ -603,9 +651,12 @@ bool Mesh::checkIfInTet(vect3d currentPosition,
 			currentPosition, vertexVectors);
 	bool inElement=true;
 	for (int i=0; i<linearBasisFunctions.rows(); i++) {
-				if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE)
-//				if (linearBasisFunctions[i]<0.)
-					inElement=false;
+		if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE) {
+			inElement=false;
+			if (nodeWithNegativeWeight)
+				*nodeWithNegativeWeight = i;
+			break;
+		}
 	}
 	return inElement;
 }
@@ -672,7 +723,6 @@ int Mesh::findFaceCrossed(int previousElementIndex,
 	int faceCrossedIndex=-1;
 	vector<int> &adjacentFaces =
 			adjacentEntitiesVectors[iBase_REGION][previousElementIndex][iBase_FACE];
-
 	for (int i=0; i<adjacentFaces.size(); i++) {
 		vector<vect3d> vertexVectors =
 				this->getVertexVectors(adjacentFaces[i], iBase_FACE);

@@ -57,12 +57,14 @@ public:
 	vector<vect3d> getVertexVectors(entHandle entity,
 			bool useMap=true);
 	vector<vect3d> getVertexVectors(int index, int dimension);
+	void getVertexVectors(int index, int dimension,
+			vector<vect3d> *vertexVectors);
 	bool checkIfInTet(vect3d currentPosition,
 			entHandle element);
 	bool checkIfInTet(vect3d currentPosition,
-			int elementIndex);
+			int elementIndex, int *nodeWithNegativeWeight=NULL);
 	bool checkIfInTet(vect3d currentPosition,
-			vector<vect3d> vertexVectors);
+			vector<vect3d> vertexVectors, int *nodeWithNegativeWeight=NULL);
 	bool checkIfIntersectsTriangle(vect3d previousPosition,
 			vect3d currentPosition,
 			vector<vect3d> vertexVectors);
@@ -126,6 +128,8 @@ public:
 
 	vector<vector<int> > verticesSurroundingRegions;
 	vector<vector<int> > regionsSurroundingRegions;
+	// regionsOppositeVertices[regionIndex][vertexIndex]
+	vector<vector<int> > regionsOppositeVertices;
 
 	vector<vect3d> verticesPositions;
 	vector<Eigen::Matrix4d> positionsToBases;
