@@ -67,6 +67,9 @@ void PotentialField::calcField(DensityField ionDensity,
 		if (vertexType.getField(entities[i])==4) {
 			// TODO: don't hard-code sheath potential
 			potential = -1./2.;
+		} else if (vertexType.getField(entities[i])==5) {
+			// TODO: don't hard-code boudnary potential
+			potential = 0;
 		} else {
 			potential = this->getField(entities[i]);
 			potential += 1./2.*log(ionDensity.getField(entities[i])/
@@ -152,6 +155,14 @@ void DensityField::calcField(ElectricField electricField,
 double DensityField::calculateDensity(int node, ElectricField electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType, double charge, double *error) {
+	// TODO: Need unified way of specifying unperturbed boundary plasma
+	if (vertexType[node]==5) {
+		return 1.;
+	} else if (vertexType[node]==4) {
+		// TODO: don't need sheath entrance density if specifying potential,
+		//       but might be interested in it or other moments later
+		return exp(-0.5);
+	}
 	double density=0.;
 	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 	IntegrandContainer integrandContainer;
