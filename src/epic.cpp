@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
 	DensityField density(&mesh,string("density"));
 	DensityField ionDensity(&mesh,string("ionDensity"));
 	DensityField electronDensity(&mesh,string("electronDensity"));
+	ShortestEdgeField shortestEdge(&mesh,string("shortestEdge"));
 
 	// TODO: add more robust detection and handling of existing fields
 	if (!mesh.vtkInputMesh) {
@@ -72,12 +73,12 @@ int main(int argc, char *argv[]) {
 		eField.calcField(potential);
 		if (mpiId == 0)
 			cout << endl << "Calculating electron density..." << endl;
-		electronDensity.calcField(eField, potential, faceType, vertexType, -1.,
-				density_electronsFile);
+		electronDensity.calcField(eField, potential, faceType, vertexType,
+				shortestEdge, -1., density_electronsFile);
 		if (mpiId == 0)
 			cout << endl << "Calculating ion charge-density..." << endl;
-		ionDensity.calcField(eField, potential, faceType, vertexType, 1.,
-				densityFile);
+		ionDensity.calcField(eField, potential, faceType, vertexType,
+				shortestEdge, 1., densityFile);
 		// TODO: shouldn't return before closing files etc...
 		return 0;
 	}
@@ -88,6 +89,9 @@ int main(int argc, char *argv[]) {
 	if (mpiId == 0)
 		cout << endl << "Setting potential..." << endl;
 	potential.calcField();
+	if (mpiId == 0)
+		cout << endl << "Calculating shortest edge of each region..." << endl;
+	shortestEdge.calcField();
 
 //	// Integrate a circular test orbit (need to deactivate trapped orbit rejection)
 //	{
@@ -103,7 +107,7 @@ int main(int argc, char *argv[]) {
 //		FILE* outFile = fopen(fName, "w");
 //		fprintf(outFile, "x y z energy\n");
 //		orbit.integrate(potential, eField,
-//				faceType, vertexType, outFile);
+//				faceType, vertexType, shortestEdge, outFile);
 //		fclose(outFile);
 //
 //		return 0;
@@ -117,12 +121,12 @@ int main(int argc, char *argv[]) {
 		eField.calcField(potential);
 		if (mpiId == 0)
 			cout << endl << "Calculating electron density..." << endl;
-		electronDensity.calcField(eField, potential, faceType, vertexType, -1.,
-				density_electronsFile);
+		electronDensity.calcField(eField, potential, faceType, vertexType,
+				shortestEdge, -1., density_electronsFile);
 		if (mpiId == 0)
 			cout << endl << "Calculating ion charge-density..." << endl;
-		ionDensity.calcField(eField, potential, faceType, vertexType, 1.,
-				densityFile);
+		ionDensity.calcField(eField, potential, faceType, vertexType,
+				shortestEdge, 1., densityFile);
 		if (mpiId == 0)
 			cout << endl << "Calculating charge density..." << endl;
 		density.calcField(ionDensity, electronDensity);

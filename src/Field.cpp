@@ -106,7 +106,8 @@ void DensityField::calcField(DensityField ionDensity,
 
 void DensityField::calcField(ElectricField electricField,
 		PotentialField potentialField,
-		Field<int> faceType, CodeField vertexType, double charge,
+		Field<int> faceType, CodeField vertexType,
+		ShortestEdgeField shortestEdge, double charge,
 		FILE *outFile) {
 	int mpiId = 0;
 #ifdef HAVE_MPI
@@ -133,7 +134,8 @@ void DensityField::calcField(ElectricField electricField,
 	for (int node=0; node<entities.size(); node++) {
 		double error;
 	    double density = this->calculateDensity(node, electricField,
-				potentialField, faceType, vertexType, charge, &error);
+				potentialField, faceType, vertexType, shortestEdge,
+				charge, &error);
 		this->setField(entities[node], density);
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		cout << nodePosition.norm() << " " << density << " " << error << endl;
@@ -154,7 +156,8 @@ void DensityField::calcField(ElectricField electricField,
 
 double DensityField::calculateDensity(int node, ElectricField electricField,
 		PotentialField potentialField,
-		Field<int> faceType, CodeField vertexType, double charge, double *error) {
+		Field<int> faceType, CodeField vertexType,
+		ShortestEdgeField shortestEdgeField, double charge, double *error) {
 	// TODO: Need unified way of specifying unperturbed boundary plasma
 	if (vertexType[node]==5) {
 		return 1.;
@@ -164,6 +167,10 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 		// TODO: could make below analytic expression for planar electron dens.
 		return exp(-0.5);
 	}
+//	// TODO: remove this
+//	if (node%100!=1) {
+//		return 1.;
+//	}
 	double density=0.;
 	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 	IntegrandContainer integrandContainer;
@@ -173,6 +180,7 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	integrandContainer.potentialField_ptr = &potentialField;
 	integrandContainer.faceTypeField_ptr = &faceType;
 	integrandContainer.vertexTypeField_ptr = &vertexType;
+	integrandContainer.shortestEdgeField_ptr = &shortestEdgeField;
 	stringstream fileNameStream;
 //	fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
 //			<< "_vert" << node << ".p3d";
@@ -284,7 +292,8 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 #ifdef HAVE_MPI
 void DensityField::processDensityRequests(ElectricField electricField,
 		PotentialField potentialField,
-		Field<int> faceType, CodeField vertexType, double charge=1.) {
+		Field<int> faceType, CodeField vertexType,
+		ShortestEdgeField shortestEdge, double charge=1.) {
 	MPI::Status status;
 	int node;
 
@@ -296,7 +305,8 @@ void DensityField::processDensityRequests(ElectricField electricField,
 		}
 		double density[2];
 		density[0] = this->calculateDensity(node, electricField,
-				potentialField, faceType, vertexType, charge, &density[1]);
+				potentialField, faceType, vertexType,
+				shortestEdge, charge, &density[1]);
 		MPI::COMM_WORLD.Send(&density[0], 2, MPI::DOUBLE, 0, node);
 	}
 }
@@ -323,3 +333,21 @@ void CodeField::calcField(Field<int> faceTypeField) {
 	}
 }
 
+ShortestEdgeField::ShortestEdgeField(Mesh *inputMesh_ptr, string inputName)
+	: Field<double>(inputMesh_ptr, inputName, iBase_REGION) {
+}
+
+void ShortestEdgeField::calcField() {
+	for (int i=0; i<entities.size(); i++) {
+		vector<vect3d> vertexVectors = mesh_ptr->getVertexVectors(entities[i]);
+		double shortestEdge = 1./DELTA_LENGTH;
+		for (int j=0; j<vertexVectors.size()-1; j++) {
+			for (int k=j+1; k<vertexVectors.size(); k++) {
+				vect3d relativePosition = vertexVectors[j]-vertexVectors[k];
+				if (relativePosition.norm() < shortestEdge)
+					shortestEdge = relativePosition.norm();
+			}
+		}
+		this->setField(entities[i], shortestEdge);
+	}
+}

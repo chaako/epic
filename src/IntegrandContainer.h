@@ -13,6 +13,7 @@ template <class T> class Field;
 class CodeField;
 class ElectricField;
 class PotentialField;
+class ShortestEdgeField;
 
 class IntegrandContainer {
 public:
@@ -25,6 +26,7 @@ public:
 	PotentialField *potentialField_ptr;
 	Field<int> *faceTypeField_ptr;
 	CodeField *vertexTypeField_ptr;
+	ShortestEdgeField *shortestEdgeField_ptr;
 	FILE *outFile;
 	FILE *orbitOutFile;
 	double charge;

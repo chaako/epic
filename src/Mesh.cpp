@@ -475,6 +475,7 @@ int Mesh::findTet(vect3d oldPosition,
 			// TODO: assuming vtkIdType is int and ordering is same as in entitiesVectors
 			if (this->checkIfInTet(position, cellId)) {
 				*tetFound = true;
+				tetIndex = cellId;
 			} else {
 //				throw;
 			}
@@ -487,6 +488,8 @@ int Mesh::findTet(vect3d oldPosition,
 		tetIndex = ents[0];
 	}
 
+	assert(tetIndex>=0);
+	assert(tetIndex<entitiesVectors[iBase_REGION].size());
 	return tetIndex;
 }
 

@@ -15,6 +15,8 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 			((IntegrandContainer*)integrandContainer_ptr)->faceTypeField_ptr;
 	CodeField *vertexTypeField_ptr =
 			((IntegrandContainer*)integrandContainer_ptr)->vertexTypeField_ptr;
+	ShortestEdgeField *shortestEdgeField_ptr =
+			((IntegrandContainer*)integrandContainer_ptr)->shortestEdgeField_ptr;
 	double charge = ((IntegrandContainer*)integrandContainer_ptr)->charge;
 	FILE *orbitOutFile = ((IntegrandContainer*)integrandContainer_ptr)->orbitOutFile;
 	vect3d velocity;
@@ -46,7 +48,8 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 //	orbit.integrate(*electricField_ptr, *potentialField_ptr,
 //			*faceTypeField_ptr, *vertexTypeField_ptr, orbitOutFile);
 	orbit.integrate(*potentialField_ptr, *electricField_ptr,
-			*faceTypeField_ptr, *vertexTypeField_ptr, orbitOutFile);
+			*faceTypeField_ptr, *vertexTypeField_ptr,
+			*shortestEdgeField_ptr, orbitOutFile);
 	*fval = 0.;
 	// TODO: shouldn't hard-code domain here
 	if ((orbit.finalPosition.norm()>4.9 || orbit.finalFaceType==5)

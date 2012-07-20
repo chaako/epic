@@ -171,11 +171,12 @@ void Orbit::integrate(ElectricField& electricField,
 }
 
 void Orbit::integrate(PotentialField& potentialField, ElectricField& electricField,
-		Field<int>& faceTypeField, CodeField& vertexTypeField, FILE *outFile) {
+		Field<int>& faceTypeField, CodeField& vertexTypeField,
+		ShortestEdgeField shortestEdgeField, FILE *outFile) {
 	// TODO: need some clever way to set tMax and/or detect trapped orbits
 //	double dt=min(0.005,0.005/initialVelocity.norm()), tMax=100;
-	double dt=min(0.01,0.01/initialVelocity.norm()), tMax=100;
-//	double dt=min(0.02,0.02/initialVelocity.norm()), tMax=100;
+//	double dt=min(0.01,0.01/initialVelocity.norm()), tMax=100;
+	double dt=min(0.02,0.02/initialVelocity.norm()), tMax=100;
 	vect3d currentPosition = initialPosition;
 	vect3d currentVelocity = initialVelocity;
 	// TODO: shouldn't hard-code quasi-neutral operation
@@ -228,7 +229,13 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 
 //	// For second order leap-frog, offset position from velocity in time
 //	currentPosition -= currentVelocity*dt/2.;
-	for (double t=0.; t<tMax; t+=dt) {
+//	for (double t=0.; t<tMax; t+=dt) {
+	double t=0;
+	// TODO: set max number of steps more cleverly
+	for (int iT=0; iT<10000 && tMax>0.; iT++) {
+		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
+				/currentVelocity.norm()/20.;
+		t+=dt;
 		nSteps++;
 		assert(!isnan(currentPosition.norm()));
 		vect3d previousPosition = currentPosition;

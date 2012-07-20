@@ -26,7 +26,7 @@ public:
 	void integrate(PotentialField& potentialField,
 			ElectricField& electricField,
 			Field<int>& faceType, CodeField& vertexTypeField,
-			FILE *outFile=NULL);
+			ShortestEdgeField shortestEdgeField, FILE *outFile=NULL);
 	Mesh *mesh_ptr;
 	entHandle initialNode;
 	entHandle currentElement;

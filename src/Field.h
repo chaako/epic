@@ -111,21 +111,25 @@ public:
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField electricField,
 			PotentialField potentialField,
-			Field<int> faceType, CodeField vertexType, double charge=1.,
+			Field<int> faceType, CodeField vertexType,
+			ShortestEdgeField shortestEdge, double charge=1.,
 			FILE *outFile=NULL);
 	double calculateDensity(int node, ElectricField electricField,
 			PotentialField potentialField,
-			Field<int> faceType, CodeField vertexType, double charge,
+			Field<int> faceType, CodeField vertexType,
+			ShortestEdgeField shortestEdge, double charge,
 			double *error);
 #ifdef HAVE_MPI
 	void requestDensityFromSlaves(ElectricField electricField,
 			PotentialField potentialField,
-			Field<int> faceType, CodeField vertexType, double charge,
+			Field<int> faceType, CodeField vertexType,
+			ShortestEdgeField shortestEdge, double charge,
 			FILE *outFile);
 	MPI::Status receiveDensity(FILE *outFile);
 	void processDensityRequests(ElectricField electricField,
 			PotentialField potentialField,
-			Field<int> faceType, CodeField vertexType, double charge);
+			Field<int> faceType, CodeField vertexType,
+			ShortestEdgeField shortestEdge, double charge);
 #endif
 
 };
@@ -140,6 +144,14 @@ public:
 	void calcField(DensityField ionDensity, DensityField electronDensity,
 			CodeField vertexType, FILE *outFile);
 
+};
+
+class ShortestEdgeField : public Field<double> {
+public:
+	ShortestEdgeField(Mesh *inputMesh_ptr, string inputName);
+	virtual ~ShortestEdgeField() {}
+
+	void calcField();
 };
 
 // gcc doesn't implement the export keyword, so define template functions here
