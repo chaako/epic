@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
 		cout << endl << "Setting potential..." << endl;
 	potential.calcField();
 
-//	// Integrate a circular test orbit
+//	// Integrate a circular test orbit (need to deactivate trapped orbit rejection)
 //	{
 //		entHandle node = ionDensity.entities[2540];
 //		double nodePotential = potential.getField(node);

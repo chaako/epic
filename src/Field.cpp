@@ -161,6 +161,7 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	} else if (vertexType[node]==4) {
 		// TODO: don't need sheath entrance density if specifying potential,
 		//       but might be interested in it or other moments later
+		// TODO: could make below analytic expression for planar electron dens.
 		return exp(-0.5);
 	}
 	double density=0.;

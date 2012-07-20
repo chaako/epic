@@ -77,5 +77,6 @@ const int INTERPOLATIONORDER=2;
 typedef Eigen::Matrix<double,NDIM,1> vect3d;
 typedef iBase_EntityHandle entHandle;
 
+const vect3d B(0.,0.,10.);
 
 #endif /* TYPES_H_ */

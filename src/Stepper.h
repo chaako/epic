@@ -82,4 +82,49 @@ public:
     }
 };
 
+class CyclotronicStepper{
+public:
+	typedef boost::array<vect3d, 2> state_type;
+
+    static unsigned short order(){return 2;}
+
+    template<class OdeSystem>
+	void do_step(OdeSystem odeSystem, state_type &x, double t, double dt) {
+		state_type dxdt;
+		// TODO: should get B from odeSystem, though Cyclotronic integrator
+		//       is meant for uniform B so external is fine in that sense
+		vect3d unitB = B/B.norm();
+		double charge = boost::unwrap_ref(odeSystem).charge;
+		// TODO: figure out how to distinguish electron and ion masses
+		double mass = 1.;
+		// TODO: replace this opaque hack to account for mass difference
+		if (charge<0)
+			charge *= sqrt(1836.); // sqrt to also account for v_th difference
+		double rotationAngle = dt*charge*B.norm()/mass;
+		vect3d larmorVector, rotatedLarmorVector;
+//		cout << B.transpose() << ", m " << mass << ", c " << charge << endl;
+//		cout << x[0].transpose() << ", v " << x[1].transpose() << endl;
+
+		// Advance position half timestep (drift)
+		x[0] += dt/2. * x[1].dot(unitB) * unitB;
+		larmorVector = -mass*x[1].cross(unitB)/charge/B.norm();
+		rotatedLarmorVector =
+				Eigen::AngleAxisd(rotationAngle/2., unitB) * larmorVector;
+		x[0] += rotatedLarmorVector - larmorVector;
+		x[1] = Eigen::AngleAxisd(rotationAngle/2., unitB) * x[1];
+
+		// Advance velocity (kick)
+		boost::unwrap_ref(odeSystem)(x, dxdt);
+		x[1] += dt * dxdt[1];
+
+		// Advance position half timestep (drift)
+		x[0] += dt/2. * x[1].dot(unitB) * unitB;
+		larmorVector = -mass*x[1].cross(unitB)/charge/B.norm();
+		rotatedLarmorVector =
+				Eigen::AngleAxisd(rotationAngle/2., unitB) * larmorVector;
+		x[0] += rotatedLarmorVector - larmorVector;
+		x[1] = Eigen::AngleAxisd(rotationAngle/2., unitB) * x[1];
+    }
+};
+
 #endif /* STEPPER_H_ */

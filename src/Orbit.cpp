@@ -218,7 +218,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	boost::array<Eigen::Matrix<double,NDIM,1>, 2> positionAndVelocityOut;
 //	positionAndVelocity[0] = currentPosition;
 //	positionAndVelocity[1] = currentVelocity;
-	VelocityVerletStepper<NDIM> timestepper;
+//	VelocityVerletStepper<NDIM> timestepper;
+	CyclotronicStepper timestepper;
 //	boost::numeric::odeint::runge_kutta4<boost::array<vect3d,2> >
 //		timestepper;
 	VelocityAndAcceleration<NDIM> velocityAndAcceleration(potentialField,
