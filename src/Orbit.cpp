@@ -235,7 +235,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	// TODO: set max number of steps more cleverly
 	for (int iT=0; iT<500 && tMax>0.; iT++) {
 		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
-				/fabs(currentVelocity[2])/5.;
+				/(fabs(currentVelocity[2])+DELTA_LENGTH)/5.;
 //				/currentVelocity.norm()/5.;
 		t+=dt;
 		nSteps++;

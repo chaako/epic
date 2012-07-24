@@ -411,7 +411,7 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 			mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions, &errorBases);
 		}
 		// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
-		*fieldValue *= 0.;
+		*fieldValue = T();
 		assert(currentFields.size()==linearBasisFunctions.rows());
 		for (int i=0;i<linearBasisFunctions.rows();i++) {
 			*fieldValue += linearBasisFunctions[i]*currentFields[i];
@@ -440,7 +440,7 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 						&errorBases);
 			}
 			// TODO: Too obscure to temp. use fieldDeriv for perturbed field?
-			(*fieldDeriv)[j] *=0;
+			(*fieldDeriv)[j] = T();
 			for (int i=0;i<linearBasisFunctions.rows();i++) {
 				(*fieldDeriv)[j] += linearBasisFunctions[i]*currentFields[i];
 			}
