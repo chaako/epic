@@ -17,6 +17,15 @@ should be rebuilt.
 
 Mesh notes:
 
+Create model in Blender and export as stl from edit mode.
+
+Import stl in engrid, flip boundaries such that green faces away from
+interior, select surface by hovering and pressing p, set boundary
+codes of the unperturbed plasma to 5 and the collecting surfaces to 4
+(to display again after setting press v), edit boundary conditions to
+create green volume, create volume mesh, and save as egc file
+(produces .vtu file as well).
+
 Load .vtu file from enGrid in VisIt, make mesh plot, export (with
 variable 'cell_code' which labels the surfaces) as MOAB VTK file
 (straight VisIt VTK export contains additional lines which crash the

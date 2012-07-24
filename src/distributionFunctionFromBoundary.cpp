@@ -26,23 +26,23 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 	velocity[0] = v*cos(phi)*sin(theta);
 	velocity[1] = v*sin(phi)*sin(theta);
 	velocity[2] = v*cos(theta);
-	// TODO: shouldn't hard-code taking advantage of symmetry, but rather
-	//       get the preferred z-axis (now rHat) from the mesh (i.e. specified elsewhere)
-	vect3d position = mesh_ptr->getCoordinates(node);
-	vect3d rHat = position/position.norm();
-//	std::cout << (velocity-rHat).norm() << std::endl;
-//	std::cout << "rHat = " << rHat[0] << ", " << rHat[1] << ", " << rHat[2] << std::endl;
-	double beta = acos(rHat[2]);
-	double alpha = atan2(rHat[0],-rHat[1]);
-//	std::cout << "vel = " << velocity[0] << ", " << velocity[1] <<
-//			", " << velocity[2] << std::endl;
-	velocity = Eigen::AngleAxisd(-alpha, vect3d::UnitZ()) *
-			velocity;
-	velocity = Eigen::AngleAxisd(-beta, vect3d::UnitX()) *
-			velocity;
-//	std::cout << (velocity-vect3d::UnitZ()).norm() << std::endl << std::endl;
-//	std::cout << "rotVel = " << velocity[0] << ", " << velocity[1] <<
-//			", " << velocity[2] << std::endl;
+//	// TODO: shouldn't hard-code taking advantage of symmetry, but rather
+//	//       get the preferred z-axis (now rHat) from the mesh (i.e. specified elsewhere)
+//	vect3d position = mesh_ptr->getCoordinates(node);
+//	vect3d rHat = position/position.norm();
+////	std::cout << (velocity-rHat).norm() << std::endl;
+////	std::cout << "rHat = " << rHat[0] << ", " << rHat[1] << ", " << rHat[2] << std::endl;
+//	double beta = acos(rHat[2]);
+//	double alpha = atan2(rHat[0],-rHat[1]);
+////	std::cout << "vel = " << velocity[0] << ", " << velocity[1] <<
+////			", " << velocity[2] << std::endl;
+//	velocity = Eigen::AngleAxisd(-alpha, vect3d::UnitZ()) *
+//			velocity;
+//	velocity = Eigen::AngleAxisd(-beta, vect3d::UnitX()) *
+//			velocity;
+////	std::cout << (velocity-vect3d::UnitZ()).norm() << std::endl << std::endl;
+////	std::cout << "rotVel = " << velocity[0] << ", " << velocity[1] <<
+////			", " << velocity[2] << std::endl;
 
 	Orbit orbit(mesh_ptr,node,velocity,charge);
 //	orbit.integrate(*electricField_ptr, *potentialField_ptr,

@@ -196,7 +196,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	// Don't integrate orbit if doesn't have enough energy to escape potential
 	// TODO: this should be refined
 //	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
-	if ((0.5*pow(initialVelocity.norm(),2.) +
+//	if ((0.5*pow(initialVelocity.norm(),2.) +
+	if ((0.5*pow(initialVelocity[2],2.) +
 			charge*potentialField.getField(initialNode)) < 0.) {
 		negativeEnergy = true;
 		tMax = 0.;
@@ -232,9 +233,10 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //	for (double t=0.; t<tMax; t+=dt) {
 	double t=0;
 	// TODO: set max number of steps more cleverly
-	for (int iT=0; iT<10000 && tMax>0.; iT++) {
+	for (int iT=0; iT<500 && tMax>0.; iT++) {
 		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
-				/currentVelocity.norm()/20.;
+				/fabs(currentVelocity[2])/5.;
+//				/currentVelocity.norm()/5.;
 		t+=dt;
 		nSteps++;
 		assert(!isnan(currentPosition.norm()));
