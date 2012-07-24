@@ -116,13 +116,15 @@ void DensityField::calcField(ElectricField electricField,
 	mpiId = MPI::COMM_WORLD.Get_rank();
 	if (mpiId == 0) {
 		DensityField::requestDensityFromSlaves(electricField,
-				potentialField, faceType, vertexType, charge, outFile);
+				potentialField, faceType, vertexType,
+				shortestEdge, charge, outFile);
 		for (int node=0; node<entities.size(); node++) {
 			density[node] = this->getField(entities[node]);
 		}
 	} else {
 		DensityField::processDensityRequests(electricField,
-				potentialField, faceType, vertexType, charge);
+				potentialField, faceType, vertexType,
+				shortestEdge, charge);
 	}
 	MPI::COMM_WORLD.Bcast(density, entities.size(), MPI::DOUBLE, 0);
 	for (int node=0; node<entities.size(); node++) {
@@ -235,8 +237,8 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 #ifdef HAVE_MPI
 void DensityField::requestDensityFromSlaves(ElectricField electricField,
 		PotentialField potentialField,
-		Field<int> faceType, CodeField vertexType, double charge,
-		FILE *outFile) {
+		Field<int> faceType, CodeField vertexType,
+		ShortestEdgeField shortestEdge, double charge, FILE *outFile) {
 	int nProcesses = MPI::COMM_WORLD.Get_size();
 	MPI::Status status;
 	int node=0;
