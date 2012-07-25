@@ -112,24 +112,25 @@ public:
 	void calcField(ElectricField electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType,
-			ShortestEdgeField shortestEdge, double charge=1.,
-			FILE *outFile=NULL);
+			ShortestEdgeField shortestEdge, double charge,
+			double potentialPerturbation, FILE *outFile=NULL);
 	double calculateDensity(int node, ElectricField electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
-			double *error);
+			double potentialPerturbation, double *error);
 #ifdef HAVE_MPI
 	void requestDensityFromSlaves(ElectricField electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
-			FILE *outFile);
+			double potentialPerturbation, FILE *outFile);
 	MPI::Status receiveDensity(FILE *outFile);
 	void processDensityRequests(ElectricField electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType,
-			ShortestEdgeField shortestEdge, double charge);
+			ShortestEdgeField shortestEdge, double charge,
+			double potentialPerturbation);
 #endif
 
 };
@@ -142,6 +143,11 @@ public:
 
 	void calcField();
 	void calcField(DensityField ionDensity, DensityField electronDensity,
+			CodeField vertexType, FILE *outFile);
+	void calcField(DensityField ionDensity,
+			DensityField ionDensityPP, DensityField ionDensityNP,
+			DensityField electronDensity,
+			DensityField electronDensityPP, DensityField electronDensityNP,
 			CodeField vertexType, FILE *outFile);
 
 };
@@ -410,8 +416,10 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 		} else if (interpolationOrder==3) {
 			mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions, &errorBases);
 		}
-		// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
+		// TODO: vect3d is not initialized to 0, but double is
 		*fieldValue = T();
+		// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
+		*fieldValue *= 0.;
 		assert(currentFields.size()==linearBasisFunctions.rows());
 		for (int i=0;i<linearBasisFunctions.rows();i++) {
 			*fieldValue += linearBasisFunctions[i]*currentFields[i];
@@ -440,7 +448,10 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 						&errorBases);
 			}
 			// TODO: Too obscure to temp. use fieldDeriv for perturbed field?
+			// TODO: vect3d is not initialized to 0, but double is
 			(*fieldDeriv)[j] = T();
+			// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
+			(*fieldDeriv)[j] *= 0.;
 			for (int i=0;i<linearBasisFunctions.rows();i++) {
 				(*fieldDeriv)[j] += linearBasisFunctions[i]*currentFields[i];
 			}

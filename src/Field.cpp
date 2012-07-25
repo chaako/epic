@@ -89,6 +89,47 @@ void PotentialField::calcField(DensityField ionDensity,
 		fprintf(outFile, "\n\n\n\n");
 }
 
+void PotentialField::calcField(DensityField ionDensity,
+		DensityField ionDensityPP, DensityField ionDensityNP,
+		DensityField electronDensity,
+		DensityField electronDensityPP, DensityField electronDensityNP,
+		CodeField vertexType, FILE *outFile) {
+	assert(ionDensity.mesh_ptr == mesh_ptr);
+	assert(electronDensity.mesh_ptr == mesh_ptr);
+	for (int i=0; i<entities.size(); i++) {
+		// TODO: remove this restriction on vertices
+		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
+		vect3d xzPosition = nodePosition;
+
+		double potential;
+		// TODO: don't hard-code boundary type and quasi-neutral operation
+		if (vertexType.getField(entities[i])==4) {
+			// TODO: don't hard-code sheath potential
+			potential = -1./2.;
+		} else if (vertexType.getField(entities[i])==5) {
+			// TODO: don't hard-code boudnary potential
+			potential = 0;
+		} else {
+//			double ionDerivative = ionDensityPP[i];
+//			double electronDerivative;
+			potential = this->getField(entities[i]);
+			potential += 1./2.*log(ionDensity.getField(entities[i])/
+					electronDensity.getField(entities[i]));
+		}
+		this->setField(entities[i], potential);
+
+//#ifdef HAVE_MPI
+//		if (MPI::COMM_WORLD.Get_rank() == 0)
+//#endif
+//			cout << nodePosition.norm() << " " << potential << endl;
+		if (outFile)
+			fprintf(outFile, "%g %g\n", nodePosition.norm(), potential);
+//		}
+	}
+	if (outFile)
+		fprintf(outFile, "\n\n\n\n");
+}
+
 DensityField::DensityField(Mesh *inputMesh_ptr, string inputName)
 		: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
@@ -108,7 +149,7 @@ void DensityField::calcField(ElectricField electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdge, double charge,
-		FILE *outFile) {
+		double potentialPerturbation, FILE *outFile) {
 	int mpiId = 0;
 #ifdef HAVE_MPI
 	double *density = new double[entities.size()];
@@ -117,14 +158,14 @@ void DensityField::calcField(ElectricField electricField,
 	if (mpiId == 0) {
 		DensityField::requestDensityFromSlaves(electricField,
 				potentialField, faceType, vertexType,
-				shortestEdge, charge, outFile);
+				shortestEdge, charge, potentialPerturbation, outFile);
 		for (int node=0; node<entities.size(); node++) {
 			density[node] = this->getField(entities[node]);
 		}
 	} else {
 		DensityField::processDensityRequests(electricField,
 				potentialField, faceType, vertexType,
-				shortestEdge, charge);
+				shortestEdge, charge, potentialPerturbation);
 	}
 	MPI::COMM_WORLD.Bcast(density, entities.size(), MPI::DOUBLE, 0);
 	for (int node=0; node<entities.size(); node++) {
@@ -137,7 +178,7 @@ void DensityField::calcField(ElectricField electricField,
 		double error;
 	    double density = this->calculateDensity(node, electricField,
 				potentialField, faceType, vertexType, shortestEdge,
-				charge, &error);
+				charge, potentialPerturbation, &error);
 		this->setField(entities[node], density);
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		cout << nodePosition.norm() << " " << density << " " << error << endl;
@@ -159,7 +200,8 @@ void DensityField::calcField(ElectricField electricField,
 double DensityField::calculateDensity(int node, ElectricField electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType,
-		ShortestEdgeField shortestEdgeField, double charge, double *error) {
+		ShortestEdgeField shortestEdgeField, double charge,
+		double potentialPerturbation, double *error) {
 	// TODO: Need unified way of specifying unperturbed boundary plasma
 	if (vertexType[node]==5) {
 		return 1.;
@@ -221,12 +263,16 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	int actualNumberOfOrbits=0;
 	int failureType=0;
 	double probabilityThatTrueError=0.;
+	// TODO: make potential perturbation more robust, transparent, and flexible
+	potentialField[node] += potentialPerturbation;
 	// TODO: Turn off smoothing flag bit
 	Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
 			(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
 			numberOfOrbits, numberOfOrbits, 100, 100, 1000, 0,
 			NULL, &actualNumberOfOrbits, &failureType,
 			&density, error, &probabilityThatTrueError);
+	// TODO: make potential perturbation more robust, transparent, and flexible
+	potentialField[node] -= potentialPerturbation;
 	if (integrandContainer.outFile)
 		fclose(integrandContainer.outFile);
 	if (integrandContainer.orbitOutFile)
@@ -238,7 +284,8 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 void DensityField::requestDensityFromSlaves(ElectricField electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType,
-		ShortestEdgeField shortestEdge, double charge, FILE *outFile) {
+		ShortestEdgeField shortestEdge, double charge,
+		double potentialPerturbation, FILE *outFile) {
 	int nProcesses = MPI::COMM_WORLD.Get_size();
 	MPI::Status status;
 	int node=0;
@@ -295,7 +342,8 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 void DensityField::processDensityRequests(ElectricField electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType,
-		ShortestEdgeField shortestEdge, double charge=1.) {
+		ShortestEdgeField shortestEdge, double charge=1.,
+		double potentialPerturbation) {
 	MPI::Status status;
 	int node;
 
@@ -308,7 +356,8 @@ void DensityField::processDensityRequests(ElectricField electricField,
 		double density[2];
 		density[0] = this->calculateDensity(node, electricField,
 				potentialField, faceType, vertexType,
-				shortestEdge, charge, &density[1]);
+				shortestEdge, charge, double potentialPerturbation,
+				&density[1]);
 		MPI::COMM_WORLD.Send(&density[0], 2, MPI::DOUBLE, 0, node);
 	}
 }
