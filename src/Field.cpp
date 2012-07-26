@@ -370,7 +370,7 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 void DensityField::processDensityRequests(ElectricField electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType,
-		ShortestEdgeField shortestEdge, double charge=1.,
+		ShortestEdgeField shortestEdge, double charge,
 		double potentialPerturbation) {
 	MPI::Status status;
 	int node;
