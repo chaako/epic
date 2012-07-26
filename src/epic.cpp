@@ -179,7 +179,8 @@ int main(int argc, char *argv[]) {
 				ionDensityPositivePerturbation, ionDensityNegativePerturbation,
 				electronDensity,
 				electronDensityPositivePerturbation, electronDensityNegativePerturbation,
-				vertexType, potentialFile);
+				vertexType, positivePotentialPerturbation,
+				negativePotentialPerturbation, potentialFile);
 		if (mpiId == 0)
 			cout << endl << endl << endl;
 	}

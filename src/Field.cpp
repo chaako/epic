@@ -93,7 +93,8 @@ void PotentialField::calcField(DensityField ionDensity,
 		DensityField ionDensityPP, DensityField ionDensityNP,
 		DensityField electronDensity,
 		DensityField electronDensityPP, DensityField electronDensityNP,
-		CodeField vertexType, FILE *outFile) {
+		CodeField vertexType, double positivePotentialPerturbation,
+		double negativePotentialPerturbation, FILE *outFile) {
 	assert(ionDensity.mesh_ptr == mesh_ptr);
 	assert(electronDensity.mesh_ptr == mesh_ptr);
 	for (int i=0; i<entities.size(); i++) {
@@ -110,11 +111,38 @@ void PotentialField::calcField(DensityField ionDensity,
 			// TODO: don't hard-code boudnary potential
 			potential = 0;
 		} else {
-//			double ionDerivative = ionDensityPP[i];
-//			double electronDerivative;
+			double ionDerivativePP = (ionDensityPP[i]-ionDensity[i])/
+					positivePotentialPerturbation;
+			double ionDerivativeNP = (ionDensityNP[i]-ionDensity[i])/
+					negativePotentialPerturbation;
+			double electronDerivativePP = (electronDensityPP[i]-electronDensity[i])/
+					positivePotentialPerturbation;
+			double electronDerivativeNP = (electronDensityNP[i]-electronDensity[i])/
+					negativePotentialPerturbation;
+			double potentialCorrectionPP = (ionDensity[i]-electronDensity[i])/
+					(electronDerivativePP-ionDerivativePP);
+			double potentialCorrectionNP = (ionDensity[i]-electronDensity[i])/
+					(electronDerivativeNP-ionDerivativeNP);
+			double limitedCorrectionPP = min(potentialCorrectionPP,
+					5.*positivePotentialPerturbation);
+			double limitedCorrectionNP = max(potentialCorrectionNP,
+					5.*negativePotentialPerturbation);
 			potential = this->getField(entities[i]);
-			potential += 1./2.*log(ionDensity.getField(entities[i])/
-					electronDensity.getField(entities[i]));
+			if (potentialCorrectionPP>0. && potentialCorrectionNP>0.) {
+				// Only one relevant solution
+				// TODO: set the max extrapolation multiplier globally?
+				potential += limitedCorrectionPP;
+			} else if (potentialCorrectionPP<0. && potentialCorrectionNP<0.) {
+				// Only one relevant solution
+				// TODO: set the max extrapolation multiplier globally?
+					potential += limitedCorrectionNP;
+			} else if (potentialCorrectionPP>0. && potentialCorrectionNP<0.) {
+				// Choose closest solution
+				potential += (potentialCorrectionPP<-potentialCorrectionNP) ?
+						limitedCorrectionPP : limitedCorrectionNP;
+			}
+//			potential += 1./2.*log(ionDensity.getField(entities[i])/
+//					electronDensity.getField(entities[i]));
 		}
 		this->setField(entities[i], potential);
 

@@ -148,7 +148,10 @@ public:
 			DensityField ionDensityPP, DensityField ionDensityNP,
 			DensityField electronDensity,
 			DensityField electronDensityPP, DensityField electronDensityNP,
-			CodeField vertexType, FILE *outFile);
+			CodeField vertexType,
+			double positivePotentialPerturbation,
+			double negativePotentialPerturbation,
+			FILE *outFile);
 
 };
 
