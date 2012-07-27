@@ -394,7 +394,7 @@ void DensityField::processDensityRequests(ElectricField electricField,
 		double density[2];
 		density[0] = this->calculateDensity(node, electricField,
 				potentialField, faceType, vertexType,
-				shortestEdge, charge, double potentialPerturbation,
+				shortestEdge, charge, potentialPerturbation,
 				&density[1]);
 		MPI::COMM_WORLD.Send(&density[0], 2, MPI::DOUBLE, 0, node);
 	}
