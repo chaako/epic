@@ -317,9 +317,9 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 					foundTet = false;
 					// TODO: not guaranteed that outside domain (since different than stepper)
 					// TODO: Revisit this in magnetized case
-					currentPosition += dt*currentVelocity;
-//					currentPosition = positionAndVelocity[0];
-//					currentVelocity = positionAndVelocity[1];
+//					currentPosition += dt*currentVelocity;
+					currentPosition = positionAndVelocity[0];
+					currentVelocity = positionAndVelocity[1];
 					break;
 				default:
 					// TODO: handle other exceptions?

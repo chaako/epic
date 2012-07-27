@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
 	vertexType.calcField(faceType);
 	if (mpiId == 0)
 		cout << endl << "Setting potential..." << endl;
-	potential.calcField();
+	potential.calcField(vertexType);
 	if (mpiId == 0)
 		cout << endl << "Calculating shortest edge of each region..." << endl;
 	shortestEdge.calcField();

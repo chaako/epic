@@ -44,11 +44,22 @@ PotentialField::PotentialField(PotentialField potential, string inputName)
 }
 
 
-void PotentialField::calcField() {
+void PotentialField::calcField(CodeField vertexType) {
 	for (int i=0; i<entities.size(); i++) {
 		vect3d point = mesh_ptr->getCoordinates(entities[i]);
 		// TODO: Change this from just a test Coulomb field
-		double potential = -1./point.norm();
+//		double potential = -1./point.norm();
+		double potential;
+		if (vertexType.getField(entities[i])==4) {
+			// TODO: don't hard-code sheath potential
+			potential = -1./2.;
+		} else if (vertexType.getField(entities[i])==5) {
+			// TODO: don't hard-code boudnary potential
+			potential = 0;
+		} else {
+			potential = 0;
+//			potential = -0.77;
+		}
 		this->setField(entities[i], potential);
 	}
 }
@@ -123,18 +134,17 @@ void PotentialField::calcField(DensityField ionDensity,
 					(electronDerivativePP-ionDerivativePP);
 			double potentialCorrectionNP = (ionDensity[i]-electronDensity[i])/
 					(electronDerivativeNP-ionDerivativeNP);
+			// TODO: set the max extrapolation multiplier globally?
 			double limitedCorrectionPP = min(potentialCorrectionPP,
-					5.*positivePotentialPerturbation);
+					2.*positivePotentialPerturbation);
 			double limitedCorrectionNP = max(potentialCorrectionNP,
-					5.*negativePotentialPerturbation);
+					2.*negativePotentialPerturbation);
 			potential = this->getField(entities[i]);
 			if (potentialCorrectionPP>0. && potentialCorrectionNP>0.) {
 				// Only one relevant solution
-				// TODO: set the max extrapolation multiplier globally?
 				potential += limitedCorrectionPP;
 			} else if (potentialCorrectionPP<0. && potentialCorrectionNP<0.) {
 				// Only one relevant solution
-				// TODO: set the max extrapolation multiplier globally?
 					potential += limitedCorrectionNP;
 			} else if (potentialCorrectionPP>0. && potentialCorrectionNP<0.) {
 				// Choose closest solution

@@ -141,7 +141,7 @@ public:
 	PotentialField(PotentialField potential, string inputName);
 	virtual ~PotentialField() {}
 
-	void calcField();
+	void calcField(CodeField vertexType);
 	void calcField(DensityField ionDensity, DensityField electronDensity,
 			CodeField vertexType, FILE *outFile);
 	void calcField(DensityField ionDensity,
