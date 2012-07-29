@@ -101,6 +101,9 @@ public:
 		if (charge<0)
 			charge *= sqrt(1836.); // sqrt to also account for v_th difference
 		double rotationAngle = dt*charge*B.norm()/mass;
+		// TODO: determine how Eigen rotation handles large angles
+//		int wholePeriods = rotationAngle/(2.*M_PI);
+//		rotationAngle -= 2.*M_PI*wholePeriods;
 		vect3d larmorVector, rotatedLarmorVector;
 //		cout << B.transpose() << ", m " << mass << ", c " << charge << endl;
 //		cout << x[0].transpose() << ", v " << x[1].transpose() << endl;

@@ -135,35 +135,35 @@ int main(int argc, char *argv[]) {
 		electronDensity.calcField(eField, potential, faceType, vertexType,
 				shortestEdge, -1., noPotentialPerturbation,
 				density_electronsFile);
-		if (mpiId == 0)
-			cout << endl << "Calculating PP electron density..." << endl;
-		electronDensityPositivePerturbation.calcField(eField,
-				potential, faceType, vertexType,
-				shortestEdge, -1., positivePotentialPerturbation,
-				density_electronsFile);
-		if (mpiId == 0)
-			cout << endl << "Calculating NP electron density..." << endl;
-		electronDensityNegativePerturbation.calcField(eField,
-				potential, faceType, vertexType,
-				shortestEdge, -1., negativePotentialPerturbation,
-				density_electronsFile);
+//		if (mpiId == 0)
+//			cout << endl << "Calculating PP electron density..." << endl;
+//		electronDensityPositivePerturbation.calcField(eField,
+//				potential, faceType, vertexType,
+//				shortestEdge, -1., positivePotentialPerturbation,
+//				density_electronsFile);
+//		if (mpiId == 0)
+//			cout << endl << "Calculating NP electron density..." << endl;
+//		electronDensityNegativePerturbation.calcField(eField,
+//				potential, faceType, vertexType,
+//				shortestEdge, -1., negativePotentialPerturbation,
+//				density_electronsFile);
 		if (mpiId == 0)
 			cout << endl << "Calculating ion charge-density..." << endl;
 		ionDensity.calcField(eField, potential, faceType, vertexType,
 				shortestEdge, 1., noPotentialPerturbation,
 				densityFile);
-		if (mpiId == 0)
-			cout << endl << "Calculating PP ion charge-density..." << endl;
-		ionDensityPositivePerturbation.calcField(eField, potential,
-				faceType, vertexType,
-				shortestEdge, 1., positivePotentialPerturbation,
-				densityFile);
-		if (mpiId == 0)
-			cout << endl << "Calculating NP ion charge-density..." << endl;
-		ionDensityNegativePerturbation.calcField(eField, potential,
-				faceType, vertexType,
-				shortestEdge, 1., negativePotentialPerturbation,
-				densityFile);
+//		if (mpiId == 0)
+//			cout << endl << "Calculating PP ion charge-density..." << endl;
+//		ionDensityPositivePerturbation.calcField(eField, potential,
+//				faceType, vertexType,
+//				shortestEdge, 1., positivePotentialPerturbation,
+//				densityFile);
+//		if (mpiId == 0)
+//			cout << endl << "Calculating NP ion charge-density..." << endl;
+//		ionDensityNegativePerturbation.calcField(eField, potential,
+//				faceType, vertexType,
+//				shortestEdge, 1., negativePotentialPerturbation,
+//				densityFile);
 		if (mpiId == 0)
 			cout << endl << "Calculating charge density..." << endl;
 		density.calcField(ionDensity, electronDensity);
@@ -174,13 +174,13 @@ int main(int argc, char *argv[]) {
 		PotentialField potentialCopy(potential,potentialCopyName.str());
 		if (mpiId == 0)
 			cout << endl << "Calculating updated potential..." << endl;
-//		potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
-		potential.calcField(ionDensity,
-				ionDensityPositivePerturbation, ionDensityNegativePerturbation,
-				electronDensity,
-				electronDensityPositivePerturbation, electronDensityNegativePerturbation,
-				vertexType, positivePotentialPerturbation,
-				negativePotentialPerturbation, potentialFile);
+		potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
+//		potential.calcField(ionDensity,
+//				ionDensityPositivePerturbation, ionDensityNegativePerturbation,
+//				electronDensity,
+//				electronDensityPositivePerturbation, electronDensityNegativePerturbation,
+//				vertexType, positivePotentialPerturbation,
+//				negativePotentialPerturbation, potentialFile);
 		if (mpiId == 0)
 			cout << endl << endl << endl;
 	}

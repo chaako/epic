@@ -292,21 +292,24 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	}
 	// TODO: should make number of orbits adaptive
 	int numberOfOrbits=100;
+//	if (charge<0.)
+//	if (charge>0.)
+//		numberOfOrbits*=10;
 //	if (node==5 || node==2540)
 //	if (node%1000==42)
 //	if (node==0)
 //	if (node<5)
+	// TODO: make potential perturbation more robust, transparent, and flexible
+	potentialField[node] += potentialPerturbation;
 //	adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
 //			vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
 	int actualNumberOfOrbits=0;
 	int failureType=0;
 	double probabilityThatTrueError=0.;
-	// TODO: make potential perturbation more robust, transparent, and flexible
-	potentialField[node] += potentialPerturbation;
 	// TODO: Turn off smoothing flag bit
 	Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
 			(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
-			numberOfOrbits, numberOfOrbits, 100, 100, 1000, 0,
+			numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
 			NULL, &actualNumberOfOrbits, &failureType,
 			&density, error, &probabilityThatTrueError);
 	// TODO: make potential perturbation more robust, transparent, and flexible

@@ -232,11 +232,15 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //	currentPosition -= currentVelocity*dt/2.;
 //	for (double t=0.; t<tMax; t+=dt) {
 	double t=0;
-	// TODO: set max number of steps more cleverly
-	for (int iT=0; iT<500 && tMax>0.; iT++) {
+	double numberOfStepsPerRegion = 100.;
+	// TODO: set max number of steps more cleverly (since also need to limit by accel)
+	for (int iT=0; iT<100*numberOfStepsPerRegion  && !negativeEnergy; iT++) {
 		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
-				/(fabs(currentVelocity[2])+DELTA_LENGTH)/5.;
+				/(fabs(currentVelocity[2])+DELTA_LENGTH)/
+				numberOfStepsPerRegion;
 //				/currentVelocity.norm()/5.;
+		// TODO: Need acceleration info as well, since v_z changes during time-step
+		dt = min(0.01,dt);
 		t+=dt;
 		nSteps++;
 		assert(!isnan(currentPosition.norm()));
@@ -274,6 +278,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				currentPosition = positionAndVelocity[0];
 				currentVelocity = positionAndVelocity[1];
 				currentElement = velocityAndAcceleration.currentElement;
+				// TODO: change this to use regionIndex
 				foundTet = mesh_ptr->checkIfInTet(currentPosition, currentElement);
 				if (!foundTet) {
 					currentElement = mesh_ptr->findTet(previousPosition, currentPosition,
@@ -399,6 +404,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //		} else {
 			potential = 0.;
 //		}
+//		assert(currentPosition.norm()<10.);
 		double energy = 1./2.*pow(currentVelocity.norm(),2.) + charge*potential;
 		if (outFile) {
 //			fprintf(outFile, "%f %f %f %p\n", currentPosition[0], currentPosition[1],

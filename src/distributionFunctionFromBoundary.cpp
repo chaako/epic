@@ -52,7 +52,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 			*shortestEdgeField_ptr, orbitOutFile);
 	*fval = 0.;
 	// TODO: shouldn't hard-code domain here
-	if ((orbit.finalPosition.norm()>4.9 || orbit.finalFaceType==5)
+	if ( orbit.finalFaceType==5
 			&& !orbit.negativeEnergy) {
 		*fval = 1./pow(2.*M_PI,3./2.);
 		*fval *= exp(-pow(orbit.finalVelocity.norm(),2.)/2.);
