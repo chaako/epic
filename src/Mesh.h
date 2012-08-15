@@ -72,6 +72,9 @@ public:
 			vect3d previousPosition, vect3d currentPosition);
 	int findFaceCrossed(int previousElementIndex,
 			vect3d previousPosition, vect3d currentPosition);
+	int findBoundaryFaceCrossed(int previousElementIndex,
+			vect3d previousPosition, vect3d currentPosition,
+			Field<int>& faceTypeField, CodeField& vertexTypeField);
 	iBase_TagHandle getTagHandle(string tagName);
 	iBase_TagHandle createTagHandle(string tagName, int size, int type);
 	vect3d getSurfaceVector(entHandle face,

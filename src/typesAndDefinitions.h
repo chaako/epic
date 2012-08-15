@@ -71,6 +71,8 @@ enum {
 #include <vtkCellTreeLocator.h>
 #include <vtkCellLocator.h>
 
+class CodeField;
+
 const int NDIM=3;
 const int INTERPOLATIONORDER=1;
 // Matrix gives better pretty printing than Vector3d in gdb

@@ -738,6 +738,59 @@ int Mesh::findFaceCrossed(int previousElementIndex,
 	return faceCrossedIndex;
 }
 
+int Mesh::findBoundaryFaceCrossed(int previousElementIndex,
+		vect3d previousPosition, vect3d currentPosition,
+		Field<int>& faceTypeField, CodeField& vertexTypeField) {
+	int faceCrossedIndex=-1;
+	vector<int> &vertices =
+			adjacentEntitiesVectors[iBase_REGION][previousElementIndex][iBase_VERTEX];
+	for (int i=0; i<vertices.size(); i++) {
+		if (vertexTypeField[vertices[i]]>0) {
+			vector<int> &faces =
+					adjacentEntitiesVectors[iBase_VERTEX][vertices[i]][iBase_FACE];
+			for (int j=0; j<faces.size(); j++) {
+				if (faceTypeField[faces[j]]>0) {
+					vector<vect3d> vertexVectors =
+							this->getVertexVectors(faces[j], iBase_FACE);
+					bool intersectsTriangle = this->checkIfIntersectsTriangle(previousPosition,
+							currentPosition, vertexVectors);
+//					// TODO: find out why reverse intersection not always same
+//					bool reverseIntersectsTriangle = this->checkIfIntersectsTriangle(
+//							currentPosition, previousPosition, vertexVectors);
+//					if (intersectsTriangle!=reverseIntersectsTriangle)
+//						cout << intersectsTriangle << " " << reverseIntersectsTriangle <<
+//							" " << vertices[i] << " " << faces[j] <<
+//							currentPosition.transpose() << previousPosition.transpose() << endl;
+					if (intersectsTriangle)
+						faceCrossedIndex = faces[j];
+				}
+			}
+		}
+	}
+//	// TODO: might need below (untested)
+//	if (faceCrossedIndex<0) {
+//		cout << previousElementIndex << " " <<
+//			currentPosition.transpose() << " " << previousPosition.transpose() << endl;
+//		for (int j=0; j<entitiesVectors[iBase_FACE].size(); j++) {
+//			if (faceTypeField[j]>0) {
+//				vector<vect3d> vertexVectors =
+//						this->getVertexVectors(j, iBase_FACE);
+//				bool intersectsTriangle = this->checkIfIntersectsTriangle(previousPosition,
+//						currentPosition, vertexVectors);
+//				bool reverseIntersectsTriangle = this->checkIfIntersectsTriangle(
+//						currentPosition, previousPosition, vertexVectors);
+//				if (intersectsTriangle!=reverseIntersectsTriangle)
+//					cout << intersectsTriangle << " " << reverseIntersectsTriangle <<
+//						" " << j <<
+//						currentPosition.transpose() << previousPosition.transpose() << endl;
+//				if (intersectsTriangle)
+//					faceCrossedIndex = j;
+//			}
+//		}
+//	}
+	return faceCrossedIndex;
+}
+
 iBase_TagHandle Mesh::getTagHandle(string tagName) {
 	int ierr;
 	iBase_TagHandle tag=0;

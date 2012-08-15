@@ -130,11 +130,11 @@ int main(int argc, char *argv[]) {
 		if (mpiId == 0)
 			cout << endl << "Calculating electric field..." << endl;
 		eField.calcField(potential);
-		if (mpiId == 0)
-			cout << endl << "Calculating electron density..." << endl;
-		electronDensity.calcField(eField, potential, faceType, vertexType,
-				shortestEdge, -1., noPotentialPerturbation,
-				density_electronsFile);
+//		if (mpiId == 0)
+//			cout << endl << "Calculating electron density..." << endl;
+//		electronDensity.calcField(eField, potential, faceType, vertexType,
+//				shortestEdge, -1., noPotentialPerturbation,
+//				density_electronsFile);
 //		if (mpiId == 0)
 //			cout << endl << "Calculating PP electron density..." << endl;
 //		electronDensityPositivePerturbation.calcField(eField,
@@ -164,9 +164,9 @@ int main(int argc, char *argv[]) {
 //				faceType, vertexType,
 //				shortestEdge, 1., negativePotentialPerturbation,
 //				densityFile);
-		if (mpiId == 0)
-			cout << endl << "Calculating charge density..." << endl;
-		density.calcField(ionDensity, electronDensity);
+//		if (mpiId == 0)
+//			cout << endl << "Calculating charge density..." << endl;
+//		density.calcField(ionDensity, electronDensity);
 		if (mpiId == 0)
 			cout << endl << "Saving current potential..." << endl;
 		stringstream potentialCopyName;
@@ -174,7 +174,8 @@ int main(int argc, char *argv[]) {
 		PotentialField potentialCopy(potential,potentialCopyName.str());
 		if (mpiId == 0)
 			cout << endl << "Calculating updated potential..." << endl;
-		potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
+		potential.calcField(ionDensity, vertexType, potentialFile);
+//		potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
 //		potential.calcField(ionDensity,
 //				ionDensityPositivePerturbation, ionDensityNegativePerturbation,
 //				electronDensity,

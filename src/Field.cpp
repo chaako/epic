@@ -101,6 +101,32 @@ void PotentialField::calcField(DensityField ionDensity,
 }
 
 void PotentialField::calcField(DensityField ionDensity,
+		CodeField vertexType, FILE *outFile) {
+	assert(ionDensity.mesh_ptr == mesh_ptr);
+	for (int i=0; i<entities.size(); i++) {
+		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
+
+		double potential;
+		// TODO: don't hard-code boundary type and quasi-neutral operation
+		if (vertexType.getField(entities[i])==4) {
+			// TODO: don't hard-code sheath potential
+			potential = -1./2.;
+		} else if (vertexType.getField(entities[i])==5) {
+			// TODO: don't hard-code boundary potential
+			potential = 0;
+		} else {
+			potential = log(ionDensity.getField(entities[i]));
+		}
+		this->setField(entities[i], potential);
+
+		if (outFile)
+			fprintf(outFile, "%g %g\n", nodePosition.norm(), potential);
+	}
+	if (outFile)
+		fprintf(outFile, "\n\n\n\n");
+}
+
+void PotentialField::calcField(DensityField ionDensity,
 		DensityField ionDensityPP, DensityField ionDensityNP,
 		DensityField electronDensity,
 		DensityField electronDensityPP, DensityField electronDensityNP,
@@ -277,6 +303,9 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 ////	if (node<5) {
 //	if (node==0) {
 ////	if (node==5 || node==2540) {
+//	if (nodePosition[2]<8. && nodePosition[2]>6. && nodePosition[0]<0. &&
+//			nodePosition[1]>0. && charge>0.) {
+//	if (node==105) {
 //		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
 //		fprintf(integrandContainer.outFile, "x y z f\n");
 //		integrandContainer.orbitOutFile =
@@ -295,17 +324,20 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 //	if (charge<0.)
 //	if (charge>0.)
 //		numberOfOrbits*=10;
+	// TODO: make potential perturbation more robust, transparent, and flexible
+	potentialField[node] += potentialPerturbation;
+	int actualNumberOfOrbits=0;
+	int failureType=0;
+	double probabilityThatTrueError=0.;
 //	if (node==5 || node==2540)
 //	if (node%1000==42)
 //	if (node==0)
 //	if (node<5)
-	// TODO: make potential perturbation more robust, transparent, and flexible
-	potentialField[node] += potentialPerturbation;
+//	if (nodePosition[2]<8. && nodePosition[2]>6. && nodePosition[0]<0. &&
+//			nodePosition[1]>0. && charge>0.)
+//	if (node==105)
 //	adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
 //			vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
-	int actualNumberOfOrbits=0;
-	int failureType=0;
-	double probabilityThatTrueError=0.;
 	// TODO: Turn off smoothing flag bit
 	Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
 			(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,

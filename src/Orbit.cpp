@@ -240,13 +240,13 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				numberOfStepsPerRegion;
 //				/currentVelocity.norm()/5.;
 		// TODO: Need acceleration info as well, since v_z changes during time-step
-		dt = min(0.01,dt);
+//		dt = min(0.01,dt);
 		t+=dt;
 		nSteps++;
 		assert(!isnan(currentPosition.norm()));
 		vect3d previousPosition = currentPosition;
 		vect3d previousVelocity = currentVelocity;
-		entHandle previousElement = currentElement;
+		entHandle previousElement = velocityAndAcceleration.currentElement;
 //		currentPosition += dt*currentVelocity;
 //		vect3d currentAcceleration(0.,0.,0.);
 //		// TODO: replace this hack
@@ -340,8 +340,16 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		if (foundTet==false) {
 			// TODO: if near vertex could leave domain through non-boundary face
 			//       by crossing sliver of other tet in one time-step
-			entHandle faceCrossed = mesh_ptr->findFaceCrossed(
-					previousElement, previousPosition, currentPosition);
+//			entHandle faceCrossed = mesh_ptr->findFaceCrossed(
+//					previousElement, previousPosition, currentPosition);
+			int faceCrossedIndex = mesh_ptr->findBoundaryFaceCrossed(
+					mesh_ptr->indicesOfEntities[previousElement],
+					previousPosition, currentPosition,
+					faceTypeField, vertexTypeField);
+			entHandle faceCrossed = NULL;
+			if (faceCrossedIndex>=0) {
+				faceCrossed = mesh_ptr->entitiesVectors[iBase_FACE][faceCrossedIndex];
+			}
 			// TODO: grazing orbits don't enter domain in first time-step
 			int faceType;
 			vect3d normalVector(0.,0.,0.), normalVelocity(0.,0.,0.);

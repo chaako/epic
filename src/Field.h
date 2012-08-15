@@ -145,6 +145,8 @@ public:
 	void calcField(DensityField ionDensity, DensityField electronDensity,
 			CodeField vertexType, FILE *outFile);
 	void calcField(DensityField ionDensity,
+			CodeField vertexType, FILE *outFile);
+	void calcField(DensityField ionDensity,
 			DensityField ionDensityPP, DensityField ionDensityNP,
 			DensityField electronDensity,
 			DensityField electronDensityPP, DensityField electronDensityNP,
