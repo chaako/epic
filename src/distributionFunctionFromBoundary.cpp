@@ -55,7 +55,10 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 	if ( orbit.finalFaceType==5
 			&& !orbit.negativeEnergy) {
 		*fval = 1./pow(2.*M_PI,3./2.);
-		*fval *= exp(-pow(orbit.finalVelocity.norm(),2.)/2.);
+//		// TODO: more transparent handling of external ExB drift?
+//		vect3d finalVelocity = orbit.finalVelocity - VEXB;
+		vect3d finalVelocity = orbit.finalVelocity;
+		*fval *= exp(-pow(finalVelocity.norm(),2.)/2.);
 		*fval /= exp(-pow(v,2.)/2.);
 		*fval *= M_PI;
 		*fval *= (1.+x[0])*sqrt(-log((1.+x[0])/2.));

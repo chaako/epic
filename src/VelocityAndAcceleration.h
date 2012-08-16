@@ -66,6 +66,9 @@ public:
 					interpolationOrder);
 			currentElement = potentialField.mesh_ptr->
 					entitiesVectors[iBase_REGION][currentRegionIndex];
+//			// TODO: Determine if better to include drift in potential
+//			//       (conductor shields it, thermal velocities could be different, etc.)
+//			currentAcceleration -= E;
 			currentAcceleration *= -charge;
 //			potential = potentialField.getField(x[0], &currentElement,
 //					interpolationOrder);

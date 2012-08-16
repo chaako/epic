@@ -110,6 +110,8 @@ public:
 
 		// Advance position half timestep (drift)
 		x[0] += dt/2. * x[1].dot(unitB) * unitB;
+		// TODO: handle EXB differently?
+		x[0] += VEXB*dt/2.;
 		larmorVector = -mass*x[1].cross(unitB)/charge/B.norm();
 		rotatedLarmorVector =
 				Eigen::AngleAxisd(rotationAngle/2., unitB) * larmorVector;
@@ -122,6 +124,8 @@ public:
 
 		// Advance position half timestep (drift)
 		x[0] += dt/2. * x[1].dot(unitB) * unitB;
+		// TODO: handle EXB differently?
+		x[0] += VEXB*dt/2.;
 		larmorVector = -mass*x[1].cross(unitB)/charge/B.norm();
 		rotatedLarmorVector =
 				Eigen::AngleAxisd(rotationAngle/2., unitB) * larmorVector;

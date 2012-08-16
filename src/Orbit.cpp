@@ -197,13 +197,13 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	// TODO: this should be refined
 //	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
 //	if ((0.5*pow(initialVelocity.norm(),2.) +
-	if ((0.5*pow(initialVelocity[2],2.) +
-			charge*potentialField.getField(initialNode)) < 0.) {
-		negativeEnergy = true;
-		tMax = 0.;
-	} else {
+//	if ((0.5*pow(initialVelocity[2],2.) +
+//			charge*potentialField.getField(initialNode)) < 0.) {
+//		negativeEnergy = true;
+//		tMax = 0.;
+//	} else {
 		negativeEnergy = false;
-	}
+//	}
 	// TODO: treat inwards electrons in a better way?
 	if (vertexType==4 &&
 			0.5*pow(initialNormalVelocity.norm(),2.)<charge*phiSurface &&
@@ -236,7 +236,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	// TODO: set max number of steps more cleverly (since also need to limit by accel)
 	for (int iT=0; iT<100*numberOfStepsPerRegion  && !negativeEnergy; iT++) {
 		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
-				/(fabs(currentVelocity[2])+DELTA_LENGTH)/
+				/(fabs(currentVelocity[2])+VEXB.norm())/
+//				/(fabs(currentVelocity[2])+DELTA_LENGTH)/
 				numberOfStepsPerRegion;
 //				/currentVelocity.norm()/5.;
 		// TODO: Need acceleration info as well, since v_z changes during time-step
