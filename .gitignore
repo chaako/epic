@@ -38,11 +38,14 @@ Makefile.in
 /missing
 
 # FMDB build
-fmdb/SCOREC_Software/
-fmdb/auxillaryBuildScripts.tar
+#fmdb/SCOREC_Software/
+fmdb/SCOREC_Software/FMDB-1.3.8
+fmdb/SCOREC_Software/GMI-1.0.1
+fmdb/SCOREC_Software/SCUtil
+#fmdb/auxillaryBuildScripts.tar
 fmdb/auxillaryBuildScripts/
-fmdb/buildFMDBSerial.env
-fmdb/buildFMDBSerial.sh
+#fmdb/buildFMDBSerial.env
+#fmdb/buildFMDBSerial.sh
 fmdb/fmdbSerial/
 
 # Library builds
