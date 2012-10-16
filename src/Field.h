@@ -482,7 +482,9 @@ T Field<T>::getField(entHandle node) {
 	int ierr;
 	iMesh_getData(mesh_ptr->meshInstance, node, tag, &field_ptr,
 			&field_alloc, &field_size, &ierr);
-	CHECK("Failure getting field");
+//	CHECK("Failure getting field");
+	if (ierr != iBase_SUCCESS)
+		throw int(FAILURE_GETTING_FIELD);
 	return field;
 //	return this->operator[](node);
 }
@@ -498,7 +500,7 @@ T Field<T>::getFieldFromMeshDB(entHandle entityHandle) {
 			&field_alloc, &field_size, &ierr);
 //	CHECK("Failure getting field");
 	if (ierr != iBase_SUCCESS)
-		throw FAILURE_GETTING_FIELD;
+		throw int(FAILURE_GETTING_FIELD);
 	return field;
 }
 

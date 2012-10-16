@@ -173,6 +173,9 @@ void Orbit::integrate(ElectricField& electricField,
 void Orbit::integrate(PotentialField& potentialField, ElectricField& electricField,
 		Field<int>& faceTypeField, CodeField& vertexTypeField,
 		ShortestEdgeField shortestEdgeField, FILE *outFile) {
+	// TODO: find better way to distinguish orbits in output
+	extern int extern_orbitNumber;
+	extern_orbitNumber++;
 	// TODO: need some clever way to set tMax and/or detect trapped orbits
 //	double dt=min(0.005,0.005/initialVelocity.norm()), tMax=100;
 //	double dt=min(0.01,0.01/initialVelocity.norm()), tMax=100;
@@ -242,6 +245,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //				/currentVelocity.norm()/5.;
 		// TODO: Need acceleration info as well, since v_z changes during time-step
 //		dt = min(0.01,dt);
+//		dt = 0.01;
 		t+=dt;
 		nSteps++;
 		assert(!isnan(currentPosition.norm()));
@@ -418,8 +422,12 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		if (outFile) {
 //			fprintf(outFile, "%f %f %f %p\n", currentPosition[0], currentPosition[1],
 //					currentPosition[2], (void*)currentElement);
-			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
-					currentPosition[2], energy);
+			// TODO: fix occasional very large coordinate values
+			// TODO: comment this out unless using spheres mesh
+			if (currentPosition.norm()<=5.)
+			fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
+					currentPosition[2], extern_orbitNumber);
+//					currentPosition[2], energy);
 //					currentPosition[2], eFieldR);
 		}
 		if (endLoop)

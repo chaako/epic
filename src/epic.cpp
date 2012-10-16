@@ -12,6 +12,9 @@
 
 using namespace std;
 
+// TODO: find better way to distinguish orbits in output
+int extern_orbitNumber=0;
+
 int main(int argc, char *argv[]) {
 
 	if (argc<3) {

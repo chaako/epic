@@ -299,18 +299,24 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	fileNameStreamOrbit << "orbits/orbits_q" << charge << "_r"
 			<< nodePosition.norm() << "_vert" << node << ".p3d";
 	integrandContainer.orbitOutFile = NULL;
-//	// TODO: don't hard-code output nodes
-////	if (node<5) {
+	bool doThisNode = true;
+	// TODO: don't hard-code output nodes
+//	if (node<5) {
 //	if (node==0) {
-////	if (node==5 || node==2540) {
-//	if (nodePosition[2]<8. && nodePosition[2]>6. && nodePosition[0]<0. &&
-//			nodePosition[1]>0. && charge>0.) {
+//	if (node==5 || node==2540) {
 //	if (node==105) {
+//	if (nodePosition[2]<0.5 && nodePosition[2]>-0. && nodePosition[0]<2.5 &&
+//			nodePosition[0]>1.8 && nodePosition[1]<1.4 && nodePosition[1]>0.8
+//			&& charge>0.) {
+//		doThisNode = true;
 //		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
 //		fprintf(integrandContainer.outFile, "x y z f\n");
 //		integrandContainer.orbitOutFile =
 //				fopen(fileNameStreamOrbit.str().c_str(), "w");
 //		fprintf(integrandContainer.orbitOutFile, "x y z energy\n");
+//	} else {
+//		// TODO: decouple do and record
+//		doThisNode = false;
 //	}
 	integrandContainer.charge = charge;
 	int vdim=3;
@@ -329,13 +335,7 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	int actualNumberOfOrbits=0;
 	int failureType=0;
 	double probabilityThatTrueError=0.;
-//	if (node==5 || node==2540)
-//	if (node%1000==42)
-//	if (node==0)
-//	if (node<5)
-//	if (nodePosition[2]<8. && nodePosition[2]>6. && nodePosition[0]<0. &&
-//			nodePosition[1]>0. && charge>0.)
-//	if (node==105)
+	if (doThisNode)
 //	adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
 //			vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
 	// TODO: Turn off smoothing flag bit
