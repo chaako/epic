@@ -192,14 +192,15 @@ int main(int argc, char *argv[]) {
 			stringstream iterMeshFileName;
 			string outFile(argv[2]);
 			int periodLocation = outFile.find(".sms");
-			char *options = NULL;
-			int options_len = 0;
-			int ierr;
 			iterMeshFileName << outFile.substr(0,periodLocation)
 					<< setfill('0') << setw(2) << i << ".sms";
-			iMesh_save(mesh.meshInstance, mesh.rootEntitySet, iterMeshFileName.str().c_str(),
-					options, &ierr, iterMeshFileName.str().length(), options_len);
-			CHECK("Save failed");
+			mesh.save(iterMeshFileName.str());
+//			char *options = NULL;
+//			int options_len = 0;
+//			int ierr;
+//			iMesh_save(mesh.meshInstance, mesh.rootEntitySet, iterMeshFileName.str().c_str(),
+//					options, &ierr, iterMeshFileName.str().length(), options_len);
+//			CHECK("Save failed");
 		}
 	}
 
