@@ -143,16 +143,6 @@ public:
 
     template<class OdeSystem>
 	void do_step(OdeSystem odeSystem, state_type &x, double t, double dt) {
-//    	cout << x[0].transpose() << endl;
-//    	cout << x[1].transpose() << endl;
-//    	x[0] += vect3d(1.,2.,3.);
-//    	x[1][0] += 1.;
-//    	x[1][1] += 2.;
-//    	x[1][2] += 3.;
-//    	cout << x[0].transpose() << endl;
-//    	cout << x[1].transpose() << endl;
-//    	exit(0);
-
 		state_type dxdt;
 		// TODO: should get B from odeSystem, though Taylor integrator
 		//       is meant for uniform B so external is fine in that sense
@@ -165,29 +155,6 @@ public:
 			charge *= sqrt(1836.); // sqrt to also account for v_th difference
 		double omega = -charge*B.norm()/mass; // minus sign since integrating backwards
 
-//		// TODO: remove this
-//		double rotationAngle = dt*charge*B.norm()/mass;
-//		vect3d larmorVector, rotatedLarmorVector;
-////		x[0] += dt * x[1].dot(unitB) * unitB;
-//		larmorVector = -mass*x[1].cross(unitB)/charge/B.norm();
-//		rotatedLarmorVector =
-//				Eigen::AngleAxisd(rotationAngle, unitB) * larmorVector;
-////		x[0] += rotatedLarmorVector - larmorVector;
-////		x[1] = Eigen::AngleAxisd(rotationAngle, unitB) * x[1];
-
-//		// TODO: remove this
-//		double cc = cos(omega*dt) - 1.;
-//		x[0][0] += (x[1][0]*sin(omega*dt)-x[1][1]*cc)/omega;
-//		x[0][1] += (x[1][1]*sin(omega*dt)+x[1][0]*cc)/omega;
-//		x[0][2] += x[1][2]*dt;
-//		double vx = x[1][0];
-//		double vy = x[1][1];
-//		x[1][0] = vx*cos(omega*dt)+vy*sin(omega*dt);
-//		x[1][1] = vy*cos(omega*dt)-vx*sin(omega*dt);
-////		double vx = x[1][0]*cos(omega*dt)+x[1][1]*sin(omega*dt);
-////		double vy = x[1][1]*cos(omega*dt)-x[1][0]*sin(omega*dt);
-////		x[1] = vect3d(vx,vy,x[1][2]);
-
 		// TODO: generalize to any unitB
 		assert(unitB[0]==0. && unitB[1]==0);
 		vect3d pos = x[0];
@@ -197,15 +164,13 @@ public:
 		vect3d velExB = VEXB;
 
 		double s = sin(omega*dt) - omega*dt;
-		double sm = sin(-omega*dt) - (-omega)*dt;
 		double c = cos(omega*dt) - 1.;
-		double cm = cos(-omega*dt) - 1.;
 
 		// Advance position
 		pos[0] += 1./omega*(vel[0]*sin(omega*dt)-vel[1]*c)
 				+1./omega/omega*(-accel[0]*c-accel[1]*s);
-		pos[1] += 1./(-omega)*(vel[1]*sin(-omega*dt)-vel[0]*cm)
-				+1./omega/omega*(-accel[1]*cm-accel[0]*sm);
+		pos[1] += -1./omega*(-vel[1]*sin(omega*dt)-vel[0]*c)
+				+1./omega/omega*(-accel[1]*c+accel[0]*s);
 		pos[2] += dt * vel[2] + 1./2.*dt*dt*accel[2];
 		// TODO: handle EXB differently?
 		pos += velExB*dt;
@@ -225,8 +190,8 @@ public:
 				+1./omega*(origAccel[0]*sin(omega*dt)-origAccel[1]*c)
 				+1./omega/omega*(-dadt[0]*c-dadt[1]*s);
 		updatedVel[1] = vel[1]*cos(-omega*dt)+vel[0]*sin(-omega*dt)
-				+1./(-omega)*(origAccel[1]*sin(-omega*dt)-origAccel[0]*cm)
-				+1./omega/omega*(-dadt[1]*cm-dadt[0]*sm);
+				-1./omega*(-origAccel[1]*sin(omega*dt)-origAccel[0]*c)
+				+1./omega/omega*(-dadt[1]*c+dadt[0]*s);
 		updatedVel[2] += 1./2.*dt*(origAccel[2]+accel[2]);
 
 		// TODO: generalize to any unitB
