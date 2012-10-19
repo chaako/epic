@@ -19,7 +19,9 @@ Orbit::Orbit(Mesh *inputMesh_ptr, entHandle inputNode,
 	// TODO: perhaps find a random adjacent tet rather than give node
 	currentElement = inputNode;
 	initialPosition = inputMesh_ptr->getCoordinates(inputNode);
-	initialVelocity = inputVelocity;
+	initialVelocity = -inputVelocity; // Reverse sign since integrating backwards
+//	// TODO: remove this
+//	initialVelocity = -vect3d(0.,1.,1.);
 	charge = inputCharge;
 }
 
@@ -224,7 +226,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //	positionAndVelocity[0] = currentPosition;
 //	positionAndVelocity[1] = currentVelocity;
 //	VelocityVerletStepper<NDIM> timestepper;
-	CyclotronicStepper timestepper;
+//	CyclotronicStepper timestepper;
+	TaylorStepper timestepper;
 //	boost::numeric::odeint::runge_kutta4<boost::array<vect3d,2> >
 //		timestepper;
 	VelocityAndAcceleration<NDIM> velocityAndAcceleration(potentialField,
@@ -235,11 +238,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //	currentPosition -= currentVelocity*dt/2.;
 //	for (double t=0.; t<tMax; t+=dt) {
 	double t=0;
-	double numberOfStepsPerRegion = 100.;
+	double numberOfStepsPerRegion = 3.;
 	// TODO: set max number of steps more cleverly (since also need to limit by accel)
 	for (int iT=0; iT<100*numberOfStepsPerRegion  && !negativeEnergy; iT++) {
 		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
-				/(fabs(currentVelocity[2])+VEXB.norm())/
+				/(fabs(currentVelocity[2])+VEXB.norm()+SMALL_VELOCITY)/
 //				/(fabs(currentVelocity[2])+DELTA_LENGTH)/
 				numberOfStepsPerRegion;
 //				/currentVelocity.norm()/5.;

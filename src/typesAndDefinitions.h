@@ -14,6 +14,7 @@ const double VOLUME_TOLERANCE=1.e-8;
 const double LENGTH_TOLERANCE=1.e-10;
 const double DELTA_LENGTH=1.e-10;
 //const double DELTA_LENGTH=1.e-5;
+const double SMALL_VELOCITY=1.e-1;
 
 const int WORKTAG=999999998;
 const int DIETAG=999999999;
@@ -74,7 +75,7 @@ enum {
 class CodeField;
 
 const int NDIM=3;
-const int INTERPOLATIONORDER=1;
+const int INTERPOLATIONORDER=2;
 // Matrix gives better pretty printing than Vector3d in gdb
 typedef Eigen::Matrix<double,NDIM,1> vect3d;
 typedef iBase_EntityHandle entHandle;
