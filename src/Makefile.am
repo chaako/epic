@@ -9,7 +9,7 @@ epic_SOURCES = epic.cpp custom_mImportVTK.cc Mesh.cpp Orbit.cpp Field.cpp Integr
 epic_CFLAGS = $(AM_CFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \
               -I ../cubature/cubature-20101018/ -I ../cuba/Cuba-3.0/
 epic_CXXFLAGS = $(AM_CXXFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \
-              -I ../eigen/eigen-eigen-13a11181fc5a/ -I ../cubature/cubature-20101018/ \
+              -I ../eigen/eigen-eigen-43d9075b23ef/ -I ../cubature/cubature-20101018/ \
               -I ../cuba/Cuba-3.0/ \
               -I ../boost/boost_1_49_0/ -I ../odeint/headmyshoulder-odeint-v2-47dbdac/ \
               -I ../vtk/VTK/install/include/vtk-5.10/ -Wno-deprecated
