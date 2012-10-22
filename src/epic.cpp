@@ -191,9 +191,9 @@ int main(int argc, char *argv[]) {
 		if (mpiId == 0){
 			stringstream iterMeshFileName;
 			string outFile(argv[2]);
-			int periodLocation = outFile.find(".sms");
+			int periodLocation = outFile.rfind(".");
 			iterMeshFileName << outFile.substr(0,periodLocation)
-					<< setfill('0') << setw(2) << i << ".sms";
+					<< setfill('0') << setw(2) << i << outFile.substr(periodLocation);
 			mesh.save(iterMeshFileName.str());
 //			char *options = NULL;
 //			int options_len = 0;
