@@ -108,11 +108,15 @@ public:
 		vect3d larmorVector, rotatedLarmorVector;
 //		cout << B.transpose() << ", m " << mass << ", c " << charge << endl;
 //		cout << x[0].transpose() << ", v " << x[1].transpose() << endl;
+		vect3d velExB = VEXB;
+		// TODO: replace this opaque hack to account for mass difference
+		if (charge<0)
+			velExB /= sqrt(1836.); // sqrt to account for v_th difference
 
 		// Advance position half timestep (drift)
 		x[0] += dt/2. * x[1].dot(unitB) * unitB;
 		// TODO: handle EXB differently?
-		x[0] += VEXB*dt/2.;
+		x[0] += velExB*dt/2.;
 		larmorVector = -mass*x[1].cross(unitB)/charge/B.norm();
 		rotatedLarmorVector =
 				Eigen::AngleAxisd(rotationAngle/2., unitB) * larmorVector;
@@ -126,7 +130,7 @@ public:
 		// Advance position half timestep (drift)
 		x[0] += dt/2. * x[1].dot(unitB) * unitB;
 		// TODO: handle EXB differently?
-		x[0] += VEXB*dt/2.;
+		x[0] += velExB*dt/2.;
 		larmorVector = -mass*x[1].cross(unitB)/charge/B.norm();
 		rotatedLarmorVector =
 				Eigen::AngleAxisd(rotationAngle/2., unitB) * larmorVector;
@@ -162,6 +166,9 @@ public:
 		boost::unwrap_ref(odeSystem)(x, dxdt);
 		vect3d accel = dxdt[1];
 		vect3d velExB = VEXB;
+		// TODO: replace this opaque hack to account for mass difference
+		if (charge<0)
+			velExB /= sqrt(1836.); // sqrt to account for v_th difference
 
 		double s = sin(omega*dt) - omega*dt;
 		double c = cos(omega*dt) - 1.;
