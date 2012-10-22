@@ -170,11 +170,11 @@ int main(int argc, char *argv[]) {
 //		if (mpiId == 0)
 //			cout << endl << "Calculating charge density..." << endl;
 //		density.calcField(ionDensity, electronDensity);
-		if (mpiId == 0)
-			cout << endl << "Saving current potential..." << endl;
-		stringstream potentialCopyName;
-		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
-		PotentialField potentialCopy(potential,potentialCopyName.str());
+//		if (mpiId == 0)
+//			cout << endl << "Saving current potential..." << endl;
+//		stringstream potentialCopyName;
+//		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
+//		PotentialField potentialCopy(potential,potentialCopyName.str());
 		if (mpiId == 0)
 			cout << endl << "Calculating updated potential..." << endl;
 		potential.calcField(ionDensity, vertexType, potentialFile);
