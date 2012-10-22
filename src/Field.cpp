@@ -115,7 +115,9 @@ void PotentialField::calcField(DensityField ionDensity,
 			// TODO: don't hard-code boundary potential
 			potential = 0;
 		} else {
-			potential = log(ionDensity.getField(entities[i]));
+			double currentPotential = this->getField(entities[i]);
+			double boltzmannPotential = log(ionDensity.getField(entities[i]));
+			potential = (currentPotential+boltzmannPotential)/2.;
 		}
 		this->setField(entities[i], potential);
 
