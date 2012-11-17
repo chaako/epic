@@ -96,6 +96,12 @@ else
   FMDB_SRC=$PWD
   FMDB=$INSTALL_TARGET
 
+  cd $SCOREC_SOFTWARE
+  tar -xzf meshAdapt.tar.gz
+  cd meshAdapt
+  MESHADAPT_SRC=$PWD
+  MESHADAPT=$INSTALL_TARGET
+
 fi
 
 source $SCRIPT_HOME/auxillaryBuildScripts/runAutoreconf.sh
@@ -136,6 +142,13 @@ make -j 4
 make install
 create_tarballs $CREATE_TARBALLS "FMDB"
 make check
+
+echo "Building MESHADAPT"
+cd $MESHADAPT_SRC
+autoreconf -i
+./configure $SHARED_LIBS $IMESH --with-gmi=$GMI --with-scorecutil=$SCORECUTIL --with-fmdb=$SCORECUTIL --with-iterators=$SITER --prefix=$MESHADAPT
+make -j 4
+make install
 
 if [ "x$CREATE_TARBALLS" == "x1" ]; then
   echo "Creating SCUtil Tarball"
