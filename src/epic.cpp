@@ -40,6 +40,11 @@ int main(int argc, char *argv[]) {
 //	cout << "  Process " << mpiId << " says 'Hello, world!'\n";
 #endif
 
+//	// TODO: remove this testing ground
+//	int playground(int argc, char* argv[]);
+//	playground(argc, argv);
+//	exit(0);
+
 	Mesh mesh(argv[1]);
 	mesh.printElementNumbers();
 

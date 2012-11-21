@@ -426,8 +426,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //			fprintf(outFile, "%f %f %f %p\n", currentPosition[0], currentPosition[1],
 //					currentPosition[2], (void*)currentElement);
 			// TODO: fix occasional very large coordinate values
-			// TODO: comment this out unless using spheres mesh
-			if (currentPosition.norm()<=5.)
+//			// TODO: comment this out unless using spheres mesh
+//			if (currentPosition.norm()<=5.)
 			fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
 					currentPosition[2], extern_orbitNumber);
 //					currentPosition[2], energy);
