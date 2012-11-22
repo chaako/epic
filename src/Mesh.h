@@ -33,6 +33,7 @@ public:
 	void printElementNumbers();
 	void save(string outputMeshFile);
 
+	void classifyBoundariesForMeshRefinement(Field<int> faceTypeField);
 	vect3d getCoordinates(entHandle node, bool useMap=false);
 	entHandle findTet(vect3d oldPosition, vect3d position,
 			entHandle adjacentTet, bool *tetFound, bool isTet=true);

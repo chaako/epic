@@ -260,6 +260,43 @@ void Mesh::save(string outputMeshFile) {
 	CHECK("Failed to destroy eFieldZ tag");
 }
 
+void Mesh::classifyBoundariesForMeshRefinement(Field<int> faceTypeField){
+	// meshAdapt requires mesh elements on the boundary to be classified
+	// in terms of geometric elements.
+
+	// Need to use native FMDB pointers since no iMesh interface
+	pMesh part;
+	FMDB_Mesh_GetPart((mMesh*)this->meshInstance, 0, part);
+	typedef GEntity* (*entityBy_FP)(SGModel*,int,int);
+	entityBy_FP cl_ptr = GM_entityByTag;
+
+	// Start by setting all elements to be part of a volume geometry element
+	for (int i=0; i<entitiesVectors.size(); i++) {
+		for (int j=0; j<entitiesVectors[i].size(); j++) {
+			entHandle entity = this->entitiesVectors[i][j];
+			((mEntity*)entity)->classify(part->getGEntity(0,3,cl_ptr));
+		}
+	}
+
+	// Take all faces, edges, and vertices of original surface mesh to be fixed
+	int i=iBase_FACE;
+	for (int j=0; j<entitiesVectors[i].size(); j++) {
+		entHandle face = this->entitiesVectors[i][j];
+		int faceType = faceTypeField.getField(face);
+		if (faceType>1) {
+			((mEntity*)face)->classify(part->getGEntity(0,2,cl_ptr));
+			vector<entHandle> edges = this->getAdjacentEntities(face,iBase_EDGE);
+			for (int k=0; k<edges.size(); k++) {
+				((mEntity*)edges[k])->classify(part->getGEntity(0,1,cl_ptr));
+			}
+			vector<entHandle> vertices = this->getAdjacentEntities(face,iBase_VERTEX);
+			for (int k=0; k<vertices.size(); k++) {
+				((mEntity*)vertices[k])->classify(part->getGEntity(0,0,cl_ptr));
+			}
+		}
+	}
+}
+
 map<entHandle,vector<entHandle> >
 Mesh::getSurroundingVerticesMap() {
 	map<entHandle,vector<entHandle> >

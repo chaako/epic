@@ -15,6 +15,32 @@ using namespace std;
 // TODO: find better way to distinguish orbits in output
 int extern_orbitNumber=0;
 
+int setBSizeField(pMesh mesh, pSField field, void *)
+{
+  pVertex vt;
+  double h[3], dirs[3][3], xyz[3], norm;
+  VIter vit=M_vertexIter(mesh);
+  while( vt=VIter_next(vit) ) {
+    h[0] = 1.0;
+    h[1] = .2;
+    h[2] = 2.5;
+
+    dirs[0][0]=1.;
+    dirs[0][1]=0;
+    dirs[0][2]=0;
+    dirs[1][0]=0;
+    dirs[1][1]=1.;
+    dirs[1][2]=0;
+    dirs[2][0]=0;
+    dirs[2][1]=0;
+    dirs[2][2]=1.;
+
+    ((PWLsfield *)field)->setSize((pEntity)vt,dirs,h);
+  }
+  VIter_delete (vit);
+  return 1;
+}
+
 int main(int argc, char *argv[]) {
 
 	if (argc<3) {
@@ -77,6 +103,24 @@ int main(int argc, char *argv[]) {
 	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
 	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
 	ShortestEdgeField shortestEdge(&mesh,string("shortestEdge"));
+
+	mesh.classifyBoundariesForMeshRefinement(faceType);
+	pMesh part;
+	FMDB_Mesh_GetPart((mMesh*)mesh.meshInstance, 0, part);
+	pSField field=new PWLsfield(part);
+	meshAdapt rdr(part,field,0,0);  // snap off; do refinement only
+//	rdr.run(2,1, setBSizeField);
+//
+//	char mesh_file[256];
+//	char outmesh[256];
+//	char without_extension[256];
+//
+//	snprintf(without_extension,strlen(argv[1])-3,"%s",argv[1]);
+//	sprintf(mesh_file,"%s",argv[1]);
+//	sprintf(outmesh,"%s-refined.sms",without_extension);
+//	FMDB_Mesh_WriteToFile(part->getMesh(), outmesh, 0);
+//
+//	exit(0);
 
 	double noPotentialPerturbation = 0.;
 	double positivePotentialPerturbation = 0.05;
