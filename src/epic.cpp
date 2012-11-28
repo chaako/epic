@@ -120,6 +120,11 @@ int main(int argc, char *argv[]) {
 //	sprintf(outmesh,"%s-refined.sms",without_extension);
 //	FMDB_Mesh_WriteToFile(part->getMesh(), outmesh, 0);
 //
+//	{
+//		using namespace nglib;
+//		Ng_Init();
+//		Ng_Exit();
+//	}
 //	exit(0);
 
 	double noPotentialPerturbation = 0.;

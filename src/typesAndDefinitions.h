@@ -61,6 +61,10 @@ enum {
 #include "AdaptUtil.h"
 #include "PWLinearSField.h"
 
+namespace nglib {
+#include "nglib.h"
+}
+
 #include "Eigen/Dense"
 #include "cubature.h"
 #include "cuba.h"
