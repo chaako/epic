@@ -10,7 +10,7 @@ epic_CFLAGS = $(AM_CFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/si
               -I ../cubature/cubature-20101018/ -I ../cuba/Cuba-3.0/
 epic_CXXFLAGS = $(AM_CXXFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \
               -I ../eigen/eigen-eigen-43d9075b23ef/ -I ../cubature/cubature-20101018/ \
-              -I ../cuba/Cuba-3.0/ \
+              -I ../cuba/Cuba-3.0/ -I ../netgen/netgen-5.0.0/nglib/ \
               -I ../boost/boost_1_49_0/ -I ../odeint/headmyshoulder-odeint-v2-47dbdac/ \
               -I ../vtk/VTK/install/include/vtk-5.10/ -Wno-deprecated
 epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lMeshAdapt -lrt \
@@ -20,7 +20,8 @@ epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lMeshAdapt -lrt \
 			-lvtkGeovis -lvtkGraphics -lvtkhdf5 -lvtkhdf5_hl -lvtkHybrid -lvtkImaging \
 			-lvtkInfovis -lvtkIO -lvtkjpeg -lvtklibxml2 -lvtkmetaio -lvtkNetCDF -lvtkNetCDF_cxx \
 			-lvtkpng -lvtkproj4 -lvtkRendering -lvtksqlite -lvtksys -lvtktiff -lvtkverdict \
-			-lvtkViews -lvtkVolumeRendering -lvtkWidgets -lvtkzlib
+			-lvtkViews -lvtkVolumeRendering -lvtkWidgets -lvtkzlib \
+			-L ../netgen/opt/netgen/lib/ -lnglib
 if USE_MPI
 epic_CXXFLAGS += -DHAVE_MPI
 else

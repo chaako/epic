@@ -1,1 +1,1 @@
-SUBDIRS = cmake vtk odeint cuba cubature eigen fmdb boost src
+SUBDIRS = cmake vtk odeint cuba cubature eigen fmdb boost netgen src

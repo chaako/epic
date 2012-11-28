@@ -59,6 +59,8 @@ eigen/printers.pyc
 odeint/headmyshoulder-odeint-v2-47dbdac/
 vtk/VTK/
 cmake/cmake-2.8.8/
+netgen/netgen-5.0.0/
+netgen/opt/
 
 # Profiling output
 gmon.out
