@@ -67,9 +67,13 @@ int main(int argc, char *argv[]) {
 #endif
 
 //	// TODO: remove this testing ground
-//	int playground(int argc, char* argv[]);
-//	playground(argc, argv);
-//	exit(0);
+//	{
+////		int playground_meshAdapt(int argc, char* argv[]);
+////		playground_meshAdapt(argc, argv);
+//		int playground_netgen(int argc, char* argv[]);
+//		playground_netgen(argc, argv);
+//		exit(0);
+//	}
 
 	Mesh mesh(argv[1]);
 	mesh.printElementNumbers();

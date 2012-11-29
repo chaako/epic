@@ -80,6 +80,8 @@ namespace nglib {
 #include <vtkDataSetMapper.h>
 #include <vtkCellTreeLocator.h>
 #include <vtkCellLocator.h>
+#include <vtkXMLUnstructuredGridReader.h>
+#include <vtkUnstructuredGridWriter.h>
 
 class CodeField;
 

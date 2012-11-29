@@ -1,3 +1,38 @@
+#include "typesAndDefinitions.h"
+
+int playground_netgen(int argc, char* argv[]) {
+	using namespace nglib;
+	Ng_Init();
+
+	// Read the input .vtu file (only surface mesh)
+	string inputFile = argv[1];
+	if (inputFile.find(".vtu")==string::npos)
+		throw; // Not a .vtu file
+	vtkSmartPointer<vtkXMLUnstructuredGridReader> reader =
+			vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
+	reader->SetFileName(inputFile.c_str());
+	reader->Update();
+	vtkSmartPointer<vtkUnstructuredGrid> mesh = reader->GetOutput();
+	mesh->Print(cout);
+
+
+
+	// Write the output .vtk file (full volume mesh)
+	vtkSmartPointer<vtkUnstructuredGridWriter> writer =
+			vtkSmartPointer<vtkUnstructuredGridWriter>::New();
+	stringstream outputFilename;
+	int periodLocation = inputFile.rfind(".vtu");
+	outputFilename << inputFile.substr(0,periodLocation)
+			<< "_meshed.vtk";
+	writer->SetFileName(outputFilename.str().c_str());
+	writer->SetInput(mesh);
+	writer->Write();
+
+	Ng_Exit();
+	return 0;
+}
+
+
 #include "MeshAdapt.h"
 #include "AdaptUtil.h"
 #include "PWLinearSField.h"
@@ -96,7 +131,7 @@ int setSizeField(pMesh mesh, pSField field, void *)
 }
 
 
-int playground(int argc, char* argv[])
+int playground_meshAdapt(int argc, char* argv[])
 {  
 
  if ( argc!=3 ) { 

@@ -28,7 +28,7 @@ using std::istream;
 using std::endl;
 using std::vector;
  
-void original_importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in);
+void custom_importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in);
 void original_importLookUpTable(pMeshMdl mesh, FILE* in, int numPnts);
 void custom_importLookUpTable(pMeshMdl, FILE*, vector<pMeshEnt>, int);
 // **********************************************************
@@ -225,7 +225,7 @@ int custom_importVTK(mMesh *mesh, const char *fName)
     if(strcmp(att_str, "SCALARS")==0)
      original_importLookUpTable(mesh, in, vertices.size());
     if(strcmp(att_str, "FIELD")==0)
-     original_importTags(mesh, vertices, in);
+     custom_importTags(mesh, vertices, in);
     }
    else if(strcmp(pt_str, "CELL_DATA")==0)
     {
@@ -234,10 +234,11 @@ int custom_importVTK(mMesh *mesh, const char *fName)
      custom_importLookUpTable(mesh, in, cellVec, cells_count);
     if(strcmp(att_str, "FIELD")==0)
     {
-    if(mDim==2)
-     original_importTags(mesh, faceVec, in);
-    else
-     original_importTags(mesh, regVec, in);
+//    if(mDim==2)
+// TODO: this can't handle cell data on volume elements for now
+     custom_importTags(mesh, faceVec, in);
+//    else
+//     custom_importTags(mesh, regVec, in);
     }
     }
   } 
@@ -319,7 +320,7 @@ void original_importLookUpTable(pMeshMdl mesh, FILE* in, int numPnts)
    }
  }
 }
-void original_importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in)
+void custom_importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in)
 {
   int numTag, opq_data_size;
   char dummy_str[64];
@@ -343,6 +344,8 @@ void original_importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in)
    if((strcmp(tagTypeChar, "int")==0) ||
       (strcmp(tagTypeChar, "unsigned_int")==0) ||
       (strcmp(tagTypeChar, "unsigned_short")==0) ||
+      (strcmp(tagTypeChar, "char")==0) ||
+      (strcmp(tagTypeChar, "long")==0) ||
       (strcmp(tagTypeChar, "short")==0))
       tag_type = SCUtil_INT;
    else if(strcmp(tagTypeChar, "float")==0 || strcmp(tagTypeChar, "double")==0)
@@ -398,7 +401,10 @@ void original_importTags(pMeshMdl mesh, vector<pMeshEnt> data, FILE* in)
        fscanf(in, "%hu", &us_data);
        int_data=us_data;//implicit conversion
       }
-     else if(strcmp(tagTypeChar, "int") ==0)
+      // TODO: not handling char correctly (use %s?)
+      else if(strcmp(tagTypeChar, "int") ==0	||
+			 (strcmp(tagTypeChar, "char")==0)	||
+			 (strcmp(tagTypeChar, "long")==0)	)
       fscanf(in, "%d", &int_data);
      
      FMDB_Ent_SetIntTag (mesh, data[i], new_tag, int_data);
