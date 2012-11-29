@@ -234,11 +234,11 @@ int custom_importVTK(mMesh *mesh, const char *fName)
      custom_importLookUpTable(mesh, in, cellVec, cells_count);
     if(strcmp(att_str, "FIELD")==0)
     {
-//    if(mDim==2)
-// TODO: this can't handle cell data on volume elements for now
-     custom_importTags(mesh, faceVec, in);
-//    else
+    if(mDim==2)
+	 custom_importTags(mesh, faceVec, in);
+    else
 //     custom_importTags(mesh, regVec, in);
+     custom_importTags(mesh, cellVec, in);
     }
     }
   } 

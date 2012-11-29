@@ -64,6 +64,7 @@ enum {
 namespace nglib {
 #include "nglib.h"
 }
+//#include <ngexception.hpp>
 
 #include "Eigen/Dense"
 #include "cubature.h"
@@ -82,6 +83,8 @@ namespace nglib {
 #include <vtkCellLocator.h>
 #include <vtkXMLUnstructuredGridReader.h>
 #include <vtkUnstructuredGridWriter.h>
+#include <vtkCellData.h>
+#include <vtkIntArray.h>
 
 class CodeField;
 
