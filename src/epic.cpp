@@ -43,11 +43,6 @@ int setBSizeField(pMesh mesh, pSField field, void *)
 
 int main(int argc, char *argv[]) {
 
-	if (argc<3) {
-		printf("usage: %s meshin meshout\n", argv[0]);
-		exit(1);
-	}
-
 	int mpiId = 0;
 #ifdef HAVE_MPI
 	MPI::Init(argc, argv);
@@ -65,6 +60,11 @@ int main(int argc, char *argv[]) {
 	}
 //	cout << "  Process " << mpiId << " says 'Hello, world!'\n";
 #endif
+
+	if (argc<3) {
+		printf("usage: %s meshin meshout\n", argv[0]);
+		exit(1);
+	}
 
 //	// TODO: remove this testing ground
 //	{
