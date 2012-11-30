@@ -9,8 +9,42 @@ int playground_netgen(int argc, char* argv[]) {
 			vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
 	reader->SetFileName(inputFile.c_str());
 	reader->Update();
-	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh = reader->GetOutput();
-//	mesh->Print(cout);
+//	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh = reader->GetOutput();
+//	vtkMesh->Print(cout);
+	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh =
+			vtkSmartPointer<vtkUnstructuredGrid>::New();
+	vtkMesh->DeepCopy(reader->GetOutput());
+
+	// Rotate and/or translate collecting surface
+	vector<bool> transformNode(vtkMesh->GetNumberOfPoints(), false);
+	string cell_code_name = "cell_code";
+	vtkIntArray* orig_cell_codes = vtkIntArray::SafeDownCast(
+			vtkMesh->GetCellData()->GetArray(cell_code_name.c_str()));
+	for (vtkIdType id_cell = 0; id_cell < vtkMesh->GetNumberOfCells(); ++id_cell) {
+		int cell_code = orig_cell_codes->GetValue(id_cell);
+		if (cell_code==4) {
+			vtkIdType *pts, N_pts;
+			vtkMesh->GetCellPoints(id_cell, N_pts, pts);
+			for (int i = 0; i < 3; ++i) {
+				transformNode[pts[i]] = true;
+			}
+		}
+	}
+	for (vtkIdType id_node = 0; id_node < vtkMesh->GetNumberOfPoints(); ++id_node) {
+		if (transformNode[id_node]) {
+			double x[3];
+			vtkMesh->GetPoints()->GetPoint(id_node, x);
+			vect3d pos(x[0],x[1],x[2]);
+			double angle=M_PI/3;
+			pos = Eigen::AngleAxisd(-angle, vect3d::UnitY())*pos;
+			pos += vect3d(1.,0.,0.);
+			x[0] = pos[0];
+			x[1] = pos[1];
+			x[2] = pos[2];
+			vtkMesh->GetPoints()->SetPoint(id_node, x);
+		}
+	}
+
 
 	// Generate volume mesh (based on Engrid's createvolumemesh.cpp)
 	using namespace nglib;
@@ -109,7 +143,7 @@ int playground_netgen(int argc, char* argv[]) {
 				vtkSmartPointer<vtkIntArray>::New();
 		cell_codes->SetNumberOfComponents(1);
 		string cell_code_name = "cell_code";
-		cell_codes->SetName("cell_code");
+		cell_codes->SetName(cell_code_name.c_str());
 		vtkIntArray* orig_cell_codes = vtkIntArray::SafeDownCast(
 				vtkMesh->GetCellData()->GetArray(cell_code_name.c_str()));
 
