@@ -45,6 +45,18 @@ int playground_netgen(int argc, char* argv[]) {
 		}
 	}
 
+	// Write the transformed .vtu file (only surface mesh)
+	{
+		vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
+				vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
+		stringstream outputFilename;
+		int periodLocation = inputFile.rfind(".vtu");
+		outputFilename << inputFile.substr(0,periodLocation)
+						<< "_tranformed.vtu";
+		writer->SetFileName(outputFilename.str().c_str());
+		writer->SetInput(vtkMesh);
+		writer->Write();
+	}
 
 	// Generate volume mesh (based on Engrid's createvolumemesh.cpp)
 	using namespace nglib;

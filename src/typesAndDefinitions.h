@@ -82,6 +82,7 @@ namespace nglib {
 #include <vtkCellTreeLocator.h>
 #include <vtkCellLocator.h>
 #include <vtkXMLUnstructuredGridReader.h>
+#include <vtkXMLUnstructuredGridWriter.h>
 #include <vtkUnstructuredGridWriter.h>
 #include <vtkCellData.h>
 #include <vtkIntArray.h>
