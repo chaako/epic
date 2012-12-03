@@ -10,8 +10,6 @@
 
 #include "epic.h"
 
-using namespace std;
-
 // TODO: find better way to distinguish orbits in output
 int extern_orbitNumber=0;
 
@@ -75,7 +73,25 @@ int main(int argc, char *argv[]) {
 //		exit(0);
 //	}
 
-	Mesh mesh(argv[1]);
+	string inputMeshFile(argv[1]);
+	stringstream volumeMeshFile;
+	// TODO: distinguish between surface and volume mesh in less obscure way than format
+	if (inputMeshFile.find(".vtu")!=string::npos) {
+		SurfaceMesh surfaceMesh(inputMeshFile);
+		double rotationAngle = M_PI/5;
+		// TODO: don't hard code collector cell_code
+		surfaceMesh.rotateSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(), rotationAngle);
+		int periodLocation = inputMeshFile.rfind(".vtu");
+		stringstream rotatedSurfaceMeshFile;
+		rotatedSurfaceMeshFile << inputMeshFile.substr(0,periodLocation)
+						<< "_rotated_" << rotationAngle << ".vtu";
+		surfaceMesh.save(rotatedSurfaceMeshFile.str());
+		surfaceMesh.createVolumeMesh();
+		volumeMeshFile << inputMeshFile.substr(0,periodLocation)
+						<< "_meshed_" << rotationAngle << ".vtk";
+		surfaceMesh.saveVolumeMesh(volumeMeshFile.str());
+	}
+	Mesh mesh(volumeMeshFile.str());
 	mesh.printElementNumbers();
 
 	FILE *densityFile=NULL;

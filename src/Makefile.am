@@ -4,7 +4,8 @@
 # epic
 bin_PROGRAMS=epic
 epic_SOURCES = epic.cpp custom_mImportVTK.cc Mesh.cpp Orbit.cpp Field.cpp IntegrandContainer.cpp \
-              intersect_RayTriangle.cpp distributionFunctionFromBoundary.cpp playground.cpp
+              intersect_RayTriangle.cpp distributionFunctionFromBoundary.cpp playground.cpp \
+              SurfaceMesh.cpp
 #              VelocityAndAcceleration.cpp
 epic_CFLAGS = $(AM_CFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \
               -I ../cubature/cubature-20101018/ -I ../cuba/Cuba-3.0/

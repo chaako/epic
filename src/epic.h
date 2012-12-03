@@ -11,6 +11,7 @@
 #include "typesAndDefinitions.h"
 
 #include "Mesh.h"
+#include "SurfaceMesh.h"
 #include "IntegrandContainer.h"
 #include "Field.h"
 #include "Stepper.h"
