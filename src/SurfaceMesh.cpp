@@ -8,6 +8,8 @@
 #include "SurfaceMesh.h"
 
 SurfaceMesh::SurfaceMesh(string inputFile) {
+	vtkMesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
+	volumeMesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
 	this->load(inputFile);
 }
 

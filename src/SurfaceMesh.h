@@ -23,10 +23,8 @@ public:
 			vect3d rotationAxis, double rotationAngle);
 	void createVolumeMesh();
 
-	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh =
-			vtkSmartPointer<vtkUnstructuredGrid>::New();
-	vtkSmartPointer<vtkUnstructuredGrid> volumeMesh =
-			vtkSmartPointer<vtkUnstructuredGrid>::New();
+	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh;
+	vtkSmartPointer<vtkUnstructuredGrid> volumeMesh;
 };
 
 #endif /* SURFACEMESH_H_ */
