@@ -91,7 +91,62 @@ int main(int argc, char *argv[]) {
 						<< "_meshed_" << rotationAngle << ".vtk";
 		surfaceMesh.saveVolumeMesh(volumeMeshFile.str());
 	}
-	Mesh mesh(volumeMeshFile.str());
+
+	stringstream refinedMeshFile;
+	// TODO: distinguish between surface and volume mesh in less obscure way than format
+	if (inputMeshFile.find(".vtu")!=string::npos) {
+		Mesh coarseMesh(volumeMeshFile.str());
+		Field<int> faceType(&coarseMesh,string("cell_code"),iBase_FACE);
+		Mesh refinedMesh(volumeMeshFile.str());
+		Field<int> faceTypeRefined(&refinedMesh,string("cell_code"),iBase_FACE);
+
+		refinedMesh.classifyBoundariesForMeshRefinement(faceTypeRefined);
+		pMesh part;
+		FMDB_Mesh_GetPart((mMesh*)refinedMesh.meshInstance, 0, part);
+		pSField field=new PWLsfield(part);
+		meshAdapt rdr(part,field,0,0);
+		rdr.run(2,1, setBSizeField);
+
+		int periodLocation = volumeMeshFile.str().rfind(".vtk");
+		refinedMeshFile << volumeMeshFile.str().substr(0,periodLocation)
+						<< "_refined" << ".sms";
+		FMDB_Mesh_WriteToFile(part->getMesh(), refinedMeshFile.str().c_str(), 0);
+
+		// Update cell_code field of refined mesh
+		Mesh reopenedMesh(refinedMeshFile.str());
+		Field<int> faceTypeReopened(&reopenedMesh,string("cell_code"),iBase_FACE);
+		for (int i=0; i<faceTypeReopened.entities.size(); i++) {
+			vect3d centroid(0.,0.,0.);
+			vector<vect3d> vVs = reopenedMesh.getVertexVectors(
+					faceTypeReopened.entities[i]);
+			centroid = (vVs[0]+vVs[1]+vVs[2])/3.;
+			bool foundTet=false;
+			entHandle coarseEntity = coarseMesh.findTet(centroid, centroid,
+					coarseMesh.entitiesVectors[iBase_REGION][0], &foundTet);
+			vector<entHandle> coarseFaces =
+					coarseMesh.getAdjacentEntities(coarseEntity, iBase_FACE);
+			for (int j=0; j<coarseFaces.size(); j++) {
+				// TODO: this doesn't work if two faces with different codes lie
+				//       in the same plane
+				double volume =
+						coarseMesh.getTetVolume(centroid, coarseFaces[j]);
+				if (volume<VOLUME_TOLERANCE) {
+					int cellCode=faceType[coarseFaces[j]];
+					// TODO: Don't hard-code cell codes
+					if (cellCode==4 || cellCode==5) {
+						faceTypeReopened.setField(faceTypeReopened.entities[i],
+								cellCode);
+					}
+				}
+			}
+		}
+		FMDB_Mesh_WriteToFile((mMesh*)reopenedMesh.meshInstance,
+				refinedMeshFile.str().c_str(), 0);
+	} else {
+		refinedMeshFile << volumeMeshFile;
+	}
+
+	Mesh mesh(refinedMeshFile.str());
 	mesh.printElementNumbers();
 
 	FILE *densityFile=NULL;
@@ -124,52 +179,29 @@ int main(int argc, char *argv[]) {
 	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
 	ShortestEdgeField shortestEdge(&mesh,string("shortestEdge"));
 
-	mesh.classifyBoundariesForMeshRefinement(faceType);
-	pMesh part;
-	FMDB_Mesh_GetPart((mMesh*)mesh.meshInstance, 0, part);
-	pSField field=new PWLsfield(part);
-	meshAdapt rdr(part,field,0,0);  // snap off; do refinement only
-//	rdr.run(2,1, setBSizeField);
-//
-//	char mesh_file[256];
-//	char outmesh[256];
-//	char without_extension[256];
-//
-//	snprintf(without_extension,strlen(argv[1])-3,"%s",argv[1]);
-//	sprintf(mesh_file,"%s",argv[1]);
-//	sprintf(outmesh,"%s-refined.sms",without_extension);
-//	FMDB_Mesh_WriteToFile(part->getMesh(), outmesh, 0);
-//
-//	{
-//		using namespace nglib;
-//		Ng_Init();
-//		Ng_Exit();
-//	}
-//	exit(0);
-
 	double noPotentialPerturbation = 0.;
 	double positivePotentialPerturbation = 0.05;
 	double negativePotentialPerturbation = -0.05;
 
-	// TODO: add more robust detection and handling of existing fields
-	if (!mesh.vtkInputMesh) {
-		if (mpiId == 0)
-			cout << endl << "Calculating electric field..." << endl;
-		eField.calcField(potential);
-		if (mpiId == 0)
-			cout << endl << "Calculating electron density..." << endl;
-		electronDensity.calcField(eField, potential, faceType, vertexType,
-				shortestEdge, -1., noPotentialPerturbation,
-				density_electronsFile);
-		if (mpiId == 0)
-			cout << endl << "Calculating ion charge-density..." << endl;
-		ionDensity.calcField(eField, potential, faceType, vertexType,
-				shortestEdge, 1., noPotentialPerturbation,
-				densityFile);
-		// TODO: shouldn't return before closing files etc...
-		cout << "Not in main iteration loop...improve handling of existing fields." << endl;
-		return 0;
-	}
+//	// TODO: add more robust detection and handling of existing fields
+//	if (!mesh.vtkInputMesh) {
+//		if (mpiId == 0)
+//			cout << endl << "Calculating electric field..." << endl;
+//		eField.calcField(potential);
+//		if (mpiId == 0)
+//			cout << endl << "Calculating electron density..." << endl;
+//		electronDensity.calcField(eField, potential, faceType, vertexType,
+//				shortestEdge, -1., noPotentialPerturbation,
+//				density_electronsFile);
+//		if (mpiId == 0)
+//			cout << endl << "Calculating ion charge-density..." << endl;
+//		ionDensity.calcField(eField, potential, faceType, vertexType,
+//				shortestEdge, 1., noPotentialPerturbation,
+//				densityFile);
+//		// TODO: shouldn't return before closing files etc...
+//		cout << "Not in main iteration loop...improve handling of existing fields." << endl;
+//		return 0;
+//	}
 
 	if (mpiId == 0)
 		cout << endl << "Setting vertex codes..." << endl;
