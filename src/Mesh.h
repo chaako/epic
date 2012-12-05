@@ -8,6 +8,10 @@
 #ifndef MESH_H_
 #define MESH_H_
 
+#ifdef HAVE_MPI
+#include "mpi.h"
+#endif
+
 #include "typesAndDefinitions.h"
 
 //#include <map>

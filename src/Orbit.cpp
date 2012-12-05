@@ -176,7 +176,6 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		Field<int>& faceTypeField, CodeField& vertexTypeField,
 		ShortestEdgeField shortestEdgeField, FILE *outFile) {
 	// TODO: find better way to distinguish orbits in output
-	extern int extern_orbitNumber;
 	extern_orbitNumber++;
 	// TODO: need some clever way to set tMax and/or detect trapped orbits
 //	double dt=min(0.005,0.005/initialVelocity.norm()), tMax=100;

@@ -8,6 +8,10 @@
 #ifndef FIELD_H_
 #define FIELD_H_
 
+#ifdef HAVE_MPI
+#include "mpi.h"
+#endif
+
 #include "typesAndDefinitions.h"
 //#include <stdio.h>
 ////#include <type_traits> // Requires -std=c++0x compiler flag

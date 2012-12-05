@@ -10,28 +10,12 @@
 
 #include "typesAndDefinitions.h"
 
-#include "Mesh.h"
-#include "SurfaceMesh.h"
-#include "IntegrandContainer.h"
-#include "Field.h"
-#include "Stepper.h"
-#include "VelocityAndAcceleration.h"
-#include "Orbit.h"
-
+#include "classes.h"
 class mMesh;
-int custom_importVTK(mMesh *, const char *);
 
-void distributionFunctionFromBoundary(unsigned ndim, const double *x,
-		void *integrandContainer_ptr, unsigned fdim, double *fval);
-int distributionFunctionFromBoundaryCuba(const int *ndim, const double x[],
-  const int *ncomp, double f[], void *integrandContainer_ptr);
+#include "functions.h"
 
-int intersect_RayTriangle(vector<vect3d> R,
-		vector<vect3d> T, vect3d* I);
-
-
-// External timing variables
-extern clock_t extern_findTet, extern_checkIfInNewTet;
+#include "variables.h"
 
 
 #endif /* EPIC_H_ */

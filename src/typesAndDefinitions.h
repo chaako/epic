@@ -49,10 +49,6 @@ enum {
 //#include <boost/timer/timer.hpp>
 #include <algorithm>
 
-#ifdef HAVE_MPI
-#include "mpi.h"
-#endif
-
 #include "iMesh.h"
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
 
