@@ -17,6 +17,7 @@
 
 # Executables
 src/epic
+src/mesher
 
 # Autotools files
 autom4te.cache/

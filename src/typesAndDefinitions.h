@@ -8,6 +8,10 @@
 #ifndef TYPES_H_
 #define TYPES_H_
 
+#ifdef MESHER
+#undef HAVE_MPI
+#endif
+
 using namespace std;
 
 const double VOLUME_TOLERANCE=1.e-8;

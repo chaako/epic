@@ -9,6 +9,7 @@
 #define MESHER_H_
 
 #include "epic.h"
+#include "SurfaceMesh.h"
 
 #include "FMDB.h"
 #include "MeshAdapt.h"

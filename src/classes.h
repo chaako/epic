@@ -9,7 +9,6 @@
 #define CLASSES_H_
 
 #include "Mesh.h"
-#include "SurfaceMesh.h"
 #include "IntegrandContainer.h"
 #include "Field.h"
 #include "Stepper.h"
