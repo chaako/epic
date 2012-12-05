@@ -172,8 +172,10 @@ void Mesh::printElementNumbers() {
 	for (dim = iBase_VERTEX; dim <= iBase_REGION; dim++) {
 		iMesh_getNumOfType(meshInstance, rootEntitySet, dim, &num, &ierr);
 		CHECK("Failure in getNumOfType");
+#ifndef MESHER
 #ifdef HAVE_MPI
 		if (MPI::COMM_WORLD.Get_rank() == 0)
+#endif
 #endif
 			printf("Number of %d-dimensional elements = %d\n", dim, num);
 	}
@@ -260,14 +262,17 @@ void Mesh::save(string outputMeshFile) {
 	CHECK("Failed to destroy eFieldZ tag");
 }
 
+#ifdef MESHER
+#include "FMDB.h"
 void Mesh::classifyBoundariesForMeshRefinement(Field<int> faceTypeField){
 	// meshAdapt requires mesh elements on the boundary to be classified
 	// in terms of geometric elements.
 
 	// Need to use native FMDB pointers since no iMesh interface
-	pMesh part;
+	mPart *part;
 	FMDB_Mesh_GetPart((mMesh*)this->meshInstance, 0, part);
 	typedef GEntity* (*entityBy_FP)(SGModel*,int,int);
+	GEntity* GM_entityByTag(SGModel*, int, int);
 	entityBy_FP cl_ptr = GM_entityByTag;
 
 	// Start by setting all elements to be part of a volume geometry element
@@ -296,6 +301,7 @@ void Mesh::classifyBoundariesForMeshRefinement(Field<int> faceTypeField){
 		}
 	}
 }
+#endif
 
 map<entHandle,vector<entHandle> >
 Mesh::getSurroundingVerticesMap() {

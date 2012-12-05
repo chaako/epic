@@ -10,6 +10,16 @@
 
 #include "typesAndDefinitions.h"
 
+#include "FMDB.h"
+#include "MeshAdapt.h"
+#include "AdaptUtil.h"
+#include "PWLinearSField.h"
+
+namespace nglib {
+#include "nglib.h"
+}
+//#include <ngexception.hpp>
+
 class SurfaceMesh {
 public:
 	SurfaceMesh(string inputFile);

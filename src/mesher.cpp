@@ -39,6 +39,15 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+	//	// TODO: remove this testing ground
+	//	{
+	////		int playground_meshAdapt(int argc, char* argv[]);
+	////		playground_meshAdapt(argc, argv);
+	//		int playground_netgen(int argc, char* argv[]);
+	//		playground_netgen(argc, argv);
+	//		exit(0);
+	//	}
+
 	string inputMeshFile(argv[1]);
 	stringstream volumeMeshFile;
 	// TODO: distinguish between surface and volume mesh in less obscure way than format

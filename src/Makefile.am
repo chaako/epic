@@ -4,8 +4,7 @@
 # epic
 bin_PROGRAMS=epic mesher
 CLASS_FILES = custom_mImportVTK.cc Mesh.cpp Orbit.cpp Field.cpp IntegrandContainer.cpp \
-              intersect_RayTriangle.cpp distributionFunctionFromBoundary.cpp playground.cpp \
-              SurfaceMesh.cpp
+              intersect_RayTriangle.cpp distributionFunctionFromBoundary.cpp
 #              VelocityAndAcceleration.cpp
 epic_SOURCES = epic.cpp $(CLASS_FILES)
 epic_CFLAGS = $(AM_CFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \
@@ -32,8 +31,8 @@ endif
 
 epic_LDADD   = ../cubature/libcubature.a ../cuba/Cuba-3.0/libcuba.a
 
-mesher_SOURCES = mesher.cpp $(CLASS_FILES)
-mesher_CFLAGS = $(epic_CFLAGS)
-mesher_CXXFLAGS = $(epic_CXXFLAGS)
+mesher_SOURCES = mesher.cpp $(CLASS_FILES) playground.cpp SurfaceMesh.cpp
+mesher_CFLAGS = $(epic_CFLAGS) -DMESHER
+mesher_CXXFLAGS = $(epic_CXXFLAGS) -DMESHER
 mesher_LDFLAGS = $(epic_LDFLAGS)
 mesher_LDADD = $(epic_LDADD)

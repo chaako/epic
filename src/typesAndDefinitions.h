@@ -52,16 +52,6 @@ enum {
 #include "iMesh.h"
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
 
-#include "FMDB.h"
-#include "MeshAdapt.h"
-#include "AdaptUtil.h"
-#include "PWLinearSField.h"
-
-namespace nglib {
-#include "nglib.h"
-}
-//#include <ngexception.hpp>
-
 #include "Eigen/Dense"
 #include "cubature.h"
 #include "cuba.h"

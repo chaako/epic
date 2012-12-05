@@ -1,5 +1,15 @@
 #include "typesAndDefinitions.h"
 
+#include "FMDB.h"
+#include "MeshAdapt.h"
+#include "AdaptUtil.h"
+#include "PWLinearSField.h"
+
+namespace nglib {
+#include "nglib.h"
+}
+//#include <ngexception.hpp>
+
 int playground_netgen(int argc, char* argv[]) {
 	// Read the input .vtu file (only surface mesh)
 	string inputFile = argv[1];
