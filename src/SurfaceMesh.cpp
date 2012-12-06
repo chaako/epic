@@ -45,8 +45,9 @@ void SurfaceMesh::saveVolumeMesh(string outputFile) {
 	writer->Write();
 }
 
-void SurfaceMesh::rotateSurface(int surfaceId, vect3d origin,
-		vect3d rotationAxis, double rotationAngle) {
+void SurfaceMesh::transformSurface(int surfaceId, vect3d origin,
+		vect3d rotationAxis, double rotationAngle, vect3d scaleFactors,
+		vect3d translation) {
 	vector<bool> transformNode(vtkMesh->GetNumberOfPoints(), false);
 	string cell_code_name = "cell_code";
 	vtkIntArray* orig_cell_codes = vtkIntArray::SafeDownCast(
@@ -63,17 +64,34 @@ void SurfaceMesh::rotateSurface(int surfaceId, vect3d origin,
 	}
 	for (vtkIdType id_node = 0; id_node < vtkMesh->GetNumberOfPoints(); ++id_node) {
 		if (transformNode[id_node]) {
-			double x[3];
+			double x[NDIM];
 			vtkMesh->GetPoints()->GetPoint(id_node, x);
 			vect3d pos(x[0],x[1],x[2]);
 			pos -= origin;
 			pos = Eigen::AngleAxisd(-rotationAngle, rotationAxis)*pos;
-			pos += origin;
-			x[0] = pos[0];
-			x[1] = pos[1];
-			x[2] = pos[2];
+			for (int i=0; i<NDIM; i++) {
+				pos[i] *= scaleFactors[i];
+				pos[i] += origin[i];
+				pos[i] += translation[i]*scaleFactors[i];
+				x[i] = pos[i];
+			}
 			vtkMesh->GetPoints()->SetPoint(id_node, x);
 		}
+	}
+}
+
+void SurfaceMesh::scaleVolumeMesh(vect3d origin, vect3d scaleFactors) {
+	for (vtkIdType id_node = 0; id_node < volumeMesh->GetNumberOfPoints(); ++id_node) {
+		double x[NDIM];
+		volumeMesh->GetPoints()->GetPoint(id_node, x);
+		vect3d pos(x[0],x[1],x[2]);
+		pos -= origin;
+		for (int i=0; i<NDIM; i++) {
+			pos[i] *= scaleFactors[i];
+			pos[i] += origin[i];
+			x[i] = pos[i];
+		}
+		volumeMesh->GetPoints()->SetPoint(id_node, x);
 	}
 }
 

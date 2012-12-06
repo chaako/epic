@@ -29,8 +29,10 @@ public:
 	void save(string outputFile);
 	void saveVolumeMesh(string outputFile);
 
-	void rotateSurface(int surfaceId, vect3d origin,
-			vect3d rotationAxis, double rotationAngle);
+	void transformSurface(int surfaceId, vect3d origin,
+			vect3d rotationAxis, double rotationAngle,
+			vect3d scaleFactors, vect3d translation);
+	void scaleVolumeMesh(vect3d origin, vect3d scaleFactors);
 	void createVolumeMesh();
 
 	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh;
