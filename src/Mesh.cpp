@@ -739,12 +739,33 @@ bool Mesh::checkIfIntersectsTriangle(vect3d previousPosition,
 	ray[1] = currentPosition;
 	vect3d intersectionPoint;
 	int intersectionStatus =
+			intersect_SegmentTriangle(ray, vertexVectors, &intersectionPoint);
+//	int intersectionStatus =
+//			intersect_RayTriangle(ray, vertexVectors, &intersectionPoint);
+	if (intersectionStatus == 1) {
+//		vect3d relativePosition = currentPosition - previousPosition;
+//		// Check whether intersection point is between input points
+//		if (relativePosition.dot(intersectionPoint-currentPosition)*
+//				relativePosition.dot(intersectionPoint-previousPosition) <= 0.) {
+			return true;
+//		}
+	}
+	return false;
+}
+
+bool Mesh::checkIfRayIntersectsTriangle(vect3d previousPosition,
+		vect3d currentPosition,
+		vector<vect3d> vertexVectors) {
+	vector<vect3d> ray(2);
+	ray[0] = previousPosition;
+	ray[1] = currentPosition;
+	vect3d intersectionPoint;
+	int intersectionStatus =
 			intersect_RayTriangle(ray, vertexVectors, &intersectionPoint);
 	if (intersectionStatus == 1) {
-		return true;
-	} else {
-		return false;
+			return true;
 	}
+	return false;
 }
 
 //vector<vect3d> Mesh::getEdgeVectors(
@@ -808,53 +829,93 @@ int Mesh::findFaceCrossed(int previousElementIndex,
 int Mesh::findBoundaryFaceCrossed(int previousElementIndex,
 		vect3d previousPosition, vect3d currentPosition,
 		Field<int>& faceTypeField, CodeField& vertexTypeField) {
+	vect3d centroid(0.,0.,0.);
+	vector<vect3d> vVs =
+			this->getVertexVectors(previousElementIndex,iBase_REGION);
+	centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+	// TODO: do something other than this hack to bring previousPosition away from node
+	previousPosition += 0.00001*centroid;
+	if (!this->checkIfInTet(previousPosition, previousElementIndex)) {
+		bool tetFound;
+		int actualPreviousElementIndex =
+				this->findTet(previousPosition, previousPosition, previousElementIndex, &tetFound);
+		if (tetFound) {
+//			cout << "Element index corrected: " << previousElementIndex << " -> " <<
+//					actualPreviousElementIndex << endl;
+			previousElementIndex = actualPreviousElementIndex;
+		}
+	}
 	int faceCrossedIndex=-1;
-	vector<int> &vertices =
-			adjacentEntitiesVectors[iBase_REGION][previousElementIndex][iBase_VERTEX];
-	for (int i=0; i<vertices.size(); i++) {
-		if (vertexTypeField[vertices[i]]>0) {
-			vector<int> &faces =
-					adjacentEntitiesVectors[iBase_VERTEX][vertices[i]][iBase_FACE];
-			for (int j=0; j<faces.size(); j++) {
-				if (faceTypeField[faces[j]]>0) {
-					vector<vect3d> vertexVectors =
-							this->getVertexVectors(faces[j], iBase_FACE);
-					bool intersectsTriangle = this->checkIfIntersectsTriangle(previousPosition,
-							currentPosition, vertexVectors);
-//					// TODO: find out why reverse intersection not always same
-//					bool reverseIntersectsTriangle = this->checkIfIntersectsTriangle(
-//							currentPosition, previousPosition, vertexVectors);
-//					if (intersectsTriangle!=reverseIntersectsTriangle)
-//						cout << intersectsTriangle << " " << reverseIntersectsTriangle <<
-//							" " << vertices[i] << " " << faces[j] <<
-//							currentPosition.transpose() << previousPosition.transpose() << endl;
-					if (intersectsTriangle)
+	int numberVisited=0;
+	int previousFaceIndex=-1;
+	int faceIndex=-1;
+	// First try to traverse elements to find boundary face crossed
+	int elementIndex = previousElementIndex;
+	while (faceCrossedIndex<0 && numberVisited<100) {
+		vector<int> &faces =
+				adjacentEntitiesVectors[iBase_REGION][elementIndex][iBase_FACE];
+		previousFaceIndex = faceIndex;
+		for (int j=0; j<faces.size(); j++) {
+			if (faces[j]!=previousFaceIndex) {
+				vector<vect3d> vertexVectors =
+						this->getVertexVectors(faces[j], iBase_FACE);
+				bool intersectsTriangle = this->checkIfIntersectsTriangle(previousPosition,
+						currentPosition, vertexVectors);
+				// TODO: find out why reverse intersection not always same
+				//       Probably when previousPosition is a vertex of the tet
+				bool reverseIntersectsTriangle = this->checkIfIntersectsTriangle(
+						currentPosition, previousPosition, vertexVectors);
+//				if (intersectsTriangle!=reverseIntersectsTriangle)
+//					cout << "Reversal different: " << previousElementIndex << " " <<
+//					intersectsTriangle << " " <<
+//						reverseIntersectsTriangle << " " << faces[j] << " " <<
+//						currentPosition.transpose() << " " << previousPosition.transpose() << endl;
+//				vector<vect3d> vVs =
+//						this->getVertexVectors(elementIndex,iBase_REGION);
+//				centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+//				if (intersectsTriangle || reverseIntersectsTriangle)
+//					cout << "traversed face: " << previousElementIndex << " " <<
+//					elementIndex << " " << centroid.transpose() << endl;
+				if (intersectsTriangle || reverseIntersectsTriangle) {
+					faceIndex = faces[j];
+					if (faceTypeField[faces[j]]>0) {
 						faceCrossedIndex = faces[j];
+					} else {
+						vector<int> &elements =
+								adjacentEntitiesVectors[iBase_FACE][faces[j]][iBase_REGION];
+						for (int i=0; i<elements.size(); i++) {
+							// TODO: do this more transparently?
+							if (elements[i]!=elementIndex) {
+								elementIndex = elements[i];
+								break;
+							}
+						}
+					}
 				}
 			}
 		}
+		numberVisited++;
 	}
-//	// TODO: might need below (untested)
-//	if (faceCrossedIndex<0) {
-//		cout << previousElementIndex << " " <<
+	vVs = this->getVertexVectors(previousElementIndex,iBase_REGION);
+	centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+	if (faceCrossedIndex<0) {
+//		cout << "Boundary face fall-back for: " << previousElementIndex << " " <<
 //			currentPosition.transpose() << " " << previousPosition.transpose() << endl;
-//		for (int j=0; j<entitiesVectors[iBase_FACE].size(); j++) {
-//			if (faceTypeField[j]>0) {
-//				vector<vect3d> vertexVectors =
-//						this->getVertexVectors(j, iBase_FACE);
-//				bool intersectsTriangle = this->checkIfIntersectsTriangle(previousPosition,
-//						currentPosition, vertexVectors);
-//				bool reverseIntersectsTriangle = this->checkIfIntersectsTriangle(
-//						currentPosition, previousPosition, vertexVectors);
-//				if (intersectsTriangle!=reverseIntersectsTriangle)
-//					cout << intersectsTriangle << " " << reverseIntersectsTriangle <<
-//						" " << j <<
-//						currentPosition.transpose() << previousPosition.transpose() << endl;
-//				if (intersectsTriangle)
-//					faceCrossedIndex = j;
-//			}
-//		}
-//	}
+		for (int j=0; j<entitiesVectors[iBase_FACE].size(); j++) {
+			if (faceTypeField[j]>0) {
+				vector<vect3d> vertexVectors =
+						this->getVertexVectors(j, iBase_FACE);
+				bool intersectsTriangle = this->checkIfRayIntersectsTriangle(centroid,
+						currentPosition, vertexVectors);
+				if (intersectsTriangle)
+					faceCrossedIndex = j;
+			}
+		}
+	}
+	if (faceCrossedIndex<0) {
+		cout << "Boundary face failure for: " << previousElementIndex << " " <<
+			currentPosition.transpose() << " " << previousPosition.transpose() << endl;
+	}
 	return faceCrossedIndex;
 }
 

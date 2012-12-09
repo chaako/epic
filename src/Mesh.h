@@ -75,6 +75,9 @@ public:
 	bool checkIfIntersectsTriangle(vect3d previousPosition,
 			vect3d currentPosition,
 			vector<vect3d> vertexVectors);
+	bool checkIfRayIntersectsTriangle(vect3d previousPosition,
+			vect3d currentPosition,
+			vector<vect3d> vertexVectors);
 	entHandle findFaceCrossed(entHandle previousElement,
 			vect3d previousPosition, vect3d currentPosition);
 	int findFaceCrossed(int previousElementIndex,

@@ -239,7 +239,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	double t=0;
 	double numberOfStepsPerRegion = 3.;
 	// TODO: set max number of steps more cleverly (since also need to limit by accel)
-	for (int iT=0; iT<100*numberOfStepsPerRegion  && !negativeEnergy; iT++) {
+	for (int iT=0; iT<100000*numberOfStepsPerRegion  && !negativeEnergy; iT++) {
 		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
 				/(fabs(currentVelocity[2])+VEXB.norm()+SMALL_VELOCITY)/
 //				/(fabs(currentVelocity[2])+DELTA_LENGTH)/

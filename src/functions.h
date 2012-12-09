@@ -19,6 +19,7 @@ int distributionFunctionFromBoundaryCuba(const int *ndim, const double x[],
 
 int intersect_RayTriangle(vector<vect3d> R,
 		vector<vect3d> T, vect3d* I);
-
+int intersect_SegmentTriangle(vector<vect3d> R,
+		vector<vect3d> T, vect3d* I );
 
 #endif /* FUNCTIONS_H_ */
