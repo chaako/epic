@@ -75,10 +75,11 @@ void PotentialField::calcField(DensityField ionDensity,
 
 		double potential;
 		// TODO: don't hard-code boundary type and quasi-neutral operation
-		if (vertexType.getField(entities[i])==4) {
-			// TODO: don't hard-code sheath potential
-			potential = -1./2.;
-		} else if (vertexType.getField(entities[i])==5) {
+//		if (vertexType.getField(entities[i])==4) {
+//			// TODO: don't hard-code sheath potential
+//			potential = -1./2.;
+//		} else
+		if (vertexType.getField(entities[i])==5) {
 			// TODO: don't hard-code boudnary potential
 			potential = 0;
 		} else {
@@ -271,11 +272,11 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 	// TODO: Need unified way of specifying unperturbed boundary plasma
 	if (vertexType[node]==5) {
 		return 1.;
-	} else if (vertexType[node]==4) {
-		// TODO: don't need sheath entrance density if specifying potential,
-		//       but might be interested in it or other moments later
-		// TODO: could make below analytic expression for planar electron dens.
-		return exp(-0.5);
+//	} else if (vertexType[node]==4) {
+//		// TODO: don't need sheath entrance density if specifying potential,
+//		//       but might be interested in it or other moments later
+//		// TODO: could make below analytic expression for planar electron dens.
+//		return exp(-0.5);
 	}
 //	// TODO: remove this
 //	if (node%100!=1) {
@@ -310,7 +311,7 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 //	if (nodePosition[2]<0.5 && nodePosition[2]>-0. && nodePosition[0]<2.5 &&
 //			nodePosition[0]>1.8 && nodePosition[1]<1.4 && nodePosition[1]>0.8
 //			&& charge>0.) {
-//	vect3d desiredNodePosition(-0.461493, -0.986149, 5.13761);
+//	vect3d desiredNodePosition(-0.933033, -0.00264569, -0.0744521);
 //	if ((desiredNodePosition-nodePosition).norm()<1e-2 && charge>0.) {
 //		doThisNode = true;
 //		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
