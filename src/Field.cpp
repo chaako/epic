@@ -109,10 +109,11 @@ void PotentialField::calcField(DensityField ionDensity,
 
 		double potential;
 		// TODO: don't hard-code boundary type and quasi-neutral operation
-		if (vertexType.getField(entities[i])==4) {
-			// TODO: don't hard-code sheath potential
-			potential = -1./2.;
-		} else if (vertexType.getField(entities[i])==5) {
+//		if (vertexType.getField(entities[i])==4) {
+//			// TODO: don't hard-code sheath potential
+//			potential = -1./2.;
+//		} else
+		if (vertexType.getField(entities[i])==5) {
 			// TODO: don't hard-code boundary potential
 			potential = 0;
 		} else {
@@ -144,10 +145,11 @@ void PotentialField::calcField(DensityField ionDensity,
 
 		double potential;
 		// TODO: don't hard-code boundary type and quasi-neutral operation
-		if (vertexType.getField(entities[i])==4) {
-			// TODO: don't hard-code sheath potential
-			potential = -1./2.;
-		} else if (vertexType.getField(entities[i])==5) {
+//		if (vertexType.getField(entities[i])==4) {
+//			// TODO: don't hard-code sheath potential
+//			potential = -1./2.;
+//		} else
+		if (vertexType.getField(entities[i])==5) {
 			// TODO: don't hard-code boudnary potential
 			potential = 0;
 		} else {
