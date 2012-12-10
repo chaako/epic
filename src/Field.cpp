@@ -311,6 +311,7 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 //	if (nodePosition[2]<0.5 && nodePosition[2]>-0. && nodePosition[0]<2.5 &&
 //			nodePosition[0]>1.8 && nodePosition[1]<1.4 && nodePosition[1]>0.8
 //			&& charge>0.) {
+//	if (vertexType[node]==4 && charge>0.) {
 //	vect3d desiredNodePosition(-0.933033, -0.00264569, -0.0744521);
 //	if ((desiredNodePosition-nodePosition).norm()<1e-2 && charge>0.) {
 //		doThisNode = true;

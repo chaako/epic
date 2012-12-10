@@ -480,10 +480,11 @@ entHandle Mesh::findTet(vect3d oldPosition,
 int Mesh::findTet(vect3d oldPosition,
 		vect3d position,
 		int adjacentTetIndex, bool *tetFound, bool isTet) {
-	int tetIndex;
+	int tetIndex=-1;
 	vector<int> ents;
 	vector<int> faces;
 
+	*tetFound=false;
 	if (isTet) {
 		int vertexWithNegativeWeight=-1;
 		this->checkIfInTet(position, adjacentTetIndex,
@@ -768,6 +769,16 @@ bool Mesh::checkIfRayIntersectsTriangle(vect3d previousPosition,
 	return false;
 }
 
+bool Mesh::checkIfLineIntersectsTriangle(vect3d previousPosition,
+		vect3d currentPosition,
+		vector<vect3d> vertexVectors) {
+	bool forwardIntersection = this->checkIfRayIntersectsTriangle(
+			previousPosition, currentPosition, vertexVectors);
+	bool backwardIntersection = this->checkIfRayIntersectsTriangle(
+			currentPosition, previousPosition, vertexVectors);
+	return (forwardIntersection || backwardIntersection);
+}
+
 //vector<vect3d> Mesh::getEdgeVectors(
 //		vector<vect3d> vertexVectors) {
 //	int nVerts = vertexVectors.size();
@@ -836,7 +847,7 @@ int Mesh::findBoundaryFaceCrossed(int previousElementIndex,
 	// TODO: do something other than this hack to bring previousPosition away from node
 	previousPosition += 0.00001*centroid;
 	if (!this->checkIfInTet(previousPosition, previousElementIndex)) {
-		bool tetFound;
+		bool tetFound=false;
 		int actualPreviousElementIndex =
 				this->findTet(previousPosition, previousPosition, previousElementIndex, &tetFound);
 		if (tetFound) {
@@ -901,14 +912,27 @@ int Mesh::findBoundaryFaceCrossed(int previousElementIndex,
 	if (faceCrossedIndex<0) {
 //		cout << "Boundary face fall-back for: " << previousElementIndex << " " <<
 //			currentPosition.transpose() << " " << previousPosition.transpose() << endl;
+		vector<int> facesCrossed;
 		for (int j=0; j<entitiesVectors[iBase_FACE].size(); j++) {
 			if (faceTypeField[j]>0) {
 				vector<vect3d> vertexVectors =
 						this->getVertexVectors(j, iBase_FACE);
-				bool intersectsTriangle = this->checkIfRayIntersectsTriangle(centroid,
+				bool intersectsTriangle = this->checkIfLineIntersectsTriangle(centroid,
 						currentPosition, vertexVectors);
 				if (intersectsTriangle)
-					faceCrossedIndex = j;
+					facesCrossed.push_back(j);
+			}
+		}
+		// Find closest boundary face intersected by line
+		// TODO: don't hard-code large number
+		double smallestDistanceBetweenCentroids = 1e10;
+		for (int j=0; j<facesCrossed.size(); j++) {
+			vVs = this->getVertexVectors(facesCrossed[j],iBase_FACE);
+			vect3d faceCentroid = (vVs[0]+vVs[1]+vVs[2])/3.;
+			double distanceBetweenCentroids = (faceCentroid-centroid).norm();
+			if (distanceBetweenCentroids < smallestDistanceBetweenCentroids) {
+				smallestDistanceBetweenCentroids = distanceBetweenCentroids;
+				faceCrossedIndex = facesCrossed[j];
 			}
 		}
 	}
