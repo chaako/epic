@@ -9,29 +9,42 @@
 
 int setBSizeField(pMesh mesh, pSField field, void *)
 {
-  pVertex vt;
-  double h[3], dirs[3][3], xyz[3], norm;
-  VIter vit=M_vertexIter(mesh);
-  double scaleFactor=1.0;
-  while( vt=VIter_next(vit) ) {
-    h[0] = 0.6*scaleFactor;
-    h[1] = 0.2*scaleFactor;
-    h[2] = 1.8*scaleFactor;
+	pVertex vt;
+	double h[3], dirs[3][3], xyz[3], norm;
+	VIter vit=M_vertexIter(mesh);
+	double scaleFactor=1.0;
+	while( vt=VIter_next(vit) ) {
+		V_coord(vt,xyz);
+		h[0] = 0.6*scaleFactor;
+		h[1] = 0.2*scaleFactor;
+		h[2] = 1.8*scaleFactor;
+		// Refine in near object
+		vect3d range(1.3,0.7,3.);
+		vect3d origin(-1,0.,0.);
+		vect3d coords(xyz[0],xyz[1],xyz[2]);
+		vect3d relPos=coords-origin;
+		if (fabs(relPos[0])<range[0] &&
+				fabs(relPos[1])<range[1] &&
+				fabs(relPos[2])<range[2]) {
+			h[0] /= (1+2.*fabs(fabs(relPos[0])-range[0])/range[0]);
+			h[1] /= (1+1.*fabs(fabs(relPos[1])-range[1])/range[1]);
+			h[2] /= (1+5.*fabs(fabs(relPos[2])-range[2])/range[2]);
+		}
 
-    dirs[0][0]=1.;
-    dirs[0][1]=0;
-    dirs[0][2]=0;
-    dirs[1][0]=0;
-    dirs[1][1]=1.;
-    dirs[1][2]=0;
-    dirs[2][0]=0;
-    dirs[2][1]=0;
-    dirs[2][2]=1.;
+		dirs[0][0]=1.;
+		dirs[0][1]=0;
+		dirs[0][2]=0;
+		dirs[1][0]=0;
+		dirs[1][1]=1.;
+		dirs[1][2]=0;
+		dirs[2][0]=0;
+		dirs[2][1]=0;
+		dirs[2][2]=1.;
 
-    ((PWLsfield *)field)->setSize((pEntity)vt,dirs,h);
-  }
-  VIter_delete (vit);
-  return 1;
+		((PWLsfield *)field)->setSize((pEntity)vt,dirs,h);
+	}
+	VIter_delete (vit);
+	return 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -51,6 +64,7 @@ int main(int argc, char *argv[]) {
 
 	cout.precision(3);
 	for (double rotationAngle=0.; rotationAngle<M_PI; rotationAngle+=M_PI/12.) {
+//	for (double rotationAngle=0.125*2.*M_PI; rotationAngle<0.126*2.*M_PI; rotationAngle+=M_PI/12.) {
 	string inputMeshFile(argv[1]);
 	stringstream volumeMeshFile;
 	// TODO: distinguish between surface and volume mesh in less obscure way than format
