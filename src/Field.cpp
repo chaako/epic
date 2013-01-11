@@ -13,6 +13,73 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName)
 }
 
 void ElectricField::calcField(PotentialField potentialField) {
+	int m = entities.size()*NDIM;
+	// Find components of E by finite element method (solving Ax=b)
+	vector<Eigen::Triplet<double> > coefficients;
+	Eigen::VectorXd b(m);
+	// TODO: don't hard-code estimated number of adjacent tets
+	coefficients.reserve(20*m);
+	for (int i=0; i<mesh_ptr->entitiesVectors[iBase_REGION].size(); i++) {
+		vector<vect3d> vVs = mesh_ptr->getVertexVectors(i,iBase_REGION);
+		double volume = mesh_ptr->getTetVolume(vVs);
+		vect3d centroid(0.,0.,0.);
+		centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+		double potential=0.;
+		vect3d potentialDerivative(0.,0.,0.);
+		int elementIndex=i;
+		potentialField.evalFieldAndDeriv(&potential, &potentialDerivative,
+				centroid, &elementIndex, 1);
+		assert(elementIndex==i);
+		vector<int> adjacentVertices =
+				mesh_ptr->adjacentEntitiesVectors[iBase_REGION][i][iBase_VERTEX];
+		for (int l=0; l<NDIM; l++) {
+			for (int j=0; j<adjacentVertices.size(); j++) {
+				int jj = adjacentVertices[j];
+				b[jj*NDIM+l] += potentialDerivative[l]*volume/4.;
+				for (int k=0; k<adjacentVertices.size(); k++) {
+					int kk = adjacentVertices[k];
+					double coefficient = volume/120;
+					if (jj==kk)
+						coefficient *= 2.;
+					// TODO: Make functions for indexing
+					coefficients.push_back(Eigen::Triplet<double>(
+							jj*NDIM+l, kk*NDIM+l, coefficient));
+				}
+			}
+		}
+	}
+
+	Eigen::SparseMatrix<double> A(m,m);
+	A.setFromTriplets(coefficients.begin(), coefficients.end());
+
+	// A is SPD, so can use Cholesky factorization (or Biconjugate Gradient)
+	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > choleskyFactorization(A);
+	if(choleskyFactorization.info()!=Eigen::Success) {
+		// decomposition failed
+		throw;
+	}
+	Eigen::VectorXd x = choleskyFactorization.solve(b);
+	if(choleskyFactorization.info()!=Eigen::Success) {
+		// solving failed
+		throw;
+	}
+//	for (int i=0; i<m; i++) {
+//		cout << "A[" << i << "," << i << "] = " << A.coeff(i,i) << " ";
+//		cout << "x[" << i << "] = " << x[i] << " ";
+//		cout << "b[" << i << "] = " << b[i] << endl;
+//	}
+
+	for (int i=0; i<entities.size(); i++) {
+		vect3d eField(0.,0.,0.);
+		// TODO: Make functions for indexing
+		for (int j=0; j<NDIM; j++)
+			eField[j] = -x[i*NDIM+j];
+		this->setField(entities[i], eField);
+	}
+
+}
+
+void ElectricField::calcField_Gatsonis(PotentialField potentialField) {
 	for (int i=0; i<entities.size(); i++) {
 		vector<entHandle> superCellFaces =
 				mesh_ptr->getSuperCellFaces(entities[i]);

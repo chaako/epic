@@ -57,6 +57,7 @@ enum {
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
 
 #include "Eigen/Dense"
+#include "Eigen/Sparse"
 #include "cubature.h"
 #include "cuba.h"
 

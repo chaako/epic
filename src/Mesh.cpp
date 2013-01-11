@@ -232,7 +232,7 @@ void Mesh::save(string outputMeshFile) {
 			options, &ierr, outputMeshFile.length(), options_len);
 	CHECK("Save failed");
 	// recreate eField tag and destroy component tags
-	iMesh_createTag(meshInstance, "eField", 1, iBase_DOUBLE,
+	iMesh_createTag(meshInstance, "eField", sizeof(vect3d), iBase_BYTES,
 			&eField_tag, &ierr, 6);
 	CHECK("Failure creating eField tag");
 	for (int i = 0; i < ents0d_size; i++) {

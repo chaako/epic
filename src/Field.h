@@ -94,6 +94,7 @@ public:
 	virtual ~ElectricField() {}
 
 	void calcField(PotentialField potentialField);
+	void calcField_Gatsonis(PotentialField potentialField);
 };
 
 class CodeField : public Field<int> {
