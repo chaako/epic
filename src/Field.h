@@ -55,6 +55,7 @@ public:
 	void getErrorCoefficients(int elementIndex,
 			int interpolationOrder,
 			Eigen::VectorXd *errorCoefficients);
+	void updateTagHandle();
 
 	Mesh *mesh_ptr;
 	string name;
@@ -710,6 +711,11 @@ void Field<T>::getErrorCoefficients(
 		currentErrorCoefficients = *errorCoefficients;
 		currentInterpolationElementIndex = elementIndex;
 	}
+}
+
+template <class T>
+void Field<T>::updateTagHandle() {
+	tag = mesh_ptr->getTagHandle(name);
 }
 
 #endif /* FIELD_H_ */

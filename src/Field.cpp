@@ -38,7 +38,7 @@ void ElectricField::calcField(PotentialField potentialField) {
 				b[jj*NDIM+l] += potentialDerivative[l]*volume/4.;
 				for (int k=0; k<adjacentVertices.size(); k++) {
 					int kk = adjacentVertices[k];
-					double coefficient = volume/120;
+					double coefficient = volume/20;
 					if (jj==kk)
 						coefficient *= 2.;
 					// TODO: Make functions for indexing

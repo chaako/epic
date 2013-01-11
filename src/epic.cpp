@@ -127,12 +127,24 @@ int main(int argc, char *argv[]) {
 //		return 0;
 //	}
 
-	for (int i=0; i<1; i++) {
+	if (mpiId == 0){
+		int i = 0;
+		stringstream iterMeshFileName;
+		string outFile(argv[2]);
+		int periodLocation = outFile.rfind(".");
+		iterMeshFileName << outFile.substr(0,periodLocation)
+				<< setfill('0') << setw(2) << i << outFile.substr(periodLocation);
+		mesh.save(iterMeshFileName.str());
+		// mesh.save() destroys eField tag, so update
+		eField.updateTagHandle();
+	}
+	for (int i=1; i<2; i++) {
 		if (mpiId == 0)
 			cout << endl  << endl << "ITERATION " << i << endl;
 		if (mpiId == 0)
 			cout << endl << "Calculating electric field..." << endl;
 		eField.calcField(potential);
+//		eField.calcField_Gatsonis(potential);
 //		if (mpiId == 0)
 //			cout << endl << "Calculating electron density..." << endl;
 //		electronDensity.calcField(eField, potential, faceType, vertexType,
@@ -187,7 +199,6 @@ int main(int argc, char *argv[]) {
 //				negativePotentialPerturbation, potentialFile);
 		if (mpiId == 0)
 			cout << endl << endl << endl;
-		// TODO: can't use mesh.save() here because of eField destruction
 		if (mpiId == 0){
 			stringstream iterMeshFileName;
 			string outFile(argv[2]);
@@ -195,12 +206,8 @@ int main(int argc, char *argv[]) {
 			iterMeshFileName << outFile.substr(0,periodLocation)
 					<< setfill('0') << setw(2) << i << outFile.substr(periodLocation);
 			mesh.save(iterMeshFileName.str());
-//			char *options = NULL;
-//			int options_len = 0;
-//			int ierr;
-//			iMesh_save(mesh.meshInstance, mesh.rootEntitySet, iterMeshFileName.str().c_str(),
-//					options, &ierr, iterMeshFileName.str().length(), options_len);
-//			CHECK("Save failed");
+			// mesh.save() destroys eField tag, so update
+			eField.updateTagHandle();
 		}
 	}
 
