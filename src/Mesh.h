@@ -111,6 +111,9 @@ public:
 			int regionIndex);
 	void evaluateLinearBasisFunctions(const vect3d &position,
 			int regionIndex, Eigen::Vector4d *basisFunctions);
+	void evaluateLinearBasisFunctionDerivatives(const vect3d &position,
+			int regionIndex,
+			Eigen::Matrix<double,NDIM,NDIM+1> *basisFunctionDerivatives);
 	Eigen::Matrix4d calculatePositionToBasesMatrix(vector<vect3d> vVs);
 	Eigen::VectorXd evaluateQuadraticErrorBases(
 			Eigen::Vector4d linearBasisFunctions);

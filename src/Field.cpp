@@ -17,6 +17,8 @@ void ElectricField::calcField(PotentialField potentialField) {
 	// Find components of E by finite element method (solving Ax=b)
 	vector<Eigen::Triplet<double> > coefficients;
 	Eigen::VectorXd b(m);
+	for (int i=0; i<m; i++)
+		b[i] = 0.;
 	// TODO: don't hard-code estimated number of adjacent tets
 	coefficients.reserve(20*m);
 	for (int i=0; i<mesh_ptr->entitiesVectors[iBase_REGION].size(); i++) {
@@ -75,6 +77,120 @@ void ElectricField::calcField(PotentialField potentialField) {
 		for (int j=0; j<NDIM; j++)
 			eField[j] = -x[i*NDIM+j];
 		this->setField(entities[i], eField);
+	}
+
+}
+
+void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vertexType,
+		DensityField ionDensity) {
+	int nVerts = entities.size();
+	int m = nVerts + nVerts*NDIM;
+	// Find potential and components of E by finite element method (solving Ax=b)
+	vector<Eigen::Triplet<double> > coefficients;
+	Eigen::VectorXd b(m);
+	for (int i=0; i<m; i++)
+		b[i] = 0.;
+	// TODO: don't hard-code estimated number of adjacent tets
+	coefficients.reserve(20*m);
+	vector<bool> potentialBoundaryVertexSet(nVerts);
+	vector<bool> eFieldBoundaryVertexSet(nVerts);
+	for (int j=0; j<nVerts; j++) {
+		potentialBoundaryVertexSet[j] = false;
+		eFieldBoundaryVertexSet[j] = false;
+	}
+	for (int i=0; i<mesh_ptr->entitiesVectors[iBase_REGION].size(); i++) {
+		vector<vect3d> vVs = mesh_ptr->getVertexVectors(i,iBase_REGION);
+		double volume = mesh_ptr->getTetVolume(vVs);
+		vect3d centroid(0.,0.,0.);
+		centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+		vector<int> adjacentVertices =
+				mesh_ptr->adjacentEntitiesVectors[iBase_REGION][i][iBase_VERTEX];
+		Eigen::Matrix<double,NDIM,NDIM+1> basisDerivatives;
+		mesh_ptr->evaluateLinearBasisFunctionDerivatives(centroid, i,
+				&basisDerivatives);
+		// The order of the basis derivatives corresponds to that of adjacentVertices
+		for (int j=0; j<adjacentVertices.size(); j++) {
+			int jj = adjacentVertices[j];
+			double potential = potentialField_ptr->operator[](jj);
+			// TODO: don't hard-code boundary codes
+			if (vertexType[jj]==4) {
+				// Set potential at object surface
+				if (!potentialBoundaryVertexSet[jj]) {
+					coefficients.push_back(Eigen::Triplet<double>(jj, jj, 1.));
+					// TODO: Don't hard-code object potential
+					b[jj] = -1.;
+				}
+				potentialBoundaryVertexSet[jj] = true;
+			} else if (vertexType[jj]==5) {
+				// Set electric field to zero
+				if (!eFieldBoundaryVertexSet[jj]) {
+					for (int l=0; l<NDIM; l++) {
+						coefficients.push_back(Eigen::Triplet<double>(
+								nVerts+jj*NDIM+l, nVerts+jj*NDIM+l, 1.));
+						b[nVerts+jj*NDIM+l] = 0.;
+					}
+				}
+				eFieldBoundaryVertexSet[jj] = true;
+			}
+			for (int k=0; k<adjacentVertices.size(); k++) {
+				int kk = adjacentVertices[k];
+				double basisBasisCoefficient = volume/20;
+				if (jj==kk)
+					basisBasisCoefficient *= 2.;
+				for (int l=0; l<NDIM; l++) {
+					double basisDerivativeBasisCoefficient =
+							-basisDerivatives(l,k)*volume/4;
+					// Coefficients multiplying eField
+					if (!eFieldBoundaryVertexSet[jj]) {
+						// TODO: Make functions for indexing
+						coefficients.push_back(Eigen::Triplet<double>(
+								nVerts+jj*NDIM+l, nVerts+kk*NDIM+l,
+								basisBasisCoefficient));
+						coefficients.push_back(Eigen::Triplet<double>(
+								jj, nVerts+kk*NDIM+l,
+								basisDerivativeBasisCoefficient));
+					}
+					// Coefficients multiplying potential
+					if (!potentialBoundaryVertexSet[jj]) {
+						coefficients.push_back(Eigen::Triplet<double>(
+								nVerts+jj*NDIM+l, kk,
+								basisDerivativeBasisCoefficient));
+					}
+				}
+			}
+			// TODO: add charge source term
+			for (int l=0; l<NDIM; l++)
+				b[nVerts+jj*NDIM+l] += 0.*(ionDensity[jj] - exp(potential))*volume/4.;
+		}
+	}
+
+	Eigen::SparseMatrix<double> A(m,m);
+	A.setFromTriplets(coefficients.begin(), coefficients.end());
+
+	Eigen::BiCGSTAB<Eigen::SparseMatrix<double> > solver(A);
+	if(solver.info()!=Eigen::Success) {
+		// decomposition failed
+		throw;
+	}
+//	for (int i=0; i<m; i++) {
+//		cout << "A[" << i << "," << i << "] = " << A.coeff(i,i) << " ";
+////		cout << "A[" << 110 << "," << i << "] = " << A.coeff(110,i) << " ";
+////		cout << "x[" << i << "] = " << x[i] << " ";
+//		cout << "b[" << i << "] = " << b[i] << endl;
+//	}
+	Eigen::VectorXd x = solver.solve(b);
+	if(solver.info()!=Eigen::Success) {
+		// solving failed
+		throw;
+	}
+
+	for (int i=0; i<nVerts; i++) {
+		vect3d eField(0.,0.,0.);
+		// TODO: Make functions for indexing
+		for (int j=0; j<NDIM; j++)
+			eField[j] = x[nVerts+i*NDIM+j];
+		this->setField(entities[i], eField);
+		potentialField_ptr->setField(entities[i], x[i]);
 	}
 
 }

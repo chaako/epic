@@ -1179,6 +1179,24 @@ void Mesh::evaluateLinearBasisFunctions(const vect3d &position,
 	*basisFunctions = positionsToBases[regionIndex]*paddedPosition;
 }
 
+void Mesh::evaluateLinearBasisFunctionDerivatives(const vect3d &position,
+		int regionIndex,
+		Eigen::Matrix<double,NDIM,NDIM+1> *basisFunctionDerivatives) {
+	Eigen::Vector4d basisFunctions;
+	this->evaluateLinearBasisFunctions(position, regionIndex, &basisFunctions);
+	for (int j=0; j<NDIM; j++) {
+		vect3d perturbedPosition = position +
+				vect3d::Unit(j)*DELTA_LENGTH;
+		Eigen::Vector4d perturbedBasisFunctions;
+		this->evaluateLinearBasisFunctions(perturbedPosition,
+				regionIndex, &perturbedBasisFunctions);
+		for (int i=0;i<basisFunctions.rows();i++) {
+			(*basisFunctionDerivatives)(j,i) = (perturbedBasisFunctions[i] -
+					basisFunctions[i])/DELTA_LENGTH;
+		}
+	}
+}
+
 Eigen::Matrix4d Mesh::calculatePositionToBasesMatrix(vector<vect3d> vVs) {
 	// TODO: should replace 4 here with unified number across functions
 	assert(vVs.size()==4);

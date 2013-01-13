@@ -27,6 +27,8 @@
 
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
 
+class DensityField;
+
 template <class T>
 class Field {
 public:
@@ -95,6 +97,8 @@ public:
 	virtual ~ElectricField() {}
 
 	void calcField(PotentialField potentialField);
+	void calcField(PotentialField *potentialField_ptr, CodeField vertexType,
+			DensityField ionDensity);
 	void calcField_Gatsonis(PotentialField potentialField);
 };
 
