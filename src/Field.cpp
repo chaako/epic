@@ -85,6 +85,11 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 		DensityField ionDensity) {
 	int nVerts = entities.size();
 	int m = nVerts + nVerts*NDIM;
+	double potentialChange=1.;
+	int numberOfSolves=1;
+	// Iterate linearized FEM solve to get Boltzmann electron response
+	while (numberOfSolves<10 && potentialChange>2.e-2) {
+	potentialChange=0.;
 	// Find potential and components of E by finite element method (solving Ax=b)
 	vector<Eigen::Triplet<double> > coefficients;
 	Eigen::VectorXd b(m);
@@ -142,11 +147,17 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 //					eFieldBoundaryVertexSet[jj] = true;
 //				}
 			}
+			double debyeLength = 1.e0;
 			for (int k=0; k<adjacentVertices.size(); k++) {
 				int kk = adjacentVertices[k];
 				double basisBasisCoefficient = volume/20;
 				if (jj==kk)
 					basisBasisCoefficient *= 2.;
+				if (!eFieldBoundaryVertexSet[jj]) {
+					coefficients.push_back(Eigen::Triplet<double>(jj, kk,
+							basisBasisCoefficient/debyeLength/debyeLength*
+							exp(potential)));
+				}
 				for (int l=0; l<NDIM; l++) {
 					// Coefficients multiplying eField
 					if (!eFieldBoundaryVertexSet[jj]) {
@@ -171,8 +182,10 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 				}
 			}
 			// TODO: add charge source term
-			for (int l=0; l<NDIM; l++)
-				b[nVerts+jj*NDIM+l] += 0.*(ionDensity[jj] - exp(potential))*volume/4.;
+			if (!potentialBoundaryVertexSet[jj]) {
+				b[jj] += 1/debyeLength/debyeLength*
+						(ionDensity[jj] - exp(potential))*volume/4.;
+			}
 		}
 	}
 
@@ -203,6 +216,11 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 //	cout << x.transpose() << endl << endl;
 
 	for (int i=0; i<nVerts; i++) {
+		double dPot = fabs(x[i]-potentialField_ptr->operator[](i));
+		potentialChange = (potentialChange>dPot) ?
+				potentialChange	: dPot;
+	}
+	for (int i=0; i<nVerts; i++) {
 		vect3d eField(0.,0.,0.);
 		// TODO: Make functions for indexing
 		for (int j=0; j<NDIM; j++)
@@ -211,7 +229,10 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 		potentialField_ptr->setField(entities[i], x[i]);
 	}
 #endif
-
+	cout << "linearized FEM iter " << numberOfSolves <<
+			" : potentialChange = " << potentialChange << endl;
+	numberOfSolves++;
+	}
 }
 
 void ElectricField::calcField_Gatsonis(PotentialField potentialField) {
