@@ -8,10 +8,10 @@ CLASS_FILES = custom_mImportVTK.cc Mesh.cpp Orbit.cpp Field.cpp IntegrandContain
 #              VelocityAndAcceleration.cpp
 epic_SOURCES = epic.cpp $(CLASS_FILES)
 epic_CFLAGS = $(AM_CFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \
-              -I ../cubature/cubature-20101018/ -I ../cuba/Cuba-3.0/
+              -I ../cubature/cubature-20101018/ -I ../cuba/Cuba-3.0/ -I ../superlu/superLU_4.3/SRC/
 epic_CXXFLAGS = $(AM_CXXFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \
               -I ../eigen/eigen-eigen-43d9075b23ef/ -I ../cubature/cubature-20101018/ \
-              -I ../cuba/Cuba-3.0/ -I ../netgen/opt/netgen/include/ \
+              -I ../cuba/Cuba-3.0/ -I ../netgen/opt/netgen/include/  -I ../superlu/SuperLU_4.3/SRC/ \
               -I ../boost/boost_1_49_0/ -I ../odeint/headmyshoulder-odeint-v2-47dbdac/ \
               -I ../vtk/VTK/install/include/vtk-5.10/ -Wno-deprecated
 epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lMeshAdapt -lrt \
@@ -29,7 +29,9 @@ else
 epic_LDFLAGS += -lmpistubs
 endif
 
+# Note that linking order matters: if A has a reference to B, then the order should be A B
 epic_LDADD   = ../cubature/libcubature.a ../cuba/Cuba-3.0/libcuba.a
+epic_LDADD   += ../superlu/SuperLU_4.3/lib/libsuperlu_4.3.a ../superlu/SuperLU_4.3/lib/libblas.a
 
 mesher_SOURCES = mesher.cpp $(CLASS_FILES) playground.cpp SurfaceMesh.cpp
 mesher_CFLAGS = $(epic_CFLAGS) -DMESHER

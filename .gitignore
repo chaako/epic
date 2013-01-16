@@ -62,6 +62,8 @@ vtk/VTK/
 cmake/cmake-2.8.8/
 netgen/netgen-5.0.0/
 netgen/opt/
+superlu/SuperLU_4.3
+superlu/make.inc
 
 # Profiling output
 gmon.out

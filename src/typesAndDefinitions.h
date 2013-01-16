@@ -58,6 +58,10 @@ enum {
 
 #include "Eigen/Dense"
 #include "Eigen/Sparse"
+// There appear to be issues with FMDB and SuperLU in the mesher
+#ifndef MESHER
+#include <Eigen/SuperLUSupport>
+#endif
 #include "cubature.h"
 #include "cuba.h"
 
