@@ -119,18 +119,28 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 					coefficients.push_back(Eigen::Triplet<double>(jj, jj, 1.));
 					// TODO: Don't hard-code object potential
 					b[jj] = -1.;
+//					b[jj] = potential;
+					potentialBoundaryVertexSet[jj] = true;
 				}
-				potentialBoundaryVertexSet[jj] = true;
 			} else if (vertexType[jj]==5) {
-				// Set electric field to zero
-				if (!eFieldBoundaryVertexSet[jj]) {
-					for (int l=0; l<NDIM; l++) {
-						coefficients.push_back(Eigen::Triplet<double>(
-								nVerts+jj*NDIM+l, nVerts+jj*NDIM+l, 1.));
-						b[nVerts+jj*NDIM+l] = 0.;
-					}
+				// Set potential at object surface
+				if (!potentialBoundaryVertexSet[jj]) {
+					coefficients.push_back(Eigen::Triplet<double>(jj, jj, 1.));
+					// TODO: Don't hard-code uperturbed potential
+					b[jj] = -0.;
+//					b[jj] = potential;
+					potentialBoundaryVertexSet[jj] = true;
 				}
-				eFieldBoundaryVertexSet[jj] = true;
+//			} else if (vertexType[jj]==5) {
+//				// Set electric field to zero
+//				if (!eFieldBoundaryVertexSet[jj]) {
+//					for (int l=0; l<NDIM; l++) {
+//						coefficients.push_back(Eigen::Triplet<double>(
+//								nVerts+jj*NDIM+l, nVerts+jj*NDIM+l, 1.));
+//						b[nVerts+jj*NDIM+l] = 0.;
+//					}
+//					eFieldBoundaryVertexSet[jj] = true;
+//				}
 			}
 			for (int k=0; k<adjacentVertices.size(); k++) {
 				int kk = adjacentVertices[k];
@@ -138,20 +148,22 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 				if (jj==kk)
 					basisBasisCoefficient *= 2.;
 				for (int l=0; l<NDIM; l++) {
-					double basisDerivativeBasisCoefficient =
-							-basisDerivatives(l,k)*volume/4;
 					// Coefficients multiplying eField
 					if (!eFieldBoundaryVertexSet[jj]) {
 						// TODO: Make functions for indexing
 						coefficients.push_back(Eigen::Triplet<double>(
 								nVerts+jj*NDIM+l, nVerts+kk*NDIM+l,
 								basisBasisCoefficient));
+					}
+					double basisDerivativeBasisCoefficient =
+							-basisDerivatives(l,k)*volume/4;
+					if (!potentialBoundaryVertexSet[jj]) {
 						coefficients.push_back(Eigen::Triplet<double>(
 								jj, nVerts+kk*NDIM+l,
 								basisDerivativeBasisCoefficient));
 					}
 					// Coefficients multiplying potential
-					if (!potentialBoundaryVertexSet[jj]) {
+					if (!eFieldBoundaryVertexSet[jj]) {
 						coefficients.push_back(Eigen::Triplet<double>(
 								nVerts+jj*NDIM+l, kk,
 								basisDerivativeBasisCoefficient));
@@ -167,22 +179,28 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 	Eigen::SparseMatrix<double> A(m,m);
 	A.setFromTriplets(coefficients.begin(), coefficients.end());
 
-	Eigen::BiCGSTAB<Eigen::SparseMatrix<double> > solver(A);
+//	Eigen::BiCGSTAB<Eigen::SparseMatrix<double> > solver(A);
+#ifndef MESHER
+	Eigen::SuperLU<Eigen::SparseMatrix<double> > solver;
+	solver.compute(A);
 	if(solver.info()!=Eigen::Success) {
 		// decomposition failed
 		throw;
 	}
 //	for (int i=0; i<m; i++) {
 //		cout << "A[" << i << "," << i << "] = " << A.coeff(i,i) << " ";
-////		cout << "A[" << 110 << "," << i << "] = " << A.coeff(110,i) << " ";
+////		cout << "A[" << 3 << "," << i << "] = " << A.coeff(3,i) << " ";
 ////		cout << "x[" << i << "] = " << x[i] << " ";
 //		cout << "b[" << i << "] = " << b[i] << endl;
 //	}
+//	cout << A << endl << endl;
+//	cout << b.transpose() << endl << endl;
 	Eigen::VectorXd x = solver.solve(b);
 	if(solver.info()!=Eigen::Success) {
 		// solving failed
 		throw;
 	}
+//	cout << x.transpose() << endl << endl;
 
 	for (int i=0; i<nVerts; i++) {
 		vect3d eField(0.,0.,0.);
@@ -192,6 +210,7 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 		this->setField(entities[i], eField);
 		potentialField_ptr->setField(entities[i], x[i]);
 	}
+#endif
 
 }
 
