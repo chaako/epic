@@ -29,148 +29,148 @@ Orbit::~Orbit() {
 	// TODO Auto-generated destructor stub
 }
 
-void Orbit::integrate(ElectricField& electricField,
-		PotentialField& potentialField,
-		Field<int>& faceTypeField, CodeField& vertexTypeField, FILE *outFile) {
-	vect3d eField = electricField.getField(initialNode);
-	int nVertices=4;
-	vector<vect3d> eFields(nVertices), vertexVectors(nVertices);
-	vector<entHandle> vertices(nVertices);
-	// TODO: need some clever way to set tMax and/or detect trapped orbits
-	double dt=min(0.01,0.01/initialVelocity.norm()), tMax=100;
-	vect3d currentPosition = initialPosition;
-	vect3d currentVelocity = initialVelocity;
-	// TODO: shouldn't hard-code quasi-neutral operation
-	double phiSurface = -4;
-	vertexType = vertexTypeField.getField(initialNode);
-	vect3d vertexNormalVector;
-	vect3d initialNormalVelocity;
-	if (vertexType==4 && charge<0.) {
-		vertexNormalVector =
-				mesh_ptr->getVertexNormalVector(initialNode, faceTypeField);
-		vect3d coords = mesh_ptr->getCoordinates(initialNode);
-		initialNormalVelocity =
-				currentVelocity.dot(vertexNormalVector)*vertexNormalVector;
-		// TODO: could do something like below to get distribution at surface
-//		currentVelocity += sqrt(2.*charge*phiSurface)*vertexNormalVector;
-	}
-	// Don't integrate orbit if doesn't have enough energy to escape potential
-	// TODO: this should be refined
-//	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
-	if ((0.5*pow(initialVelocity.norm(),2.) +
-			charge*potentialField.getField(initialNode)) < 0.) {
-		negativeEnergy = true;
-		tMax = 0.;
-	} else {
-		negativeEnergy = false;
-	}
-	// For second order leap-frog, offset position from velocity in time
-	currentPosition -= currentVelocity*dt/2.;
-	// TODO: treat inwards electrons in a better way?
-	if (vertexType==4 &&
-			0.5*pow(initialNormalVelocity.norm(),2.)<charge*phiSurface &&
-			currentVelocity.dot(vertexNormalVector)<0.) {
-		currentVelocity -= 2.*initialNormalVelocity;
-	}
-	bool inNewTet = true;
-	int nSteps=0, nNewTet=0;
-//	cout << "Initial radius=" << currentPosition.norm() << endl;
-	bool isTet=false;
-	bool firstStep=true;
-	for (double t=0; t<tMax; t+=dt) {
-		nSteps++;
-		vect3d previousPosition = currentPosition;
-		currentPosition += dt*currentVelocity;
-//		clock_t startClock = clock(); // timing
-		if (!firstStep)
-			inNewTet = !mesh_ptr->checkIfInTet(currentPosition, vertexVectors);
-		firstStep=false;
-//		clock_t endClock = clock(); // timing
-//		extern_checkIfInNewTet += endClock-startClock; // timing
-		if (inNewTet) {
-			nNewTet++;
-			bool foundTet=false;
-//			if  (vertexVectors.size()==nVertices)
-//				isTet = true;
-			clock_t startClock = clock(); // timing
-			entHandle previousElement = currentElement;
-			currentElement = mesh_ptr->findTet(previousPosition,
-					currentPosition, previousElement, &foundTet, isTet);
-			clock_t endClock = clock(); // timing
-			extern_findTet += endClock-startClock; // timing
-			// TODO: should handle failure to find tet in some way
-			if (foundTet==false) {
-				entHandle faceCrossed = mesh_ptr->findFaceCrossed(
-						previousElement, previousPosition, currentPosition);
-				// TODO: grazing orbits don't enter domain in first time-step
-				int faceType;
-				vect3d normalVector, normalVelocity;
-				if (faceCrossed!=NULL) {
-					faceType = faceTypeField.getField(faceCrossed);
-					normalVector = mesh_ptr->getNormalVector(faceCrossed,
-									previousPosition);
-					normalVelocity =
-							currentVelocity.dot(normalVector)*normalVector;
-					finalPotential = 0;
-					vertices = mesh_ptr->getVertices(faceCrossed);
-					for (int i=0; i<vertices.size(); i++) {
-						// TODO: should use point where left domain here
-						finalPotential += 1./3.*potentialField.getField(vertices[i]);
-					}
-					// TODO: shouldn't hard-code boundary code
-				} else {
-					faceType = 0;
-				}
-				finalFaceType = faceType;
-				if (faceType==4 && 0.5*pow(normalVelocity.norm(),2.)<charge*phiSurface) {
-					foundTet = true;
-					currentElement = previousElement;
-					// TODO: resetting position isn't quite right
-					currentPosition = previousPosition;
-					// TODO: revisit this in magnetized case
-					currentVelocity -= 2.*normalVelocity;
-				} else {
-					break;
-				}
-			}
-			isTet=true;
-
-			vertices = mesh_ptr->getVertices(currentElement);
-			assert( vertexVectors.size()==vertices.size() &&
-					eFields.size()==vertices.size() );
-			for (int i=0; i<vertices.size(); i++) {
-				vertexVectors[i] = mesh_ptr->getCoordinates(vertices[i]);
-				eFields[i] = electricField.getField(vertices[i]);
-			}
-		}
-//		if (t>=tMax-dt)
-//			cout << "orbit reached tMax" << endl;
-
-		assert(vertexVectors.size()==nVertices);
-		vector<double> vertexWeights = mesh_ptr->getVertexWeights(currentPosition,
-				vertexVectors);
-		vect3d currentAcceleration(0.,0.,0.);
-		assert(eFields.size()==vertexWeights.size());
-		for (int i=0; i<vertexWeights.size(); i++) {
-			currentAcceleration += charge*eFields[i]*vertexWeights[i];
-		}
-//		currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
-		double eFieldR = currentAcceleration.dot(currentPosition)/
-				currentPosition.norm();
-		currentVelocity += dt*currentAcceleration;
-//		double potential = potentialField.getField(currentPosition, currentElement);
-//		vect3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
-//		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
-//		if (outFile) {
-//			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
-//					currentPosition[2], energy);
+//void Orbit::integrate(ElectricField& electricField,
+//		PotentialField& potentialField,
+//		Field<int>& faceTypeField, CodeField& vertexTypeField, FILE *outFile) {
+//	vect3d eField = electricField.getField(initialNode);
+//	int nVertices=4;
+//	vector<vect3d> eFields(nVertices), vertexVectors(nVertices);
+//	vector<entHandle> vertices(nVertices);
+//	// TODO: need some clever way to set tMax and/or detect trapped orbits
+//	double dt=min(0.01,0.01/initialVelocity.norm()), tMax=100;
+//	vect3d currentPosition = initialPosition;
+//	vect3d currentVelocity = initialVelocity;
+//	// TODO: shouldn't hard-code quasi-neutral operation
+//	double phiSurface = -4;
+//	vertexType = vertexTypeField.getField(initialNode);
+//	vect3d vertexNormalVector;
+//	vect3d initialNormalVelocity;
+//	if (vertexType==4 && charge<0.) {
+//		vertexNormalVector =
+//				mesh_ptr->getVertexNormalVector(initialNode, faceTypeField);
+//		vect3d coords = mesh_ptr->getCoordinates(initialNode);
+//		initialNormalVelocity =
+//				currentVelocity.dot(vertexNormalVector)*vertexNormalVector;
+//		// TODO: could do something like below to get distribution at surface
+////		currentVelocity += sqrt(2.*charge*phiSurface)*vertexNormalVector;
+//	}
+//	// Don't integrate orbit if doesn't have enough energy to escape potential
+//	// TODO: this should be refined
+////	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
+//	if ((0.5*pow(initialVelocity.norm(),2.) +
+//			charge*potentialField.getField(initialNode)) < 0.) {
+//		negativeEnergy = true;
+//		tMax = 0.;
+//	} else {
+//		negativeEnergy = false;
+//	}
+//	// For second order leap-frog, offset position from velocity in time
+//	currentPosition -= currentVelocity*dt/2.;
+//	// TODO: treat inwards electrons in a better way?
+//	if (vertexType==4 &&
+//			0.5*pow(initialNormalVelocity.norm(),2.)<charge*phiSurface &&
+//			currentVelocity.dot(vertexNormalVector)<0.) {
+//		currentVelocity -= 2.*initialNormalVelocity;
+//	}
+//	bool inNewTet = true;
+//	int nSteps=0, nNewTet=0;
+////	cout << "Initial radius=" << currentPosition.norm() << endl;
+//	bool isTet=false;
+//	bool firstStep=true;
+//	for (double t=0; t<tMax; t+=dt) {
+//		nSteps++;
+//		vect3d previousPosition = currentPosition;
+//		currentPosition += dt*currentVelocity;
+////		clock_t startClock = clock(); // timing
+//		if (!firstStep)
+//			inNewTet = !mesh_ptr->checkIfInTet(currentPosition, vertexVectors);
+//		firstStep=false;
+////		clock_t endClock = clock(); // timing
+////		extern_checkIfInNewTet += endClock-startClock; // timing
+//		if (inNewTet) {
+//			nNewTet++;
+//			bool foundTet=false;
+////			if  (vertexVectors.size()==nVertices)
+////				isTet = true;
+//			clock_t startClock = clock(); // timing
+//			entHandle previousElement = currentElement;
+//			currentElement = mesh_ptr->findTet(previousPosition,
+//					currentPosition, previousElement, &foundTet, isTet);
+//			clock_t endClock = clock(); // timing
+//			extern_findTet += endClock-startClock; // timing
+//			// TODO: should handle failure to find tet in some way
+//			if (foundTet==false) {
+//				entHandle faceCrossed = mesh_ptr->findFaceCrossed(
+//						previousElement, previousPosition, currentPosition);
+//				// TODO: grazing orbits don't enter domain in first time-step
+//				int faceType;
+//				vect3d normalVector, normalVelocity;
+//				if (faceCrossed!=NULL) {
+//					faceType = faceTypeField.getField(faceCrossed);
+//					normalVector = mesh_ptr->getNormalVector(faceCrossed,
+//									previousPosition);
+//					normalVelocity =
+//							currentVelocity.dot(normalVector)*normalVector;
+//					finalPotential = 0;
+//					vertices = mesh_ptr->getVertices(faceCrossed);
+//					for (int i=0; i<vertices.size(); i++) {
+//						// TODO: should use point where left domain here
+//						finalPotential += 1./3.*potentialField.getField(vertices[i]);
+//					}
+//					// TODO: shouldn't hard-code boundary code
+//				} else {
+//					faceType = 0;
+//				}
+//				finalFaceType = faceType;
+//				if (faceType==4 && 0.5*pow(normalVelocity.norm(),2.)<charge*phiSurface) {
+//					foundTet = true;
+//					currentElement = previousElement;
+//					// TODO: resetting position isn't quite right
+//					currentPosition = previousPosition;
+//					// TODO: revisit this in magnetized case
+//					currentVelocity -= 2.*normalVelocity;
+//				} else {
+//					break;
+//				}
+//			}
+//			isTet=true;
+//
+//			vertices = mesh_ptr->getVertices(currentElement);
+//			assert( vertexVectors.size()==vertices.size() &&
+//					eFields.size()==vertices.size() );
+//			for (int i=0; i<vertices.size(); i++) {
+//				vertexVectors[i] = mesh_ptr->getCoordinates(vertices[i]);
+//				eFields[i] = electricField.getField(vertices[i]);
+//			}
 //		}
-	}
-//	cout << "Final radius=" << currentPosition.norm() << endl;
-	finalPosition = currentPosition;
-	// TODO: correct for time-step offset?
-	finalVelocity = currentVelocity;
-}
+////		if (t>=tMax-dt)
+////			cout << "orbit reached tMax" << endl;
+//
+//		assert(vertexVectors.size()==nVertices);
+//		vector<double> vertexWeights = mesh_ptr->getVertexWeights(currentPosition,
+//				vertexVectors);
+//		vect3d currentAcceleration(0.,0.,0.);
+//		assert(eFields.size()==vertexWeights.size());
+//		for (int i=0; i<vertexWeights.size(); i++) {
+//			currentAcceleration += charge*eFields[i]*vertexWeights[i];
+//		}
+////		currentAcceleration = -currentPosition/pow(currentPosition.norm(),3.);
+//		double eFieldR = currentAcceleration.dot(currentPosition)/
+//				currentPosition.norm();
+//		currentVelocity += dt*currentAcceleration;
+////		double potential = potentialField.getField(currentPosition, currentElement);
+////		vect3d velocityAtPosition = currentVelocity - 1./2.*dt*currentAcceleration;
+////		double energy = 1./2.*pow(velocityAtPosition.norm(),2.) + charge*potential;
+////		if (outFile) {
+////			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
+////					currentPosition[2], energy);
+////		}
+//	}
+////	cout << "Final radius=" << currentPosition.norm() << endl;
+//	finalPosition = currentPosition;
+//	// TODO: correct for time-step offset?
+//	finalVelocity = currentVelocity;
+//}
 
 void Orbit::integrate(PotentialField& potentialField, ElectricField& electricField,
 		Field<int>& faceTypeField, CodeField& vertexTypeField,
@@ -230,7 +230,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //	boost::numeric::odeint::runge_kutta4<boost::array<vect3d,2> >
 //		timestepper;
 	VelocityAndAcceleration<NDIM> velocityAndAcceleration(potentialField,
-			charge, initialNode);
+			electricField, charge, initialNode, false);
 	foundTet = velocityAndAcceleration.foundTet;
 
 //	// For second order leap-frog, offset position from velocity in time

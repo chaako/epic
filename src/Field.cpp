@@ -229,8 +229,11 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 		potentialField_ptr->setField(entities[i], x[i]);
 	}
 #endif
-	cout << "linearized FEM iter " << numberOfSolves <<
-			" : potentialChange = " << potentialChange << endl;
+#ifdef HAVE_MPI
+		if (MPI::COMM_WORLD.Get_rank() == 0)
+#endif
+			cout << "linearized FEM iter " << numberOfSolves <<
+				" : potentialChange = " << potentialChange << endl;
 	numberOfSolves++;
 	}
 }
@@ -427,6 +430,22 @@ DensityField::DensityField(Mesh *inputMesh_ptr, string inputName)
 }
 
 void DensityField::calcField() {}
+
+void DensityField::calcField(CodeField vertexType,
+		PotentialField potential, double charge) {
+	// TODO: get rid of hard-coding here
+	for (int i=0; i<entities.size(); i++) {
+		double density=1.;
+		if (vertexType.getField(entities[i])==4) {
+			density = -1./2.;
+		} else if (vertexType.getField(entities[i])==5) {
+			density = 1.;
+		} else {
+			density = exp(charge*potential[i]);
+		}
+		this->setField(entities[i], density);
+	}
+}
 
 void DensityField::calcField(DensityField ionDensity,
 		DensityField electronDensity) {

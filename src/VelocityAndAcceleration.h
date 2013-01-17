@@ -21,9 +21,13 @@ public:
 	typedef boost::array<Eigen::Matrix<double,N,1>, 2> state_type;
 
 	VelocityAndAcceleration(PotentialField &inputPotentialField,
-			double inputCharge, entHandle initialNode) :
+			ElectricField &inputElectricField,
+			double inputCharge, entHandle initialNode,
+			bool inputOnlyUsePotential=true) :
 		potentialField(inputPotentialField),
-		charge(inputCharge)
+		electricField(inputElectricField),
+		charge(inputCharge),
+		onlyUsePotential(inputOnlyUsePotential)
 	{
 		currentPosition=potentialField.mesh_ptr->getCoordinates(initialNode);
 		for (int i=0; i<NDIM; i++) {
@@ -42,12 +46,19 @@ public:
 //		assert(dimension==3);
 //		if (!foundTet)
 //			throw int(OUTSIDE_DOMAIN);
-		interpolationOrder = INTERPOLATIONORDER;
+		// TODO: Handle this more transparently
+		if (onlyUsePotential) {
+			interpolationOrder = INTERPOLATIONORDER;
+		} else {
+			interpolationOrder = 1;
+		}
 	}
 
 	// TODO: should perhaps be consistent about ptrs vs refs
 	PotentialField& potentialField;
+	ElectricField& electricField;
 	double charge;
+	bool onlyUsePotential;
 	entHandle currentElement;
 	int currentRegionIndex;
 	bool foundTet;
@@ -61,9 +72,15 @@ public:
 		// TODO: for efficiency should find way to only calc accel when needed
 //		if (x[0]!=currentPosition) {
 			currentPosition = x[0];
-			potentialField.evalFieldAndDeriv(&potential, &currentAcceleration,
-					x[0], &currentRegionIndex,
-					interpolationOrder);
+			if (onlyUsePotential) {
+				potentialField.evalFieldAndDeriv(&potential, &currentAcceleration,
+						x[0], &currentRegionIndex,
+						interpolationOrder);
+			} else {
+				electricField.evalField(&currentAcceleration,
+						x[0], &currentRegionIndex,
+						interpolationOrder);
+			}
 			currentElement = potentialField.mesh_ptr->
 					entitiesVectors[iBase_REGION][currentRegionIndex];
 //			// TODO: Determine if better to include drift in potential

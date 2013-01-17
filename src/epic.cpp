@@ -104,6 +104,9 @@ int main(int argc, char *argv[]) {
 		cout << endl << "Setting potential..." << endl;
 	potential.calcField(vertexType);
 	if (mpiId == 0)
+		cout << endl << "Setting density..." << endl;
+	ionDensity.calcField(vertexType, potential, 1.);
+	if (mpiId == 0)
 		cout << endl << "Calculating shortest edge of each region..." << endl;
 	shortestEdge.calcField();
 
@@ -143,7 +146,8 @@ int main(int argc, char *argv[]) {
 			cout << endl  << endl << "ITERATION " << i << endl;
 		if (mpiId == 0)
 			cout << endl << "Calculating electric field..." << endl;
-		eField.calcField(potential);
+		eField.calcField(&potential, vertexType, ionDensity);
+//		eField.calcField(potential);
 //		eField.calcField_Gatsonis(potential);
 //		if (mpiId == 0)
 //			cout << endl << "Calculating electron density..." << endl;
@@ -187,9 +191,9 @@ int main(int argc, char *argv[]) {
 //		stringstream potentialCopyName;
 //		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
 //		PotentialField potentialCopy(potential,potentialCopyName.str());
-		if (mpiId == 0)
-			cout << endl << "Calculating updated potential..." << endl;
-		potential.calcField(ionDensity, vertexType, potentialFile);
+//		if (mpiId == 0)
+//			cout << endl << "Calculating updated potential..." << endl;
+//		potential.calcField(ionDensity, vertexType, potentialFile);
 //		potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
 //		potential.calcField(ionDensity,
 //				ionDensityPositivePerturbation, ionDensityNegativePerturbation,

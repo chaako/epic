@@ -45,6 +45,9 @@ public:
 	T getField(entHandle node);
 	T getFieldFromMeshDB(entHandle entityHandle);
 	T getAverageField(entHandle element);
+	void evalField(T *fieldValue,
+			const vect3d &position, int *entityIndex=-1,
+			int interpolationOrder=INTERPOLATIONORDER);
 	void evalFieldAndDeriv(T *fieldValue,
 			Eigen::Matrix<T,NDIM,1> *fieldDeriv,
 			const vect3d &position, int *entityIndex=-1,
@@ -118,6 +121,8 @@ public:
 	virtual ~DensityField() {}
 
 	void calcField();
+	void calcField(CodeField vertexType,
+			PotentialField potential, double charge);
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField electricField,
 			PotentialField potentialField,
@@ -364,6 +369,96 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 //	cout << field << endl;
 	*entity = currentElement;
 	return field;
+}
+
+template <class T>
+void Field<T>::evalField(T *fieldValue,
+		const vect3d &position, int *entityIndex,
+		int interpolationOrder) {
+	// TODO: should evalField just be getField?
+	// TODO: too much code-duplication with evalFieldAndDeriv
+	// Can only do 1st order interpolation of non-doubles
+	assert(interpolationOrder==1);
+	if (position==currentPosition &&
+			interpolationOrder==currentInterpolationOrder) {
+		*fieldValue = currentFieldValue;
+	} else {
+		bool inElement=false;
+//		Eigen::Vector4d &linearBasisFunctions = currentLinearBasisFunctions;
+		Eigen::Vector4d linearBasisFunctions(0.,0.,0.,0.);
+		int nErrorBases=N_BASES_QUADRATIC;
+		if (interpolationOrder==2) {
+			nErrorBases = N_BASES_QUADRATIC;
+		} else if (interpolationOrder==3) {
+			nErrorBases = N_BASES_CUBIC;
+		}
+		Eigen::VectorXd &errorBases = currentErrorBases;
+		Eigen::VectorXd &errorCoefficients = currentErrorCoefficients;
+		if (errorBases.rows()!=nErrorBases) {
+			errorBases = Eigen::VectorXd(nErrorBases);
+			errorCoefficients = Eigen::VectorXd(nErrorBases);
+		}
+		if (*entityIndex<0) {
+			// TODO: handle case with no entity hint
+			vector<entHandle> adjacentEntities =
+					mesh_ptr->getAdjacentEntities(entities[0],iBase_REGION);
+			*entityIndex = mesh_ptr->indicesOfEntities[adjacentEntities[0]];
+		} else if (*entityIndex==currentRegionIndex) {
+				inElement=true;
+				// TODO: should replace use of linear coeffs with fast checkIfInTet
+				mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex,
+						&linearBasisFunctions);
+				for (int i=0; i<linearBasisFunctions.rows(); i++)
+					if (linearBasisFunctions[i]<0.-VOLUME_TOLERANCE)
+						inElement=false;
+		}
+		currentRegionIndex = *entityIndex;
+		if (!inElement) {
+			vect3d centroid(0.,0.,0.);
+			vector<vect3d> vVs(NDIM+1);
+			mesh_ptr->getVertexVectors(currentRegionIndex, iBase_REGION, &vVs);
+			centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+//			currentElement = mesh_ptr->entitiesVectors[iBase_REGION][currentRegionIndex];
+			bool foundTet=false;
+			currentRegionIndex = mesh_ptr->findTet(centroid,
+					position, currentRegionIndex, &foundTet);
+			// TODO: failure to find tet doesn't really mean outside domain yet
+			if (!foundTet)
+				throw int(OUTSIDE_DOMAIN);
+			currentVerticesIndices = mesh_ptr->
+					adjacentEntitiesVectors[iBase_REGION][currentRegionIndex][iBase_VERTEX];
+			for (int i=0;i<currentVerticesIndices.size();i++) {
+				currentFields[i] = this->operator[](currentVerticesIndices[i]);
+			}
+		}
+		mesh_ptr->evaluateLinearBasisFunctions(position, currentRegionIndex,
+				&linearBasisFunctions);
+		if (interpolationOrder==2) {
+			mesh_ptr->evaluateQuadraticErrorBases(linearBasisFunctions, &errorBases);
+		} else if (interpolationOrder==3) {
+			mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions, &errorBases);
+		}
+		// TODO: vect3d is not initialized to 0, but double is
+		*fieldValue = T();
+		// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
+		*fieldValue *= 0.;
+		assert(currentFields.size()==linearBasisFunctions.rows());
+		for (int i=0;i<linearBasisFunctions.rows();i++) {
+			*fieldValue += linearBasisFunctions[i]*currentFields[i];
+		}
+		// TODO: should be able to call evalField for doubles with higher order
+//		if (interpolationOrder>1) {
+//			this->getErrorCoefficients(currentRegionIndex,
+//					interpolationOrder, &errorCoefficients);
+//			assert(errorBases.rows()==errorCoefficients.rows());
+//			*fieldValue += errorCoefficients.dot(errorBases);
+//		}
+		*entityIndex = currentRegionIndex;
+
+		currentInterpolationOrder = interpolationOrder;
+		currentPosition = position;
+		currentFieldValue = *fieldValue;
+	}
 }
 
 template <class T>
