@@ -153,7 +153,7 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 				double basisBasisCoefficient = volume/20;
 				if (jj==kk)
 					basisBasisCoefficient *= 2.;
-				if (!eFieldBoundaryVertexSet[jj]) {
+				if (!potentialBoundaryVertexSet[jj]) {
 					coefficients.push_back(Eigen::Triplet<double>(jj, kk,
 							basisBasisCoefficient/debyeLength/debyeLength*
 							exp(potential)));
