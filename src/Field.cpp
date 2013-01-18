@@ -222,11 +222,14 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 	}
 	for (int i=0; i<nVerts; i++) {
 		vect3d eField(0.,0.,0.);
+		vect3d currentEField=this->operator[](i);
 		// TODO: Make functions for indexing
+		// TODO: Do more advanced under-relaxation?
 		for (int j=0; j<NDIM; j++)
-			eField[j] = x[nVerts+i*NDIM+j];
+			eField[j] = 0.5*(x[nVerts+i*NDIM+j]+currentEField[j]);
 		this->setField(entities[i], eField);
-		potentialField_ptr->setField(entities[i], x[i]);
+		potentialField_ptr->setField(entities[i],
+				0.5*(x[i]+potentialField_ptr->operator[](i)));
 	}
 #endif
 #ifdef HAVE_MPI
