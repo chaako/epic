@@ -1,0 +1,3 @@
+[submodule "sceptic3D"]
+	path = sceptic3D
+	url = git@github.com:chaako/sceptic3D.git
