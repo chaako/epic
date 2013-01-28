@@ -2,7 +2,7 @@
 -include ../fmdb/fmdbSerial/lib/iMesh-Defs.inc
 
 # epic
-bin_PROGRAMS=epic mesher
+bin_PROGRAMS=epic mesher solutionTransfer
 CLASS_FILES = custom_mImportVTK.cc Mesh.cpp Orbit.cpp Field.cpp IntegrandContainer.cpp \
               intersect_RayTriangle.cpp distributionFunctionFromBoundary.cpp
 #              VelocityAndAcceleration.cpp
@@ -33,8 +33,31 @@ endif
 epic_LDADD   = ../cubature/libcubature.a ../cuba/Cuba-3.0/libcuba.a
 epic_LDADD   += ../superlu/SuperLU_4.3/lib/libsuperlu_4.3.a ../superlu/SuperLU_4.3/lib/libblas.a
 
+#mesher
 mesher_SOURCES = mesher.cpp $(CLASS_FILES) playground.cpp SurfaceMesh.cpp
 mesher_CFLAGS = $(epic_CFLAGS) -DMESHER
 mesher_CXXFLAGS = $(epic_CXXFLAGS) -DMESHER
 mesher_LDFLAGS = $(epic_LDFLAGS)
 mesher_LDADD = $(epic_LDADD)
+
+#solutionTransfer
+../sceptic3D/.dummy:
+	cd .. && git submodule init && git submodule update
+
+../sceptic3D/interptool: ../sceptic3D/.dummy ../sceptic3D/interpolateFieldsSceptic3D.f
+	cd ../sceptic3D && make interptool
+
+../sceptic3D/libsceptic3Dhdf.a: ../sceptic3D/interptool
+	cd ../sceptic3D && make libsceptic3Dhdf.a
+
+DIRHDF = $(PWD)/../sceptic3D/hdf5-1.8.4
+LIBHDF = -L$(DIRHDF)/lib -lhdf5hl_fortran -lhdf5_hl \
+          -lhdf5_fortran -lhdf5 -lz -lm -Wl,-rpath -Wl,$(DIRHDF)/lib
+
+solutionTransfer_SOURCES = solutionTransfer.cpp $(CLASS_FILES)
+solutionTransfer_CFLAGS = $(epic_CFLAGS)
+solutionTransfer_CXXFLAGS = $(epic_CXXFLAGS)
+solutionTransfer_LDFLAGS = $(epic_LDFLAGS) $(LIBHDF) -lgfortran
+solutionTransfer_LDADD = $(epic_LDADD) ../sceptic3D/libsceptic3Dhdf.a
+#interpolateFieldsSceptic3D.o
+#		../sceptic3D/advancing.o ../sceptic3D/readhdf.o ../sceptic3D/chargefield.o

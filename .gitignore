@@ -18,6 +18,7 @@
 # Executables
 src/epic
 src/mesher
+src/solutionTransfer
 
 # Autotools files
 autom4te.cache/
