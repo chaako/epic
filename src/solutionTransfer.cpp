@@ -32,10 +32,26 @@ int main(int argc, char *argv[]) {
 		for (int i=0; i<numberOfVertices; i++) {
 			entHandle entity=mesh.entitiesVectors[iBase_VERTEX][i];
 			vect3d position=mesh.getCoordinates(entity);
-			double scaleFactor=1.001;
-			xs[i] = position[0]*scaleFactor;
-			ys[i] = position[1]*scaleFactor;
-			zs[i] = position[2]*scaleFactor;
+			// Move nodes slightly to keep inside sceptic3D mesh
+			// TODO: this is a little hacky
+			double maxShift=0.00005;
+			double shift=0.;
+			double minimumRadius=1.;
+			double unchangedRadius=1.5;
+			double distanceToUnchangedR =
+					unchangedRadius-position.norm();
+			if (distanceToUnchangedR>0) {
+				shift = maxShift*distanceToUnchangedR/
+						(unchangedRadius-minimumRadius);
+			} else {
+				shift = maxShift*distanceToUnchangedR/
+						position.norm();
+			}
+			double scaleFactor = 1. + shift/position.norm();
+			position *= scaleFactor;
+			xs[i] = position[0];
+			ys[i] = position[1];
+			zs[i] = position[2];
 //			struct timespec sleepTime;
 //			struct timespec returnTime;
 //			sleepTime.tv_sec = 0;
@@ -43,13 +59,14 @@ int main(int argc, char *argv[]) {
 //			nanosleep(&sleepTime, &returnTime);
 ////			boost::this_thread::sleep( boost::posix_time::milliseconds(10) );
 //			cout << "x y z: " << position.transpose() << endl;
+//			cout << "r: " << position.norm() << endl;
 		}
 		string inputHdfFile(argv[1]);
 		int filenameLength=inputHdfFile.length();
 		interpolatefieldssceptic3d_(inputHdfFile.c_str(),xs,ys,zs,
 				numberOfVertices,potentials,axs,ays,azs,filenameLength);
-		cout << "first fields: " << potentials[0] << " "
-				<< axs[0] << " " << ays[0] << " " << azs[0] << endl;
+//		cout << "first fields: " << potentials[0] << " "
+//				<< axs[0] << " " << ays[0] << " " << azs[0] << endl;
 		PotentialField potential(&mesh,string("potential"));
 		ElectricField eField(&mesh,string("eField"));
 		for (int i=0; i<numberOfVertices; i++) {
