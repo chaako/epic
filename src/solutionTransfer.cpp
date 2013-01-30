@@ -36,7 +36,13 @@ int main(int argc, char *argv[]) {
 			xs[i] = position[0]*scaleFactor;
 			ys[i] = position[1]*scaleFactor;
 			zs[i] = position[2]*scaleFactor;
-//			cout << position.transpose() << endl;
+//			struct timespec sleepTime;
+//			struct timespec returnTime;
+//			sleepTime.tv_sec = 0;
+//			sleepTime.tv_nsec = 10000000;
+//			nanosleep(&sleepTime, &returnTime);
+////			boost::this_thread::sleep( boost::posix_time::milliseconds(10) );
+//			cout << "x y z: " << position.transpose() << endl;
 		}
 		string inputHdfFile(argv[1]);
 		int filenameLength=inputHdfFile.length();
