@@ -77,8 +77,19 @@ int main(int argc, char *argv[]) {
 	double positivePotentialPerturbation = 0.05;
 	double negativePotentialPerturbation = -0.05;
 
-//	// TODO: add more robust detection and handling of existing fields
-//	if (!mesh.vtkInputMesh) {
+	if (mpiId == 0)
+		cout << endl << "Setting vertex codes..." << endl;
+	vertexType.calcField(faceType);
+	if (mpiId == 0)
+		cout << endl << "Calculating shortest edge of each region..." << endl;
+	shortestEdge.calcField();
+	if (mpiId == 0)
+		cout << endl << "Setting density..." << endl;
+	ionDensity.calcField(vertexType, potential, 1.);
+
+	// TODO: add more robust detection and handling of existing fields
+	if (!mesh.vtkInputMesh) {
+		cout << endl << ".sms file loaded, so assuming existing fields" << endl;
 //		if (mpiId == 0)
 //			cout << endl << "Calculating electric field..." << endl;
 //		eField.calcField(potential);
@@ -87,28 +98,19 @@ int main(int argc, char *argv[]) {
 //		electronDensity.calcField(eField, potential, faceType, vertexType,
 //				shortestEdge, -1., noPotentialPerturbation,
 //				density_electronsFile);
-//		if (mpiId == 0)
-//			cout << endl << "Calculating ion charge-density..." << endl;
-//		ionDensity.calcField(eField, potential, faceType, vertexType,
-//				shortestEdge, 1., noPotentialPerturbation,
-//				densityFile);
+		if (mpiId == 0)
+			cout << endl << "Calculating ion charge-density..." << endl;
+		ionDensity.calcField(eField, potential, faceType, vertexType,
+				shortestEdge, 1., noPotentialPerturbation,
+				densityFile);
 //		// TODO: shouldn't return before closing files etc...
 //		cout << "Not in main iteration loop...improve handling of existing fields." << endl;
 //		return 0;
-//	}
-
-	if (mpiId == 0)
-		cout << endl << "Setting vertex codes..." << endl;
-	vertexType.calcField(faceType);
-	if (mpiId == 0)
-		cout << endl << "Setting potential..." << endl;
-	potential.calcField(vertexType);
-	if (mpiId == 0)
-		cout << endl << "Setting density..." << endl;
-	ionDensity.calcField(vertexType, potential, 1.);
-	if (mpiId == 0)
-		cout << endl << "Calculating shortest edge of each region..." << endl;
-	shortestEdge.calcField();
+	} else {
+		if (mpiId == 0)
+			cout << endl << "Setting potential..." << endl;
+		potential.calcField(vertexType);
+	}
 
 //	// Integrate a circular test orbit (need to deactivate trapped orbit rejection)
 //	{
