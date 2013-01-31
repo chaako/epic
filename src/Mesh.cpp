@@ -29,6 +29,52 @@ Mesh::Mesh(string inputMeshFile) {
 		iMesh_load(mesh, root, inputMeshFile.c_str(), options, &ierr,
 				strlen(inputMeshFile.c_str()), options_len);
 		vtkInputMesh = false;
+		// recreate eField tag and destroy component tags
+		// TODO: do this in a function since also done in save
+		entHandle *ents0d = NULL;
+		int ents0d_alloc = 0, ents0d_size;
+		iBase_TagHandle eFieldX_tag, eFieldY_tag, eFieldZ_tag;
+		string tagName;
+		tagName = "eFieldX";
+		iMesh_getTagHandle(meshInstance, tagName.c_str(),
+				&eFieldX_tag, &ierr, tagName.length());
+		CHECK("Failed to get eFieldX tag");
+		tagName = "eFieldY";
+		iMesh_getTagHandle(meshInstance, tagName.c_str(),
+				&eFieldY_tag, &ierr, tagName.length());
+		CHECK("Failed to get eFieldY tag");
+		tagName = "eFieldZ";
+		iMesh_getTagHandle(meshInstance, tagName.c_str(),
+				&eFieldZ_tag, &ierr, tagName.length());
+		CHECK("Failed to get eFieldZ tag");
+		iBase_TagHandle eField_tag;
+		tagName = "eField";
+		iMesh_createTag(meshInstance, tagName.c_str(), sizeof(vect3d), iBase_BYTES,
+				&eField_tag, &ierr, tagName.length());
+		CHECK("Failure creating eField tag");
+		for (int i = 0; i < ents0d_size; i++) {
+			double eFieldX, eFieldY, eFieldZ;
+			iMesh_getDblData(meshInstance, ents0d[i], eFieldX_tag,
+					&eFieldX, &ierr);
+			CHECK("Failure getting eFieldX");
+			iMesh_getDblData(meshInstance, ents0d[i], eFieldY_tag,
+					&eFieldY, &ierr);
+			CHECK("Failure getting eFieldY");
+			iMesh_getDblData(meshInstance, ents0d[i], eFieldZ_tag,
+					&eFieldZ, &ierr);
+			CHECK("Failure getting eFieldZ");
+			vect3d eField(eFieldX,eFieldY,eFieldZ);
+			int eField_size = sizeof(vect3d);
+			iMesh_setData(meshInstance, ents0d[i], eField_tag, &eField,
+					eField_size, &ierr);
+			CHECK("Failure setting eField");
+		}
+		iMesh_destroyTag(meshInstance, eFieldX_tag, 1, &ierr);
+		CHECK("Failed to destroy eFieldX tag");
+		iMesh_destroyTag(meshInstance, eFieldY_tag, 1, &ierr);
+		CHECK("Failed to destroy eFieldY tag");
+		iMesh_destroyTag(meshInstance, eFieldZ_tag, 1, &ierr);
+		CHECK("Failed to destroy eFieldZ tag");
 	} else {
 		// FMDB's importVTK can't handle our tags, so use custom version
 		ierr = custom_importVTK((mMesh *)mesh, inputMeshFile.c_str());

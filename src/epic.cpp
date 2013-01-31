@@ -89,7 +89,8 @@ int main(int argc, char *argv[]) {
 
 	// TODO: add more robust detection and handling of existing fields
 	if (!mesh.vtkInputMesh) {
-		cout << endl << ".sms file loaded, so assuming existing fields" << endl;
+		if (mpiId == 0)
+			cout << endl << ".sms file loaded, so assuming existing fields" << endl;
 //		if (mpiId == 0)
 //			cout << endl << "Calculating electric field..." << endl;
 //		eField.calcField(potential);
