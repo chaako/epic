@@ -35,6 +35,10 @@ Mesh::Mesh(string inputMeshFile) {
 		int ents0d_alloc = 0, ents0d_size;
 		iBase_TagHandle eFieldX_tag, eFieldY_tag, eFieldZ_tag;
 		string tagName;
+		iMesh_getEntities(meshInstance, rootEntitySet,
+				iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
+				&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
+		CHECK("Couldn't get vertex entities");
 		tagName = "eFieldX";
 		iMesh_getTagHandle(meshInstance, tagName.c_str(),
 				&eFieldX_tag, &ierr, tagName.length());
