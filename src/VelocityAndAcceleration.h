@@ -76,6 +76,7 @@ public:
 				potentialField.evalFieldAndDeriv(&potential, &currentAcceleration,
 						x[0], &currentRegionIndex,
 						interpolationOrder);
+				currentAcceleration *= -1.;
 			} else {
 				electricField.evalField(&currentAcceleration,
 						x[0], &currentRegionIndex,
@@ -86,7 +87,7 @@ public:
 //			// TODO: Determine if better to include drift in potential
 //			//       (conductor shields it, thermal velocities could be different, etc.)
 //			currentAcceleration -= E;
-			currentAcceleration *= -charge;
+			currentAcceleration *= charge;
 //			potential = potentialField.getField(x[0], &currentElement,
 //					interpolationOrder);
 //			for (int i=0; i<N; i++) {

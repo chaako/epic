@@ -74,6 +74,7 @@ void ElectricField::calcField(PotentialField potentialField) {
 	for (int i=0; i<entities.size(); i++) {
 		vect3d eField(0.,0.,0.);
 		// TODO: Make functions for indexing
+		// TODO: Check sign of eField
 		for (int j=0; j<NDIM; j++)
 			eField[j] = -x[i*NDIM+j];
 		this->setField(entities[i], eField);
@@ -123,7 +124,7 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 				if (!potentialBoundaryVertexSet[jj]) {
 					coefficients.push_back(Eigen::Triplet<double>(jj, jj, 1.));
 					// TODO: Don't hard-code object potential
-					b[jj] = -1.;
+					b[jj] = -4.;
 //					b[jj] = potential;
 					potentialBoundaryVertexSet[jj] = true;
 				}
@@ -225,8 +226,9 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 		vect3d currentEField=this->operator[](i);
 		// TODO: Make functions for indexing
 		// TODO: Do more advanced under-relaxation?
+		// TODO: Fix sign of eField in solve rather than here
 		for (int j=0; j<NDIM; j++)
-			eField[j] = 0.5*(x[nVerts+i*NDIM+j]+currentEField[j]);
+			eField[j] = 0.5*(-x[nVerts+i*NDIM+j]+currentEField[j]);
 		this->setField(entities[i], eField);
 		potentialField_ptr->setField(entities[i],
 				0.5*(x[i]+potentialField_ptr->operator[](i)));
