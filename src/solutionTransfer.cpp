@@ -9,7 +9,8 @@
 
 extern "C" {void interpolatefieldssceptic3d_(
 		const char*,double*,double*,double*,int&,
-		double*,double*,double*,double*,const int&);}
+		double*,double*,double*,double*,
+		double*,const int&);}
 
 int main(int argc, char *argv[]) {
 	if (argc<3) {
@@ -29,6 +30,7 @@ int main(int argc, char *argv[]) {
 		double *axs = new double[numberOfVertices];
 		double *ays = new double[numberOfVertices];
 		double *azs = new double[numberOfVertices];
+		double *densities = new double[numberOfVertices];
 		for (int i=0; i<numberOfVertices; i++) {
 			entHandle entity=mesh.entitiesVectors[iBase_VERTEX][i];
 			vect3d position=mesh.getCoordinates(entity);
@@ -64,15 +66,18 @@ int main(int argc, char *argv[]) {
 		string inputHdfFile(argv[1]);
 		int filenameLength=inputHdfFile.length();
 		interpolatefieldssceptic3d_(inputHdfFile.c_str(),xs,ys,zs,
-				numberOfVertices,potentials,axs,ays,azs,filenameLength);
+				numberOfVertices,potentials,axs,ays,azs,
+				densities,filenameLength);
 //		cout << "first fields: " << potentials[0] << " "
 //				<< axs[0] << " " << ays[0] << " " << azs[0] << endl;
 		PotentialField potential(&mesh,string("potential"));
+		DensityField ionDensity(&mesh,string("ionDensity"));
 		ElectricField eField(&mesh,string("eField"));
 		for (int i=0; i<numberOfVertices; i++) {
 			entHandle entity=mesh.entitiesVectors[iBase_VERTEX][i];
 			vect3d position=mesh.getCoordinates(entity);
 			potential.setField(entity,potentials[i]);
+			ionDensity.setField(entity,densities[i]);
 			eField.setField(entity,vect3d(axs[i],ays[i],azs[i]));
 		}
 		int periodLocation = inputMeshFile.rfind(".vtk");
@@ -87,6 +92,7 @@ int main(int argc, char *argv[]) {
 		delete[] axs;
 		delete[] ays;
 		delete[] azs;
+		delete[] densities;
 	}
 	return 0;
 }
