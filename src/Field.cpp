@@ -117,14 +117,17 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 		// The order of the basis derivatives corresponds to that of adjacentVertices
 		for (int j=0; j<adjacentVertices.size(); j++) {
 			int jj = adjacentVertices[j];
+			vect3d vertexPosition = mesh_ptr->getCoordinates(entities[jj]);
 			double potential = potentialField_ptr->operator[](jj);
 			// TODO: don't hard-code boundary codes
 			if (vertexType[jj]==4) {
 				// Set potential at object surface
 				if (!potentialBoundaryVertexSet[jj]) {
 					coefficients.push_back(Eigen::Triplet<double>(jj, jj, 1.));
+					// TODO: hard-coding zero potential of ExB-field as origin here
+					double shieldedPotential=vertexPosition.dot(E);
 					// TODO: Don't hard-code object potential
-					b[jj] = -4.;
+					b[jj] = -4. + shieldedPotential;
 //					b[jj] = potential;
 					potentialBoundaryVertexSet[jj] = true;
 				}
