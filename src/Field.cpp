@@ -127,7 +127,7 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 					// TODO: hard-coding zero potential of ExB-field as origin here
 					double shieldedPotential=vertexPosition.dot(E);
 					// TODO: Don't hard-code object potential
-					b[jj] = -4. + shieldedPotential;
+					b[jj] = -4. - shieldedPotential;
 //					b[jj] = potential;
 					potentialBoundaryVertexSet[jj] = true;
 				}
