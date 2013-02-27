@@ -12,24 +12,24 @@ int setBSizeField(pMesh mesh, pSField field, void *)
 	pVertex vt;
 	double h[3], dirs[3][3], xyz[3], norm;
 	VIter vit=M_vertexIter(mesh);
-	double scaleFactor=1.0;
+	double scaleFactor=0.05;
 	while( vt=VIter_next(vit) ) {
 		V_coord(vt,xyz);
-		h[0] = 0.6*scaleFactor;
-		h[1] = 0.2*scaleFactor;
-		h[2] = 1.8*scaleFactor;
-		// Refine in near object
-		vect3d range(1.3,0.7,3.);
-		vect3d origin(-1,0.,0.);
-		vect3d coords(xyz[0],xyz[1],xyz[2]);
-		vect3d relPos=coords-origin;
-		if (fabs(relPos[0])<range[0] &&
-				fabs(relPos[1])<range[1] &&
-				fabs(relPos[2])<range[2]) {
-			h[0] /= (1+2.*fabs(fabs(relPos[0])-range[0])/range[0]);
-			h[1] /= (1+1.*fabs(fabs(relPos[1])-range[1])/range[1]);
-			h[2] /= (1+5.*fabs(fabs(relPos[2])-range[2])/range[2]);
-		}
+		h[0] = 1.*scaleFactor;
+		h[1] = 1.*scaleFactor;
+		h[2] = 1.*scaleFactor;
+//		// Refine in near object
+//		vect3d range(1.3,0.7,3.);
+//		vect3d origin(-1,0.,0.);
+//		vect3d coords(xyz[0],xyz[1],xyz[2]);
+//		vect3d relPos=coords-origin;
+//		if (fabs(relPos[0])<range[0] &&
+//				fabs(relPos[1])<range[1] &&
+//				fabs(relPos[2])<range[2]) {
+//			h[0] /= (1+2.*fabs(fabs(relPos[0])-range[0])/range[0]);
+//			h[1] /= (1+1.*fabs(fabs(relPos[1])-range[1])/range[1]);
+//			h[2] /= (1+5.*fabs(fabs(relPos[2])-range[2])/range[2]);
+//		}
 
 		dirs[0][0]=1.;
 		dirs[0][1]=0;
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
 	//	}
 
 	cout.precision(3);
-	for (double rotationAngle=0.; rotationAngle<M_PI; rotationAngle+=M_PI/12.) {
+//	for (double rotationAngle=0.; rotationAngle<M_PI; rotationAngle+=M_PI/12.) {
 //	for (double rotationAngle=0.125*2.*M_PI; rotationAngle<0.126*2.*M_PI; rotationAngle+=M_PI/12.) {
 	string inputMeshFile(argv[1]);
 	stringstream volumeMeshFile;
@@ -78,27 +78,29 @@ int main(int argc, char *argv[]) {
 		}
 		vect3d translation(-1.,0.,0.);
 		// TODO: don't hard code collector cell_code
-		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
-				0., vect3d(0.7,0.5,1.3), vect3d(0.,0.,0.));
-		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
-				0., scaleFactors, vect3d(0.,0.,0.));
-		surfaceMesh.transformSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(),
-				rotationAngle, scaleFactors, translation);
+//		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
+//				0., vect3d(0.7,0.5,1.3), vect3d(0.,0.,0.));
+//		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
+//				0., scaleFactors, vect3d(0.,0.,0.));
+//		surfaceMesh.transformSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(),
+//				rotationAngle, scaleFactors, translation);
 		surfaceMesh.createVolumeMesh();
-		surfaceMesh.scaleVolumeMesh(vect3d(0.,0.,0.), inverseScaleFactors);
+//		surfaceMesh.scaleVolumeMesh(vect3d(0.,0.,0.), inverseScaleFactors);
 		int periodLocation = inputMeshFile.rfind(".vtu");
 		volumeMeshFile << inputMeshFile.substr(0,periodLocation)
-				<< "_meshed_" << fixed << rotationAngle/(2.*M_PI) << ".vtk";
+				<< "_meshed" << ".vtk";
+//		<< "_meshed_" << fixed << rotationAngle/(2.*M_PI) << ".vtk";
 		surfaceMesh.saveVolumeMesh(volumeMeshFile.str());
 
 		// TODO: don't hard code collector cell_code
-		surfaceMesh.transformSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(),
-				0., inverseScaleFactors, vect3d(0.,0.,0.));
-		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
-				0., inverseScaleFactors, vect3d(0.,0.,0.));
+//		surfaceMesh.transformSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(),
+//				0., inverseScaleFactors, vect3d(0.,0.,0.));
+//		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
+//				0., inverseScaleFactors, vect3d(0.,0.,0.));
 		stringstream rotatedSurfaceMeshFile;
 		rotatedSurfaceMeshFile << inputMeshFile.substr(0,periodLocation)
-				<< "_rotated_" << fixed << rotationAngle/(2.*M_PI) << ".vtu";
+				<< "_rotated" << ".vtu";
+//		<< "_rotated_" << fixed << rotationAngle/(2.*M_PI) << ".vtu";
 		surfaceMesh.save(rotatedSurfaceMeshFile.str());
 	}
 
@@ -155,7 +157,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		refinedMeshFile << volumeMeshFile;
 	}
-	}
+//	}
 	return 0;
 }
 
