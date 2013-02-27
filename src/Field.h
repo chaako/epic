@@ -97,12 +97,22 @@ public:
 class ElectricField : public Field<vect3d> {
 public:
 	ElectricField(Mesh *inputMesh_ptr, string inputName);
+	ElectricField(Mesh *inputMesh_ptr, string inputName, CodeField vertexType);
 	virtual ~ElectricField() {}
 
 	void calcField(PotentialField potentialField);
 	void calcField(PotentialField *potentialField_ptr, CodeField vertexType,
 			DensityField ionDensity);
 	void calcField_Gatsonis(PotentialField potentialField);
+
+#ifndef MESHER
+//	Eigen::SuperLU<Eigen::SparseMatrix<double> > preconditioner;
+//	Eigen::BiCGSTAB< Eigen::SparseMatrix<double>,Eigen::SuperILU<Eigen::SparseMatrix<double> > > solver;
+//	Eigen::BiCGSTAB< Eigen::SparseMatrix<double>,Eigen::SuperLU<Eigen::SparseMatrix<double> > > solver;
+	Eigen::SuperLU<Eigen::SparseMatrix<double> > solver;
+#else
+	Eigen::BiCGSTAB< Eigen::SparseMatrix<double> > solver;
+#endif
 };
 
 class CodeField : public Field<int> {
@@ -124,24 +134,25 @@ public:
 	void calcField(CodeField vertexType,
 			PotentialField potential, double charge);
 	void calcField(DensityField ionDensity, DensityField electronDensity);
-	void calcField(ElectricField electricField,
+	void calcField(ElectricField& electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile=NULL);
-	double calculateDensity(int node, ElectricField electricField,
+	void poissonCubeTest();
+	double calculateDensity(int node, ElectricField& electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, double *error);
 #ifdef HAVE_MPI
-	void requestDensityFromSlaves(ElectricField electricField,
+	void requestDensityFromSlaves(ElectricField& electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile);
 	MPI::Status receiveDensity(FILE *outFile);
-	void processDensityRequests(ElectricField electricField,
+	void processDensityRequests(ElectricField& electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,

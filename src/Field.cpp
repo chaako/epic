@@ -12,6 +12,103 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName)
 		: Field<vect3d>(inputMesh_ptr, inputName, iBase_VERTEX) {
 }
 
+ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName,
+		CodeField vertexType)
+		: Field<vect3d>(inputMesh_ptr, inputName, iBase_VERTEX) {
+#ifdef HAVE_MPI
+	if (MPI::COMM_WORLD.Get_rank() == 0)
+#endif
+		cout << "Computing the Poisson solve preconditioner..." << endl << endl;
+	int nVerts = entities.size();
+	int m = nVerts + nVerts*NDIM;
+	vector<Eigen::Triplet<double> > coefficients;
+	// TODO: don't hard-code estimated number of adjacent tets
+	coefficients.reserve(20*m);
+	vector<bool> potentialBoundaryVertexSet(nVerts);
+	vector<bool> eFieldBoundaryVertexSet(nVerts);
+	for (int j=0; j<nVerts; j++) {
+		potentialBoundaryVertexSet[j] = false;
+		eFieldBoundaryVertexSet[j] = false;
+	}
+	for (int i=0; i<mesh_ptr->entitiesVectors[iBase_REGION].size(); i++) {
+		vector<vect3d> vVs = mesh_ptr->getVertexVectors(i,iBase_REGION);
+		double volume = mesh_ptr->getTetVolume(vVs);
+		vect3d centroid(0.,0.,0.);
+		centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+		vector<int> adjacentVertices =
+				mesh_ptr->adjacentEntitiesVectors[iBase_REGION][i][iBase_VERTEX];
+		Eigen::Matrix<double,NDIM,NDIM+1> basisDerivatives;
+		mesh_ptr->evaluateLinearBasisFunctionDerivatives(centroid, i,
+				&basisDerivatives);
+		// The order of the basis derivatives corresponds to that of adjacentVertices
+		for (int j=0; j<adjacentVertices.size(); j++) {
+			int jj = adjacentVertices[j];
+			vect3d vertexPosition = mesh_ptr->getCoordinates(entities[jj]);
+			double potential = 0.;
+			// TODO: don't hard-code boundary codes
+			if (vertexType[jj]==4) {
+				// Set potential at object surface
+				if (!potentialBoundaryVertexSet[jj]) {
+					coefficients.push_back(Eigen::Triplet<double>(jj, jj, 1.));
+					potentialBoundaryVertexSet[jj] = true;
+				}
+			} else if (vertexType[jj]==5) {
+				// Set potential at object surface
+				if (!potentialBoundaryVertexSet[jj]) {
+					coefficients.push_back(Eigen::Triplet<double>(jj, jj, 1.));
+					potentialBoundaryVertexSet[jj] = true;
+				}
+			}
+			double debyeLength = 1.e0;
+			for (int k=0; k<adjacentVertices.size(); k++) {
+				int kk = adjacentVertices[k];
+				double basisBasisCoefficient = volume/20;
+				if (jj==kk)
+					basisBasisCoefficient *= 2.;
+				if (!potentialBoundaryVertexSet[jj]) {
+					coefficients.push_back(Eigen::Triplet<double>(jj, kk,
+							basisBasisCoefficient/debyeLength/debyeLength*
+							exp(potential)));
+				}
+				for (int l=0; l<NDIM; l++) {
+					// Coefficients multiplying eField
+					if (!eFieldBoundaryVertexSet[jj]) {
+						// TODO: Make functions for indexing
+						coefficients.push_back(Eigen::Triplet<double>(
+								nVerts+jj*NDIM+l, nVerts+kk*NDIM+l,
+								basisBasisCoefficient));
+					}
+					double basisDerivativeBasisCoefficient =
+							-basisDerivatives(l,k)*volume/4;
+					if (!potentialBoundaryVertexSet[jj]) {
+						coefficients.push_back(Eigen::Triplet<double>(
+								jj, nVerts+kk*NDIM+l,
+								basisDerivativeBasisCoefficient));
+					}
+					// Coefficients multiplying potential
+					if (!eFieldBoundaryVertexSet[jj]) {
+						coefficients.push_back(Eigen::Triplet<double>(
+								nVerts+jj*NDIM+l, kk,
+								basisDerivativeBasisCoefficient));
+					}
+				}
+			}
+		}
+	}
+
+	Eigen::SparseMatrix<double> fixedPartOfA(m,m);
+	fixedPartOfA.setFromTriplets(coefficients.begin(), coefficients.end());
+//	// TODO: Don't hard-code tolerance
+//	solver.setTolerance(1.e-2);
+//	solver.setMaxIterations(10);
+	solver.compute(fixedPartOfA);
+//	solver.analyzePattern(fixedPartOfA);
+	if(solver.info()!=Eigen::Success) {
+		// decomposition failed
+		throw;
+	}
+}
+
 void ElectricField::calcField(PotentialField potentialField) {
 	int m = entities.size()*NDIM;
 	// Find components of E by finite element method (solving Ax=b)
@@ -89,7 +186,7 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 	double potentialChange=1.;
 	int numberOfSolves=1;
 	// Iterate linearized FEM solve to get Boltzmann electron response
-	while (numberOfSolves<10 && potentialChange>2.e-2) {
+	while (numberOfSolves<20 && potentialChange>2.e-5) {
 	potentialChange=0.;
 	// Find potential and components of E by finite element method (solving Ax=b)
 	vector<Eigen::Triplet<double> > coefficients;
@@ -188,7 +285,10 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 			// TODO: add charge source term
 			if (!potentialBoundaryVertexSet[jj]) {
 				b[jj] += 1/debyeLength/debyeLength*
-						(ionDensity[jj] - exp(potential))*volume/4.;
+//						(ionDensity[jj] - exp(potential)*(1.-potential))*
+						// TODO: check that this works for potential~1
+						(ionDensity[jj] - (exp(potential)-potential))*
+						volume/4.;
 			}
 		}
 	}
@@ -198,12 +298,12 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 
 //	Eigen::BiCGSTAB<Eigen::SparseMatrix<double> > solver(A);
 #ifndef MESHER
-	Eigen::SuperLU<Eigen::SparseMatrix<double> > solver;
-	solver.compute(A);
-	if(solver.info()!=Eigen::Success) {
-		// decomposition failed
-		throw;
-	}
+//	Eigen::SuperLU<Eigen::SparseMatrix<double> > solver;
+//	solver.compute(A);
+//	if(solver.info()!=Eigen::Success) {
+//		// decomposition failed
+//		throw;
+//	}
 //	for (int i=0; i<m; i++) {
 //		cout << "A[" << i << "," << i << "] = " << A.coeff(i,i) << " ";
 ////		cout << "A[" << 3 << "," << i << "] = " << A.coeff(3,i) << " ";
@@ -212,9 +312,12 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 //	}
 //	cout << A << endl << endl;
 //	cout << b.transpose() << endl << endl;
+//	solver.factorize(A);
 	Eigen::VectorXd x = solver.solve(b);
+//	Eigen::VectorXd x = solver.solveWithGuess(b,currentSolution);
 	if(solver.info()!=Eigen::Success) {
 		// solving failed
+		cout << "Poisson solve failed with error: " << solver.info() << endl;
 		throw;
 	}
 //	cout << x.transpose() << endl << endl;
@@ -464,7 +567,7 @@ void DensityField::calcField(DensityField ionDensity,
 	}
 }
 
-void DensityField::calcField(ElectricField electricField,
+void DensityField::calcField(ElectricField& electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdge, double charge,
@@ -516,7 +619,20 @@ void DensityField::calcField(ElectricField electricField,
 		fprintf(outFile, "\n\n\n\n");
 }
 
-double DensityField::calculateDensity(int node, ElectricField electricField,
+void DensityField::poissonCubeTest() {
+	for (int i=0; i<entities.size(); i++) {
+		vect3d xyz = mesh_ptr->getCoordinates(entities[i]);
+		double chargeDensity = -0.9*sin(xyz[0]*M_PI)*sin(xyz[1]*M_PI)*sin(xyz[2]*M_PI);
+		// TODO: don't hard-code debye length
+		double debyeLength=1.;
+		double density = debyeLength*debyeLength*chargeDensity
+				+ exp(1./M_PI/M_PI/3.*chargeDensity);
+//		cout << density << " " << xyz.transpose() << endl;
+		this->setField(entities[i], density);
+	}
+}
+
+double DensityField::calculateDensity(int node, ElectricField& electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdgeField, double charge,
@@ -612,7 +728,7 @@ double DensityField::calculateDensity(int node, ElectricField electricField,
 }
 
 #ifdef HAVE_MPI
-void DensityField::requestDensityFromSlaves(ElectricField electricField,
+void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdge, double charge,
@@ -670,7 +786,7 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 #endif
 
 #ifdef HAVE_MPI
-void DensityField::processDensityRequests(ElectricField electricField,
+void DensityField::processDensityRequests(ElectricField& electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdge, double charge,

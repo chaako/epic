@@ -62,8 +62,12 @@ int main(int argc, char *argv[]) {
 
 	Field<int> faceType(&mesh,string("cell_code"),iBase_FACE);
 	CodeField vertexType(&mesh,string("vertex_code"),iBase_VERTEX);
+	if (mpiId == 0)
+		cout << endl << "Setting vertex codes..." << endl;
+	vertexType.calcField(faceType);
 	PotentialField potential(&mesh,string("potential"));
-	ElectricField eField(&mesh,string("eField"));
+//	ElectricField eField(&mesh,string("eField"));
+	ElectricField eField(&mesh,string("eField"),vertexType);
 	DensityField density(&mesh,string("density"));
 	DensityField ionDensity(&mesh,string("ionDensity"));
 	DensityField electronDensity(&mesh,string("electronDensity"));
@@ -78,9 +82,6 @@ int main(int argc, char *argv[]) {
 	double negativePotentialPerturbation = -0.05;
 
 	if (mpiId == 0)
-		cout << endl << "Setting vertex codes..." << endl;
-	vertexType.calcField(faceType);
-	if (mpiId == 0)
 		cout << endl << "Calculating shortest edge of each region..." << endl;
 	shortestEdge.calcField();
 	if (mpiId == 0)
@@ -89,6 +90,8 @@ int main(int argc, char *argv[]) {
 
 	// TODO: add more robust detection and handling of existing fields
 	if (!mesh.vtkInputMesh) {
+//	// TODO: remove this hard-coded enable of Poisson test
+//	if (0 && !mesh.vtkInputMesh) {
 		if (mpiId == 0)
 			cout << endl << ".sms file loaded, so assuming existing fields" << endl;
 //		if (mpiId == 0)
@@ -112,6 +115,18 @@ int main(int argc, char *argv[]) {
 			cout << endl << "Setting potential..." << endl;
 		potential.calcField(vertexType);
 	}
+
+//	// Do Poisson test
+//	// TODO: for now need to remove eField reconstruction from load...shouldn't
+//	//       shouldn't use file extension as indication of restart vs clean start
+//	// TODO: make this a standard callable test?
+//	if (mpiId == 0)
+//		cout << endl << "Setting poissonCubeTest density..." << endl;
+//	ionDensity.poissonCubeTest();
+//	if (mpiId == 0)
+//		cout << endl << "Calculating electric field..." << endl;
+//	eField.calcField(&potential, vertexType, ionDensity);
+
 
 //	// Integrate a circular test orbit (need to deactivate trapped orbit rejection)
 //	{
@@ -144,6 +159,11 @@ int main(int argc, char *argv[]) {
 		// mesh.save() destroys eField tag, so update
 		eField.updateTagHandle();
 	}
+
+//	// Exit for Poisson test
+//	// TODO: remove this
+//	return(0);
+
 	for (int i=1; i<2; i++) {
 		if (mpiId == 0)
 			cout << endl  << endl << "ITERATION " << i << endl;
