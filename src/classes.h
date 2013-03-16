@@ -10,6 +10,7 @@
 
 #include "Mesh.h"
 #include "IntegrandContainer.h"
+#include "Solver.h"
 #include "Field.h"
 #include "Stepper.h"
 #include "VelocityAndAcceleration.h"
