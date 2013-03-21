@@ -1,5 +1,5 @@
 if USE_MPI
-all: SuperLU_4.3/lib/libsuperlu_4.3.a SuperLU_DIST_3.2/lib/libsuperlu_dist_3.2.a
+all: SuperLU_DIST_3.2/lib/libsuperlu_dist_3.2.a
 else
 all: SuperLU_4.3/lib/libsuperlu_4.3.a
 endif
@@ -26,7 +26,7 @@ SuperLU_4.3/lib/libsuperlu_4.3.a:
 	echo "LOADOPTS     =" >> make.inc
 	echo "CDEFS        = -DAdd_" >> make.inc
 	cp make.inc SuperLU_4.3/make.inc
-	cd SuperLU_4.3 && make -j 8 blaslib && make install && make -j 8 lib && make testing
+	cd SuperLU_4.3 && make -j 8 blaslib && make install && make lib && make testing
 
 DSuperLUrootVAL = $(PWD)/SuperLU_DIST_3.2
 
