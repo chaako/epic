@@ -1,0 +1,21 @@
+--- SuperLU_DIST_3.2/SRC/get_perm_c.c	2013-03-20 19:41:08.544483987 -0400
++++ get_perm_c.c	2013-03-20 19:40:38.781373384 -0400
+@@ -30,10 +30,6 @@
+     int_t ct, i, j, nm, numflag = 0; /* C-Style ordering */
+     int_t *perm, *iperm;
+     int_t *b_colptr_int, *b_rowind_int;
+-    extern int check_perm_dist(char *what, int_t n, int_t *perm);
+-
+-    extern int METIS_NodeND(int_t*, int_t*, int_t*, int_t*, int_t*,
+-			    int_t*, int_t*);
+ 
+     metis_options[0] = 0; /* Use Defaults for now */
+ 
+@@ -74,7 +70,6 @@
+        perm, iperm);*/
+ 
+     /* Latest version 4.x.x */
+-    METIS_NodeND(&nm, b_colptr, b_rowind, NULL, NULL, perm, iperm);
+ 
+     /*check_perm_dist("metis perm",  n, perm);*/
+ #endif

@@ -1,0 +1,12 @@
+--- SuperLU_DIST_3.2/SRC/get_perm_c_parmetis.c	2013-03-20 19:41:08.545483991 -0400
++++ get_perm_c_parmetis.c	2013-03-20 19:40:38.781373384 -0400
+@@ -238,9 +238,6 @@
+     
+   if ( iam < noDomains) {
+ 
+-    ParMETIS_V3_NodeND(vtxdist_o, b_rowptr, b_colind, 
+-		       &numflag, options,
+-		       dist_order, l_sizes, metis_comm);
+   }
+ 
+   if (bnz) SUPERLU_FREE (b_colind);
