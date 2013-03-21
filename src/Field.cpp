@@ -18,7 +18,7 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName,
 #ifdef HAVE_MPI
 	if (MPI::COMM_WORLD.Get_rank() == 0)
 #endif
-		cout << "Computing the Poisson solve preconditioner..." << endl << endl;
+		cout << "Computing the Poisson solve LU decomposition..." << endl << endl;
 	int nVerts = entities.size();
 	int m = nVerts + nVerts*NDIM;
 	vector<Eigen::Triplet<double> > coefficients;

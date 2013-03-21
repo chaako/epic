@@ -105,14 +105,7 @@ public:
 			DensityField ionDensity);
 	void calcField_Gatsonis(PotentialField potentialField);
 
-#ifndef MESHER
-//	Eigen::SuperLU<Eigen::SparseMatrix<double> > preconditioner;
-//	Eigen::BiCGSTAB< Eigen::SparseMatrix<double>,Eigen::SuperILU<Eigen::SparseMatrix<double> > > solver;
-//	Eigen::BiCGSTAB< Eigen::SparseMatrix<double>,Eigen::SuperLU<Eigen::SparseMatrix<double> > > solver;
-	Eigen::SuperLU<Eigen::SparseMatrix<double> > solver;
-#else
-	Eigen::BiCGSTAB< Eigen::SparseMatrix<double> > solver;
-#endif
+	Solver solver;
 };
 
 class CodeField : public Field<int> {
