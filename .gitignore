@@ -65,6 +65,14 @@ netgen/netgen-5.0.0/
 netgen/opt/
 superlu/SuperLU_4.3
 superlu/make.inc
+superlu/SuperLU_DIST_3.2
+python/Python-2.7.3
+
+# Install directories
+bin
+lib
+include
+share
 
 # Profiling output
 gmon.out
