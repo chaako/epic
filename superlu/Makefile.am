@@ -26,7 +26,7 @@ SuperLU_4.3/lib/libsuperlu_4.3.a:
 	echo "LOADOPTS     =" >> make.inc
 	echo "CDEFS        = -DAdd_" >> make.inc
 	cp make.inc SuperLU_4.3/make.inc
-	cd SuperLU_4.3 && make -j 8 blaslib && make install && make lib && make testing
+	cd SuperLU_4.3 && make blaslib && make
 
 DSuperLUrootVAL = $(PWD)/SuperLU_DIST_3.2
 
@@ -54,7 +54,7 @@ SuperLU_DIST_3.2/lib/libsuperlu_dist_3.2.a:
 	cp make.inc SuperLU_DIST_3.2/make.inc
 	patch SuperLU_DIST_3.2/SRC/get_perm_c.c get_perm_c.patch
 	patch SuperLU_DIST_3.2/SRC/get_perm_c_parmetis.c get_perm_c_parmetis.patch
-	cd SuperLU_DIST_3.2 && make -j 8 blaslib && make -j 8 lib && make -j 8 install
+	cd SuperLU_DIST_3.2 && make blaslib && make
 
 clean:
 	echo 'rm -rf $$(ls | grep -v Makefile | grep -v superlu_4.3.tar.gz | grep -v superlu_dist_3.2.tar.gz | grep -v .patch)' > clean.sh
