@@ -1,11 +1,11 @@
-all: VTK/install/lib/vtk-5.10/libvtkFiltering.so
+all: @abs_top_builddir@/lib/vtk-5.10/libvtkFiltering.so
 
-VTK/install/lib/vtk-5.10/libvtkFiltering.so:
+@abs_top_builddir@/lib/vtk-5.10/libvtkFiltering.so:
 	tar -xf vtk-5.10.0.tar.gz
-	cd VTK && mkdir install && \
-	../../cmake/cmake-2.8.8/bin/cmake -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=./install/ \
+	cd VTK && \
+	../../cmake/cmake-2.8.8/bin/cmake -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=@abs_top_builddir@ \
 	-DBUILD_SHARED_LIBS=ON . \
-	&& make && make install
+	&& make -j8 && make install
 #	-DBUILD_EXAMPLES=OFF -DBUILD_SHARED_LIBS=ON \
 #	-DCMAKE_BUILD_TYPE=RelWithDebInfo \
 #	-DVTK_USE_CHARTS=OFF -DVTK_USE_CHEMISTRY=OFF \
