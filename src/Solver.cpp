@@ -180,9 +180,9 @@ Eigen::VectorXd Solver::solve(Eigen::VectorXd b) {
 	for (int i=0; i<currentSize; i++) {
 		currentSolution[i] = b[i];
 	}
+	if (partOfGrid) {
 	if (!factored)
 		throw;
-	if (partOfGrid) {
 //		set_default_options_dist(&options);
 		// TODO: explore other reorderings for sparsity-preservation (e.g. METIS),
 		//       since NATURAL gives almost an order of magnitude more non-zeros
