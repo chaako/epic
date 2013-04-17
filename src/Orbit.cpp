@@ -197,6 +197,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		// TODO: could do something like below to get distribution at surface
 //		currentVelocity += sqrt(2.*charge*phiSurface)*vertexNormalVector;
 	}
+//	initialEnergy = 0.5*pow(initialVelocity.norm(),2.)
+//		+ charge*potentialField.getField(initialNode);
 	// Don't integrate orbit if doesn't have enough energy to escape potential
 	// TODO: this should be refined
 //	if (0.5*pow(initialVelocity.norm(),2.)+0.22 <
@@ -227,11 +229,22 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //	VelocityVerletStepper<NDIM> timestepper;
 //	CyclotronicStepper timestepper;
 	TaylorStepper timestepper;
+//	DriftStepper timestepper;
 //	boost::numeric::odeint::runge_kutta4<boost::array<vect3d,2> >
 //		timestepper;
 	VelocityAndAcceleration<NDIM> velocityAndAcceleration(potentialField,
 			electricField, charge, initialNode, false);
+//			electricField, charge, initialNode, true);
 	foundTet = velocityAndAcceleration.foundTet;
+	initialPotential = velocityAndAcceleration.currentPotential;
+//	double driftPotential=-E.dot(initialPosition);
+//	initialPotential += driftPotential;
+//	initialEnergy = 0.5*pow((initialVelocity-VEXB).norm(),2.)
+	initialEnergy = 0.5*pow(initialVelocity.norm(),2.)
+		+ charge*initialPotential;
+	double currentPotential=initialPotential;
+	double currentEnergy=initialEnergy;
+
 
 //	// For second order leap-frog, offset position from velocity in time
 //	currentPosition -= currentVelocity*dt/2.;
@@ -291,6 +304,18 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 					currentElement = mesh_ptr->findTet(previousPosition, currentPosition,
 							currentElement, &foundTet);
 				}
+//				finalEnergy = 0.5*pow(currentVelocity.norm(),2.)
+//					+ charge*potentialField.getField(currentPosition);
+				// TODO: this doesn't account for final step, but as long as boundary
+				//       is at potential zero it shouldn't matter for orbits with non-zero weight
+				//       (actually, am using finalPotential later)
+//				driftPotential = -E.dot(currentPosition);
+				currentPotential = velocityAndAcceleration.currentPotential;
+//				currentPotential += driftPotential;
+//				currentEnergy = 0.5*pow((currentVelocity-VEXB).norm(),2.)
+				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
+//					+ charge*velocityAndAcceleration.currentPotential;
+					+ charge*(currentPotential);
 //				// TODO: set order through input parameter?
 //				int interpolationOrder = INTERPOLATIONORDER;
 ////				currentAcceleration = charge*
@@ -366,13 +391,54 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 								previousPosition);
 				normalVelocity =
 						currentVelocity.dot(normalVector)*normalVector;
-				finalPotential = 0.;
-				vector<entHandle> vertices =
-						mesh_ptr->getVertices(faceCrossed);
-				for (int i=0; i<vertices.size(); i++) {
-					// TODO: should use point where left domain here
-					finalPotential += 1./3.*potentialField.getField(vertices[i]);
-				}
+//				// TODO: debugging
+//				if (extern_orbitNumber==15) {
+//					cout << currentPotential << endl;
+//				}
+//				finalPotential = 0.;
+//				vector<entHandle> vertices =
+//						mesh_ptr->getVertices(faceCrossed);
+//				for (int i=0; i<vertices.size(); i++) {
+//					// TODO: should use point where left domain here
+//					finalPotential += 1./3.*potentialField.getField(vertices[i]);
+//				}
+//				// TODO: debugging
+//				if (extern_orbitNumber==15) {
+//					cout << finalPotential << endl;
+//				}
+				vect3d exitPosition;
+				vector<vect3d> vertexVectors =
+						mesh_ptr->getVertexVectors(faceCrossed);
+				// TODO: straight line intersection may not be accurate for magnetized orbits
+				mesh_ptr->checkIfIntersectsTriangle(previousPosition,
+						currentPosition, vertexVectors, &exitPosition);
+				vect3d centroid(0.,0.,0.);
+//				vector<vect3d> vVs = mesh_ptr->getVertexVectors(i,iBase_REGION);
+//				centroid = (vVs[0]+vVs[1]+vVs[2]+vVs[3])/4.;
+//				vect3d interiorDirection=centroid-exitPosition;
+//				interiorDirection /= interiorDirection.norm();
+				// TODO: Don't hard-code this correction
+//				exitPosition += sqrt(LENGTH_TOLERANCE)*interiorDirection;
+				exitPosition -= sqrt(LENGTH_TOLERANCE)*normalVector;
+				// TODO: figure out why this fails with interpolationorder=1
+//				currentPotential = potentialField.getField(exitPosition);
+				// TODO: for consistency should strictly evaluate everything at exitPosition
+//				driftPotential = -E.dot(currentPosition);
+//				currentPotential += driftPotential;
+//				currentEnergy = 0.5*pow((currentVelocity-VEXB).norm(),2.)
+				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
+					+ charge*currentPotential;
+				finalPotential = currentPotential;
+				finalEnergy = currentEnergy;
+//				// TODO: debugging
+//				if (extern_orbitNumber==15) {
+//					cout << finalPotential << endl;
+////					cout << previousPosition.transpose() << endl;
+////					cout <<	exitPosition.transpose() << endl;
+////					cout << currentPosition.transpose() << endl;
+////					cout << potentialField.getField(previousPosition) << endl;
+////					cout <<	potentialField.getField(exitPosition) << endl;
+//				}
 				// TODO: shouldn't hard-code boundary code
 			} else {
 				faceType = 0;
@@ -383,6 +449,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //						" " << previousPosition.norm() << endl;
 //			}
 			finalFaceType = faceType;
+			// TODO: need to account for shielding potential here
 			if (faceType==4 && 0.5*pow(normalVelocity.norm(),2.)<charge*phiSurface) {
 				currentElement = previousElement;
 				foundTet = true;
@@ -420,8 +487,10 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 			potential = 0.;
 //		}
 //		assert(currentPosition.norm()<10.);
-		double energy = 1./2.*pow(currentVelocity.norm(),2.) + charge*potential;
+		double energy = 0.;
+//		double energy = 1./2.*pow(currentVelocity.norm(),2.) + charge*finalPotential;
 		if (outFile) {
+//		if (outFile && (extern_orbitNumber==15 || extern_orbitNumber==790)) {
 //			fprintf(outFile, "%f %f %f %p\n", currentPosition[0], currentPosition[1],
 //					currentPosition[2], (void*)currentElement);
 			// TODO: fix occasional very large coordinate values
@@ -429,7 +498,9 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //			if (currentPosition.norm()<=5.)
 			fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
 					currentPosition[2], extern_orbitNumber);
-//					currentPosition[2], energy);
+//			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
+//					currentPosition[2], currentEnergy);
+//					currentPosition[2], currentPotential);
 //					currentPosition[2], eFieldR);
 		}
 		if (endLoop)
@@ -440,4 +511,14 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	finalPosition = currentPosition;
 	// TODO: correct for time-step offset?
 	finalVelocity = currentVelocity;
+	// TODO: debugging
+	double fractionalEnergyChange = (finalEnergy-initialEnergy)/initialEnergy;
+//	if (fabs(fractionalEnergyChange) > 0.0 && finalPotential-driftPotential > -1.) {
+//	if (fabs(fractionalEnergyChange) > 0.0 && finalPotential > -1.) {
+//		cout << fractionalEnergyChange << " energy change for orbit " <<
+//				extern_orbitNumber << " : " << finalPotential << " / " <<
+//				initialPotential <<	" " << finalVelocity.norm() << " / " <<
+//				initialVelocity.norm() <<	" " << finalEnergy << " / " <<
+//				initialEnergy << endl;
+//	}
 }

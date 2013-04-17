@@ -52,6 +52,7 @@ public:
 		} else {
 			interpolationOrder = 1;
 		}
+		currentPotential = potentialField.getField(initialNode);
 	}
 
 	// TODO: should perhaps be consistent about ptrs vs refs
@@ -77,8 +78,12 @@ public:
 						x[0], &currentRegionIndex,
 						interpolationOrder);
 				currentAcceleration *= -1.;
+				currentPotential = potential;
 			} else {
 				electricField.evalField(&currentAcceleration,
+						x[0], &currentRegionIndex,
+						interpolationOrder);
+				potentialField.evalField(&currentPotential,
 						x[0], &currentRegionIndex,
 						interpolationOrder);
 			}
@@ -109,6 +114,7 @@ public:
 	Eigen::Matrix<double,N,1> currentPosition;
 	Eigen::Matrix<double,N,1> currentVelocity;
 	Eigen::Matrix<double,N,1> currentAcceleration;
+	double currentPotential;
 };
 
 #endif /* VELOCITYANDACCELERATION_H_ */
