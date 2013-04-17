@@ -32,11 +32,14 @@ public:
 	entHandle currentElement;
 	vect3d initialPosition;
 	vect3d initialVelocity;
+	double initialEnergy;
 	vect3d finalPosition;
 	vect3d finalVelocity;
+	double finalEnergy;
 	bool negativeEnergy;
 	int vertexType;
 	int finalFaceType;
+	double initialPotential;
 	double finalPotential;
 	double charge;
 };

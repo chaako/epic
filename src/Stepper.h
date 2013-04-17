@@ -207,4 +207,62 @@ public:
     }
 };
 
+class DriftStepper{
+public:
+	typedef boost::array<vect3d, 2> state_type;
+
+    static unsigned short order(){return 99;}
+
+    template<class OdeSystem>
+	void do_step(OdeSystem odeSystem, state_type &x, double t, double dt) {
+		state_type dxdt;
+		// TODO: should get B from odeSystem, though Drift integrator
+		//       is meant for uniform B so external is fine in that sense
+		vect3d unitB = B/B.norm();
+		double charge = boost::unwrap_ref(odeSystem).charge;
+		// TODO: figure out how to distinguish electron and ion masses
+		double mass = 1.;
+		// TODO: replace this opaque hack to account for mass difference
+		if (charge<0)
+			charge *= sqrt(1836.); // sqrt to also account for v_th difference
+		double omega = -charge*B.norm()/mass; // minus sign since integrating backwards
+
+		// TODO: generalize to any unitB
+		assert(unitB[0]==0. && unitB[1]==0);
+		vect3d pos = x[0];
+		vect3d vel = x[1];
+		boost::unwrap_ref(odeSystem)(x, dxdt);
+		vect3d accel = dxdt[1];
+		vect3d velExB = VEXB;
+		// TODO: replace this opaque hack to account for mass difference
+		if (charge<0)
+			velExB /= sqrt(1836.); // sqrt to account for v_th difference
+
+		double s = sin(omega*dt) - omega*dt;
+		double c = cos(omega*dt) - 1.;
+
+		// Advance position
+		pos[0] += 1./omega*(vel[0]*sin(omega*dt)-vel[1]*c)
+				+1./omega/omega*(-accel[0]*c-accel[1]*s);
+		pos[1] += -1./omega*(-vel[1]*sin(omega*dt)-vel[0]*c)
+				+1./omega/omega*(-accel[1]*c+accel[0]*s);
+		pos[2] += dt * vel[2] + 1./2.*dt*dt*accel[2];
+		// TODO: handle EXB differently?
+		pos += velExB*dt;
+
+		// Advance velocity
+		// TODO: generalize to any unitB
+		vect3d updatedVel = vel;
+		updatedVel[0] = vel[0]*cos(omega*dt)+vel[1]*sin(omega*dt)
+				+1./omega*(accel[0]*sin(omega*dt)-accel[1]*c);
+		updatedVel[1] = vel[1]*cos(-omega*dt)+vel[0]*sin(-omega*dt)
+				-1./omega*(-accel[1]*sin(omega*dt)-accel[0]*c);
+		updatedVel[2] += dt*accel[2];
+
+		// TODO: generalize to any unitB
+		x[0] = pos;
+		x[1] = updatedVel;
+    }
+};
+
 #endif /* STEPPER_H_ */
