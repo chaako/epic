@@ -611,14 +611,24 @@ int Mesh::findTet(vect3d oldPosition,
 	return tetIndex;
 }
 
-//entHandle Mesh::findStartingTet(vect3d const &position,
-//		vect3d const &velocity, entHandle vertex) {
-//	entHandle startingTet=NULL;
-//	vect3d perturbedPosition =
-//			position + DELTA_LENGTH*velocity/velocity.norm();
-//
-//	return startingTet;
-//}
+entHandle Mesh::findStartingTet(vect3d const &position,
+		vect3d const &velocity, entHandle vertex) {
+	entHandle startingTet=NULL;
+	// TODO: pertubation should be large enough that registers as only within tolerance of one tet
+	vect3d perturbedPosition =
+			position + sqrt(DELTA_LENGTH)*velocity/velocity.norm();
+	vector<entHandle> adjacentElements=getAdjacentEntities(vertex, iBase_REGION);
+	int numberOfRegionsWithinTolerance=0;
+	for (int i=0; i<adjacentElements.size(); i++) {
+		if (checkIfInTet(perturbedPosition, adjacentElements[i])) {
+			startingTet = adjacentElements[i];
+			numberOfRegionsWithinTolerance++;
+		}
+	}
+	if (numberOfRegionsWithinTolerance!=1)
+		throw numberOfRegionsWithinTolerance;
+	return startingTet;
+}
 
 vector<entHandle> Mesh::getEntities(int dimension) {
 	int ierr;

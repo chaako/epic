@@ -16,10 +16,18 @@ Orbit::Orbit(Mesh *inputMesh_ptr, entHandle inputNode,
 		vect3d inputVelocity, double inputCharge) {
 	mesh_ptr = inputMesh_ptr;
 	initialNode = inputNode;
-	// TODO: perhaps find a random adjacent tet rather than give node
-	currentElement = inputNode;
 	initialPosition = inputMesh_ptr->getCoordinates(inputNode);
 	initialVelocity = -inputVelocity; // Reverse sign since integrating backwards
+	try {
+		currentElement = mesh_ptr->findStartingTet(initialPosition, initialVelocity, inputNode);
+	} catch (int numberOfRegionsWithinTolerance) {
+		if (numberOfRegionsWithinTolerance==0) {
+			// TODO: change this to be flag not to pursue orbit
+			currentElement = inputNode;
+		} else {
+			throw;
+		}
+	}
 //	// TODO: remove this
 //	initialVelocity = -vect3d(0.,1.,1.);
 	charge = inputCharge;

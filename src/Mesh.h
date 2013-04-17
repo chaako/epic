@@ -45,8 +45,8 @@ public:
 			entHandle adjacentTet, bool *tetFound, bool isTet=true);
 	int findTet(vect3d oldPosition, vect3d position,
 			int adjacentTetIndex, bool *tetFound, bool isTet=true);
-//	entHandle findStartingTet(vect3d const &position,
-//			vect3d const &velocity, entHandle vertex);
+	entHandle findStartingTet(vect3d const &position,
+			vect3d const &velocity, entHandle vertex);
 	vector<entHandle> getVertices(entHandle element);
 	vector<entHandle> getAdjacentEntities(entHandle element,
 			int dimension);
