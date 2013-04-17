@@ -785,12 +785,19 @@ bool Mesh::checkIfInTet(vect3d currentPosition,
 bool Mesh::checkIfIntersectsTriangle(vect3d previousPosition,
 		vect3d currentPosition,
 		vector<vect3d> vertexVectors) {
+	vect3d intersectionPoint;
+	return this->checkIfIntersectsTriangle(previousPosition, currentPosition,
+			vertexVectors, &intersectionPoint);
+}
+
+bool Mesh::checkIfIntersectsTriangle(vect3d previousPosition,
+		vect3d currentPosition,
+		vector<vect3d> vertexVectors, vect3d *intersectionPoint) {
 	vector<vect3d> ray(2);
 	ray[0] = previousPosition;
 	ray[1] = currentPosition;
-	vect3d intersectionPoint;
 	int intersectionStatus =
-			intersect_SegmentTriangle(ray, vertexVectors, &intersectionPoint);
+			intersect_SegmentTriangle(ray, vertexVectors, intersectionPoint);
 //	int intersectionStatus =
 //			intersect_RayTriangle(ray, vertexVectors, &intersectionPoint);
 	if (intersectionStatus == 1) {

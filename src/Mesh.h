@@ -75,6 +75,9 @@ public:
 	bool checkIfIntersectsTriangle(vect3d previousPosition,
 			vect3d currentPosition,
 			vector<vect3d> vertexVectors);
+	bool checkIfIntersectsTriangle(vect3d previousPosition,
+			vect3d currentPosition,
+			vector<vect3d> vertexVectors, vect3d *intersectionPoint);
 	bool checkIfRayIntersectsTriangle(vect3d previousPosition,
 			vect3d currentPosition,
 			vector<vect3d> vertexVectors);
