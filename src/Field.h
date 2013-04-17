@@ -277,6 +277,10 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 	Eigen::VectorXd errorBases, errorCoefficients;
 //	cout << this << " " << *entity << " " << currentElement << " " <<
 //			position.transpose() << endl;
+	entHandle entityIfNull=NULL;
+	// TODO: figure out why *entity=NULL initialization can give entity=NULL...opt?
+	if (entity==NULL)
+		entity = &entityIfNull;
 	if (*entity==NULL) {
 //		cout << this << " " << *entity << " " << currentElement << " " <<
 //				position.transpose() << endl;
