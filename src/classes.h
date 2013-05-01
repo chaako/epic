@@ -14,6 +14,7 @@
 #include "Field.h"
 #include "Stepper.h"
 #include "VelocityAndAcceleration.h"
+#include "MinimumBasisFunction.h"
 #include "Orbit.h"
 
 

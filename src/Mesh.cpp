@@ -615,8 +615,11 @@ entHandle Mesh::findStartingTet(vect3d const &position,
 		vect3d const &velocity, entHandle vertex) {
 	entHandle startingTet=NULL;
 	// TODO: pertubation should be large enough that registers as only within tolerance of one tet
-	vect3d perturbedPosition =
-			position + sqrt(DELTA_LENGTH)*velocity/velocity.norm();
+	// TODO: EXB drift wrong for electrons since uits are different
+//	vect3d perturbedPosition =
+//			position + sqrt(DELTA_LENGTH)*(velocity+VEXB)/(velocity+VEXB).norm();
+	// TODO: standardize this
+	vect3d perturbedPosition = position + (velocity+VEXB)*SMALL_TIME;
 	vector<entHandle> adjacentElements=getAdjacentEntities(vertex, iBase_REGION);
 	int numberOfRegionsWithinTolerance=0;
 	for (int i=0; i<adjacentElements.size(); i++) {
@@ -1366,6 +1369,12 @@ void Mesh::evaluateCubicErrorBases(
 //	cubicBasisFunctions[21] =
 //			linearBasisFunctions[2]*linearBasisFunctions[3];
 
+}
+
+double Mesh::minimumBasisFunction(const vect3d &position, int &regionIndex) {
+	Eigen::Vector4d bF(0.,0.,0.,0.);
+	this->evaluateLinearBasisFunctions(position, regionIndex, &bF);
+	return min(min(min(bF[0],bF[1]),bF[2]),bF[3]);
 }
 
 vtkSmartPointer<vtkUnstructuredGrid> Mesh::createVtkMesh() {

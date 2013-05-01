@@ -4,7 +4,8 @@
 # epic
 bin_PROGRAMS=epic mesher solutionTransfer
 CLASS_FILES = custom_mImportVTK.cc Mesh.cpp Orbit.cpp Field.cpp IntegrandContainer.cpp \
-              intersect_RayTriangle.cpp distributionFunctionFromBoundary.cpp Solver.cpp
+              intersect_RayTriangle.cpp distributionFunctionFromBoundary.cpp Solver.cpp \
+              MinimumBasisFunction.cpp
 #              VelocityAndAcceleration.cpp
 epic_SOURCES = epic.cpp $(CLASS_FILES)
 epic_CFLAGS = $(AM_CFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \

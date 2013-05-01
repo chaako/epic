@@ -128,6 +128,7 @@ public:
 	void evaluateCubicErrorBases(
 			Eigen::Vector4d linearBasisFunctions,
 			Eigen::VectorXd *cubicBasisFunctions);
+	double minimumBasisFunction(const vect3d &position, int &regionIndex);
 
 	vtkSmartPointer<vtkUnstructuredGrid> createVtkMesh();
 
