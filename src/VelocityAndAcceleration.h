@@ -22,7 +22,7 @@ public:
 
 	VelocityAndAcceleration(PotentialField &inputPotentialField,
 			ElectricField &inputElectricField,
-			double inputCharge, entHandle initialNode,
+			double inputCharge, entHandle initialNode, vect3d initialVelocity,
 			bool inputOnlyUsePotential=true) :
 		potentialField(inputPotentialField),
 		electricField(inputElectricField),
@@ -38,10 +38,21 @@ public:
 //		currentVelocity*=0.;
 //		currentAcceleration*=0.;
 		foundTet = false;
-		currentElement = potentialField.mesh_ptr->findTet(currentPosition,
-				currentPosition, initialNode, &foundTet, false);
-		currentRegionIndex =
-				potentialField.mesh_ptr->indicesOfEntities[currentElement];
+		currentRegionIndex=-1;
+		try {
+			currentElement = potentialField.mesh_ptr->findStartingTet(currentPosition,
+					initialVelocity, initialNode);
+			currentRegionIndex =
+					potentialField.mesh_ptr->indicesOfEntities[currentElement];
+			foundTet = true;
+		} catch (int numberOfRegionsWithinTolerance) {
+			if (numberOfRegionsWithinTolerance==0) {
+				// TODO: come up with better handling of this
+				currentElement = initialNode;
+			} else {
+				throw;
+			}
+		}
 //		int dimension=potentialField.mesh_ptr->getEntityDimension(currentElement);
 //		assert(dimension==3);
 //		if (!foundTet)
