@@ -642,8 +642,12 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		double dtMultiplier=10.;
 		double dtAtWhichNegative=sqrt(SMALL_TIME)/dtMultiplier;
 		// TODO: minimumBasisFunction() should not throw provided positionAndVelocity[0] is within tet
-		while (dtAtWhichNegative<tMax && minimumBasisFunction(dtAtWhichNegative)>0.) {
-			dtAtWhichNegative *= dtMultiplier;
+		try {
+			while (dtAtWhichNegative<tMax && minimumBasisFunction(dtAtWhichNegative)>0.) {
+				dtAtWhichNegative *= dtMultiplier;
+			}
+		} catch (...) {
+			cout << "Failed to evaluate minimumBasisFunction(" << dtAtWhichNegative << ")" << endl;
 		}
 //		// TODO: debugging
 ////		cout << minimumBasisFunction(-dtAtWhichNegative) << endl;
