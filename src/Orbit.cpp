@@ -633,7 +633,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		// TODO: can this fail (need to ensure minimumBasisFunction(0.)>0.?
 		dt = SMALL_TIME;
 		t += dt;
-		timestepper.do_step(boost::ref(velocityAndAcceleration), positionAndVelocity, t, dt);
+		try {
+			timestepper.do_step(boost::ref(velocityAndAcceleration), positionAndVelocity, t, dt);
+		} catch (...) {
+			cout << "Failed to do SMALL_TIME step into interior." << endl;
+		}
 		// TODO: optimise this or replace with better way?
 		double dtMultiplier=10.;
 		double dtAtWhichNegative=sqrt(SMALL_TIME)/dtMultiplier;
@@ -658,11 +662,17 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	    boost::uintmax_t max_iter=500;
 	    // tolerance is number of bits
 	    boost::math::tools::eps_tolerance<double> tol(8);
-	    std::pair<double, double> dtInterval=
-				boost::math::tools::toms748_solve(minimumBasisFunction, 0.,
+	    std::pair<double, double> dtInterval;
+	    dtInterval.first=0.;
+	    dtInterval.second=SMALL_TIME;
+		try {
+			dtInterval = boost::math::tools::toms748_solve(minimumBasisFunction, 0.,
 						dtAtWhichNegative, tol, max_iter);
 //				boost::math::tools::toms748_solve(minimumBasisFunction, SMALL_TIME,
 //						dtAtWhichNegative, tol, max_iter);
+		} catch (...) {
+			cout << "toms748 failed to find root." << endl;
+		}
 //	    dt = dtInterval.first;
 	    // TODO: find better way to ensure next point is not in same region
 	    dt = dtInterval.second+SMALL_TIME;
@@ -677,7 +687,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //		cout << nSteps << " : " << t << endl;
 //		cout << positionAndVelocity[0].transpose() << endl;
 		// TODO: DriftStepper::do_step() should not throw, but others might...
-		timestepper.do_step(boost::ref(velocityAndAcceleration), positionAndVelocity, t, dt);
+		try {
+			timestepper.do_step(boost::ref(velocityAndAcceleration), positionAndVelocity, t, dt);
+		} catch (...) {
+			cout << "Failed to step out of tet." << endl;
+		}
 		currentPosition = positionAndVelocity[0];
 		currentVelocity = positionAndVelocity[1];
 //		// TODO: debugging
