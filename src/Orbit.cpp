@@ -966,6 +966,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		if (endLoop)
 			break;
 	}
+	} else { // !foundTet
+		// TODO: check that only get here if starting from node on boundary
+		finalFaceType = vertexTypeField.getField(initialNode);
+		finalPotential = potentialField.getField(initialNode);
+	}
 //	cout << "Final radius=" << currentPosition.norm() << " nSteps=" <<
 //			nSteps << "faceType =" << finalFaceType << endl;
 	finalPosition = currentPosition;
@@ -981,5 +986,4 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //				initialVelocity.norm() <<	" " << finalEnergy << " / " <<
 //				initialEnergy << endl;
 //	}
-	}
 }
