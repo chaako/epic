@@ -630,6 +630,10 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 		// TODO: Need acceleration info as well, since v_z changes during time-step
 //		dt = min(0.01,dt);
 //		dt = 0.01;
+		// TODO: can this fail (need to ensure minimumBasisFunction(0.)>0.?
+		dt = SMALL_TIME;
+		t += dt;
+		timestepper.do_step(boost::ref(velocityAndAcceleration), positionAndVelocity, t, dt);
 		// TODO: optimise this or replace with better way?
 		double dtMultiplier=10.;
 		double dtAtWhichNegative=sqrt(SMALL_TIME)/dtMultiplier;
@@ -644,12 +648,21 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 ////		cout << mesh_ptr->minimumBasisFunction(positionAndVelocity[0]+dtAtWhichNegative*(
 ////				positionAndVelocity[1]+VEXB),
 ////				velocityAndAcceleration.currentRegionIndex) << endl;
+//		if (extern_orbitNumber==64313 7328) {
+//		if (extern_orbitNumber==64313) {
+//			cout << velocityAndAcceleration.currentPosition.transpose() << endl;
+//			cout << dtAtWhichNegative << endl;
+//			cout << minimumBasisFunction(0.) << " " << minimumBasisFunction(dtAtWhichNegative) << endl;
+////			cout << minimumBasisFunction(SMALL_TIME) << " " << minimumBasisFunction(dtAtWhichNegative) << endl;
+//		}
 	    boost::uintmax_t max_iter=500;
 	    // tolerance is number of bits
 	    boost::math::tools::eps_tolerance<double> tol(8);
 	    std::pair<double, double> dtInterval=
-				boost::math::tools::toms748_solve(minimumBasisFunction, SMALL_TIME,
+				boost::math::tools::toms748_solve(minimumBasisFunction, 0.,
 						dtAtWhichNegative, tol, max_iter);
+//				boost::math::tools::toms748_solve(minimumBasisFunction, SMALL_TIME,
+//						dtAtWhichNegative, tol, max_iter);
 //	    dt = dtInterval.first;
 	    // TODO: find better way to ensure next point is not in same region
 	    dt = dtInterval.second+SMALL_TIME;
@@ -723,11 +736,15 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				currentElement = velocityAndAcceleration.currentElement;
 				// TODO: this isn't elegant, but under this scheme should always be in new tet
 				assert(currentElement!=previousElement);
+//				if (currentElement==previousElement)
+//					cout << "Did not step to new element...something is wrong.";
 				// TODO: change this to use regionIndex
 				foundTet = mesh_ptr->checkIfInTet(currentPosition, currentElement);
 				if (!foundTet) {
-					currentElement = mesh_ptr->findTet(previousPosition, currentPosition,
-							currentElement, &foundTet);
+					// TODO: figure out why sometimes lose track of tet
+					throw int(OUTSIDE_DOMAIN);
+//					currentElement = mesh_ptr->findTet(previousPosition, currentPosition,
+//							currentElement, &foundTet);
 				}
 //				finalEnergy = 0.5*pow(currentVelocity.norm(),2.)
 //					+ charge*potentialField.getField(currentPosition);
