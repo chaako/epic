@@ -189,7 +189,9 @@ Orbit::~Orbit() {
 ////	double dt=min(0.005,0.005/initialVelocity.norm()), tMax=100;
 ////	double dt=min(0.01,0.01/initialVelocity.norm()), tMax=100;
 //	double dt=min(0.02,0.02/initialVelocity.norm()), tMax=100;
-//	vect3d currentPosition = initialPosition;
+//	// TODO: should be consistent about starting position
+//	vect3d currentPosition = initialPosition + (initialVelocity+VEXB)*SMALL_TIME;
+////	vect3d currentPosition = initialPosition;
 //	vect3d currentVelocity = initialVelocity;
 //	// TODO: shouldn't hard-code quasi-neutral operation
 //	double phiSurface = -4;
@@ -241,14 +243,14 @@ Orbit::~Orbit() {
 ////	boost::numeric::odeint::runge_kutta4<boost::array<vect3d,2> >
 ////		timestepper;
 //	VelocityAndAcceleration<NDIM> velocityAndAcceleration(potentialField,
-//			electricField, charge, initialNode, false);
-////			electricField, charge, initialNode, true);
+////			electricField, charge, initialNode, initialVelocity, false);
+//			electricField, charge, initialNode, initialVelocity, true);
 //	foundTet = velocityAndAcceleration.foundTet;
 //	initialPotential = velocityAndAcceleration.currentPotential;
-////	double driftPotential=-E.dot(initialPosition);
-////	initialPotential += driftPotential;
-////	initialEnergy = 0.5*pow((initialVelocity-VEXB).norm(),2.)
-//	initialEnergy = 0.5*pow(initialVelocity.norm(),2.)
+//	double driftPotential=E.dot(initialPosition);
+//	initialPotential += driftPotential;
+//	initialEnergy = 0.5*pow((initialVelocity+VEXB).norm(),2.)
+////	initialEnergy = 0.5*pow(initialVelocity.norm(),2.)
 //		+ charge*initialPotential;
 //	double currentPotential=initialPotential;
 //	double currentEnergy=initialEnergy;
@@ -258,7 +260,7 @@ Orbit::~Orbit() {
 ////	currentPosition -= currentVelocity*dt/2.;
 ////	for (double t=0.; t<tMax; t+=dt) {
 //	double t=0;
-//	double numberOfStepsPerRegion = 3.;
+//	double numberOfStepsPerRegion = 30.;
 //	// TODO: set max number of steps more cleverly (since also need to limit by accel)
 //	for (int iT=0; iT<100000*numberOfStepsPerRegion  && !negativeEnergy; iT++) {
 //		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
@@ -317,11 +319,11 @@ Orbit::~Orbit() {
 //				// TODO: this doesn't account for final step, but as long as boundary
 //				//       is at potential zero it shouldn't matter for orbits with non-zero weight
 //				//       (actually, am using finalPotential later)
-////				driftPotential = -E.dot(currentPosition);
+//				driftPotential = E.dot(currentPosition);
 //				currentPotential = velocityAndAcceleration.currentPotential;
-////				currentPotential += driftPotential;
-////				currentEnergy = 0.5*pow((currentVelocity-VEXB).norm(),2.)
-//				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
+//				currentPotential += driftPotential;
+//				currentEnergy = 0.5*pow((currentVelocity+VEXB).norm(),2.)
+////				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
 ////					+ charge*velocityAndAcceleration.currentPotential;
 //					+ charge*(currentPotential);
 ////				// TODO: set order through input parameter?
@@ -431,11 +433,11 @@ Orbit::~Orbit() {
 //				// TODO: figure out why this fails with interpolationorder=1
 ////				currentPotential = potentialField.getField(exitPosition);
 //				// TODO: for consistency should strictly evaluate everything at exitPosition
-////				driftPotential = -E.dot(currentPosition);
+////				driftPotential = E.dot(currentPosition);
 ////				currentPotential += driftPotential;
-////				currentEnergy = 0.5*pow((currentVelocity-VEXB).norm(),2.)
-//				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
-//					+ charge*currentPotential;
+////				currentEnergy = 0.5*pow((currentVelocity+VEXB).norm(),2.)
+//////				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
+////					+ charge*currentPotential;
 //				finalPotential = currentPotential;
 //				finalEnergy = currentEnergy;
 ////				// TODO: debugging
@@ -603,10 +605,10 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	// TODO: do this more cleanly
 	if (foundTet) {
 	initialPotential = velocityAndAcceleration.currentPotential;
-//	double driftPotential=-E.dot(initialPosition);
-//	initialPotential += driftPotential;
-//	initialEnergy = 0.5*pow((initialVelocity-VEXB).norm(),2.)
-	initialEnergy = 0.5*pow(initialVelocity.norm(),2.)
+	double driftPotential=E.dot(initialPosition);
+	initialPotential += driftPotential;
+	initialEnergy = 0.5*pow((initialVelocity+VEXB).norm(),2.)
+//	initialEnergy = 0.5*pow(initialVelocity.norm(),2.)
 		+ charge*initialPotential;
 	double currentPotential=initialPotential;
 	double currentEnergy=initialEnergy;
@@ -769,11 +771,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				// TODO: this doesn't account for final step, but as long as boundary
 				//       is at potential zero it shouldn't matter for orbits with non-zero weight
 				//       (actually, am using finalPotential later)
-//				driftPotential = -E.dot(currentPosition);
+				driftPotential = E.dot(currentPosition);
 				currentPotential = velocityAndAcceleration.currentPotential;
-//				currentPotential += driftPotential;
-//				currentEnergy = 0.5*pow((currentVelocity-VEXB).norm(),2.)
-				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
+				currentPotential += driftPotential;
+				currentEnergy = 0.5*pow((currentVelocity+VEXB).norm(),2.)
+//				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
 //					+ charge*velocityAndAcceleration.currentPotential;
 					+ charge*(currentPotential);
 //				// TODO: set order through input parameter?
@@ -883,11 +885,11 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				// TODO: figure out why this fails with interpolationorder=1
 //				currentPotential = potentialField.getField(exitPosition);
 				// TODO: for consistency should strictly evaluate everything at exitPosition
-//				driftPotential = -E.dot(currentPosition);
+//				driftPotential = E.dot(currentPosition);
 //				currentPotential += driftPotential;
-//				currentEnergy = 0.5*pow((currentVelocity-VEXB).norm(),2.)
-				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
-					+ charge*currentPotential;
+//				currentEnergy = 0.5*pow((currentVelocity+VEXB).norm(),2.)
+////				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
+//					+ charge*currentPotential;
 				finalPotential = currentPotential;
 				finalEnergy = currentEnergy;
 //				// TODO: debugging
