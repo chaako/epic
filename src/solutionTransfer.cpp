@@ -20,7 +20,8 @@ int main(int argc, char *argv[]) {
 
 	cout.precision(3);
 	string inputMeshFile(argv[2]);
-	if (inputMeshFile.find(".vtk")!=string::npos) {
+//	if (inputMeshFile.find(".vtk")!=string::npos) {
+	if (inputMeshFile.find(".sms")!=string::npos) {
 		Mesh mesh(inputMeshFile);
 		int numberOfVertices=mesh.entitiesVectors[iBase_VERTEX].size();
 		double *xs = new double[numberOfVertices];

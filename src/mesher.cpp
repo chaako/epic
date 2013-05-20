@@ -12,7 +12,7 @@ int setBSizeField(pMesh mesh, pSField field, void *)
 	pVertex vt;
 	double h[3], dirs[3][3], xyz[3], norm;
 	VIter vit=M_vertexIter(mesh);
-	double scaleFactor=0.05;
+	double scaleFactor=1.0;
 	while( vt=VIter_next(vit) ) {
 		V_coord(vt,xyz);
 		h[0] = 1.*scaleFactor;
@@ -31,15 +31,46 @@ int setBSizeField(pMesh mesh, pSField field, void *)
 //			h[2] /= (1+5.*fabs(fabs(relPos[2])-range[2])/range[2]);
 //		}
 
-		dirs[0][0]=1.;
-		dirs[0][1]=0;
-		dirs[0][2]=0;
-		dirs[1][0]=0;
-		dirs[1][1]=1.;
-		dirs[1][2]=0;
-		dirs[2][0]=0;
-		dirs[2][1]=0;
-		dirs[2][2]=1.;
+//		dirs[0][0]=1.;
+//		dirs[0][1]=0;
+//		dirs[0][2]=0;
+//		dirs[1][0]=0;
+//		dirs[1][1]=1.;
+//		dirs[1][2]=0;
+//		dirs[2][0]=0;
+//		dirs[2][1]=0;
+//		dirs[2][2]=1.;
+
+		// Refine in near object
+		vect3d coords(xyz[0],xyz[1],xyz[2]);
+		vect3d rHat=coords/coords.norm();
+		vect3d perpX=rHat.cross(vect3d::UnitX());
+		vect3d perpY=rHat.cross(vect3d::UnitY());
+		vect3d perpZ=rHat.cross(vect3d::UnitZ());
+//		h[0] *= pow(coords.norm(),2.)/10.;
+		h[0] *= min(exp((coords.norm()-1.5)/0.2),coords.norm())/3.;
+
+		vect3d perp1, perp2;
+		if (perpX.norm()<sqrt(LENGTH_TOLERANCE)) {
+			perp1 = perpY;
+			perp2 = perpZ;
+		} else if (perpY.norm()<sqrt(LENGTH_TOLERANCE)) {
+			perp1 = perpX;
+			perp2 = perpZ;
+		} else {
+			perp1 = perpX;
+			perp2 = perpY;
+		}
+
+		dirs[0][0]=rHat[0];
+		dirs[0][1]=rHat[1];
+		dirs[0][2]=rHat[2];
+		dirs[1][0]=perp1[0];
+		dirs[1][1]=perp1[1];
+		dirs[1][2]=perp1[2];
+		dirs[2][0]=perp2[0];
+		dirs[2][1]=perp2[1];
+		dirs[2][2]=perp2[2];
 
 		((PWLsfield *)field)->setSize((pEntity)vt,dirs,h);
 	}
@@ -67,49 +98,52 @@ int main(int argc, char *argv[]) {
 //	for (double rotationAngle=0.125*2.*M_PI; rotationAngle<0.126*2.*M_PI; rotationAngle+=M_PI/12.) {
 	string inputMeshFile(argv[1]);
 	stringstream volumeMeshFile;
-	// TODO: distinguish between surface and volume mesh in less obscure way than format
-	if (inputMeshFile.find(".vtu")!=string::npos) {
-		SurfaceMesh surfaceMesh(inputMeshFile);
-//		double rotationAngle = M_PI/5;
-		vect3d scaleFactors(1./4.,1./1.,1./10.);
-		vect3d inverseScaleFactors(1.,1.,1.);
-		for (int i=0; i<NDIM; i++) {
-			inverseScaleFactors[i] = 1./scaleFactors[i];
-		}
-		vect3d translation(-1.,0.,0.);
-		// TODO: don't hard code collector cell_code
-//		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
-//				0., vect3d(0.7,0.5,1.3), vect3d(0.,0.,0.));
-//		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
-//				0., scaleFactors, vect3d(0.,0.,0.));
-//		surfaceMesh.transformSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(),
-//				rotationAngle, scaleFactors, translation);
-		surfaceMesh.createVolumeMesh();
-//		surfaceMesh.scaleVolumeMesh(vect3d(0.,0.,0.), inverseScaleFactors);
-		int periodLocation = inputMeshFile.rfind(".vtu");
-		volumeMeshFile << inputMeshFile.substr(0,periodLocation)
-				<< "_meshed" << ".vtk";
-//		<< "_meshed_" << fixed << rotationAngle/(2.*M_PI) << ".vtk";
-		surfaceMesh.saveVolumeMesh(volumeMeshFile.str());
-
-		// TODO: don't hard code collector cell_code
-//		surfaceMesh.transformSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(),
-//				0., inverseScaleFactors, vect3d(0.,0.,0.));
-//		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
-//				0., inverseScaleFactors, vect3d(0.,0.,0.));
-		stringstream rotatedSurfaceMeshFile;
-		rotatedSurfaceMeshFile << inputMeshFile.substr(0,periodLocation)
-				<< "_rotated" << ".vtu";
-//		<< "_rotated_" << fixed << rotationAngle/(2.*M_PI) << ".vtu";
-		surfaceMesh.save(rotatedSurfaceMeshFile.str());
-	}
+//	// TODO: distinguish between surface and volume mesh in less obscure way than format
+//	if (inputMeshFile.find(".vtu")!=string::npos) {
+//		SurfaceMesh surfaceMesh(inputMeshFile);
+////		double rotationAngle = M_PI/5;
+//		vect3d scaleFactors(1./4.,1./1.,1./10.);
+//		vect3d inverseScaleFactors(1.,1.,1.);
+//		for (int i=0; i<NDIM; i++) {
+//			inverseScaleFactors[i] = 1./scaleFactors[i];
+//		}
+//		vect3d translation(-1.,0.,0.);
+//		// TODO: don't hard code collector cell_code
+////		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
+////				0., vect3d(0.7,0.5,1.3), vect3d(0.,0.,0.));
+////		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
+////				0., scaleFactors, vect3d(0.,0.,0.));
+////		surfaceMesh.transformSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(),
+////				rotationAngle, scaleFactors, translation);
+//		surfaceMesh.createVolumeMesh();
+////		surfaceMesh.scaleVolumeMesh(vect3d(0.,0.,0.), inverseScaleFactors);
+//		int periodLocation = inputMeshFile.rfind(".vtu");
+//		volumeMeshFile << inputMeshFile.substr(0,periodLocation)
+//				<< "_meshed" << ".vtk";
+////		<< "_meshed_" << fixed << rotationAngle/(2.*M_PI) << ".vtk";
+//		surfaceMesh.saveVolumeMesh(volumeMeshFile.str());
+//
+//		// TODO: don't hard code collector cell_code
+////		surfaceMesh.transformSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(),
+////				0., inverseScaleFactors, vect3d(0.,0.,0.));
+////		surfaceMesh.transformSurface(5, vect3d(0.,0.,0.), vect3d::UnitY(),
+////				0., inverseScaleFactors, vect3d(0.,0.,0.));
+//		stringstream rotatedSurfaceMeshFile;
+//		rotatedSurfaceMeshFile << inputMeshFile.substr(0,periodLocation)
+//				<< "_rotated" << ".vtu";
+////		<< "_rotated_" << fixed << rotationAngle/(2.*M_PI) << ".vtu";
+//		surfaceMesh.save(rotatedSurfaceMeshFile.str());
+//	}
 
 	stringstream refinedMeshFile;
+	volumeMeshFile << inputMeshFile;
 	// TODO: distinguish between surface and volume mesh in less obscure way than format
-	if (inputMeshFile.find(".vtu")!=string::npos) {
+	if (inputMeshFile.find(".vtk")!=string::npos) {
 		Mesh coarseMesh(volumeMeshFile.str());
+//		Mesh coarseMesh(inputMeshFile);
 		Field<int> faceType(&coarseMesh,string("cell_code"),iBase_FACE);
 		Mesh refinedMesh(volumeMeshFile.str());
+//		Mesh refinedMesh(inputMeshFile);
 		Field<int> faceTypeRefined(&refinedMesh,string("cell_code"),iBase_FACE);
 
 		refinedMesh.classifyBoundariesForMeshRefinement(faceTypeRefined);
