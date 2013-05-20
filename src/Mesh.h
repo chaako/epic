@@ -39,6 +39,12 @@ public:
 	void printElementNumbers();
 	void save(string outputMeshFile);
 
+	iBase_TagHandle createTag(string tagName, int size, int type);
+	iBase_TagHandle getTag(string tagName);
+	void destroyTag(string tagName);
+	void convertVectorTagToComponentTags(string vectorTagName);
+	void convertComponentTagsToVectorTag(string vectorTagName);
+
 	void classifyBoundariesForMeshRefinement(Field<int> faceTypeField);
 	vect3d getCoordinates(entHandle node, bool useMap=false);
 	entHandle findTet(vect3d oldPosition, vect3d position,

@@ -30,61 +30,19 @@ Mesh::Mesh(string inputMeshFile) {
 				strlen(inputMeshFile.c_str()), options_len);
 		vtkInputMesh = false;
 		// recreate eField tag and destroy component tags
-		// TODO: do this in a function since also done in save
-		entHandle *ents0d = NULL;
-		int ents0d_alloc = 0, ents0d_size;
-		iBase_TagHandle eFieldX_tag, eFieldY_tag, eFieldZ_tag;
-		string tagName;
-		iMesh_getEntities(meshInstance, rootEntitySet,
-				iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
-				&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
-		CHECK("Couldn't get vertex entities");
-		tagName = "eFieldX";
-		iMesh_getTagHandle(meshInstance, tagName.c_str(),
-				&eFieldX_tag, &ierr, tagName.length());
-		CHECK("Failed to get eFieldX tag");
-		tagName = "eFieldY";
-		iMesh_getTagHandle(meshInstance, tagName.c_str(),
-				&eFieldY_tag, &ierr, tagName.length());
-		CHECK("Failed to get eFieldY tag");
-		tagName = "eFieldZ";
-		iMesh_getTagHandle(meshInstance, tagName.c_str(),
-				&eFieldZ_tag, &ierr, tagName.length());
-		CHECK("Failed to get eFieldZ tag");
-		iBase_TagHandle eField_tag;
-		tagName = "eField";
-		iMesh_createTag(meshInstance, tagName.c_str(), sizeof(vect3d), iBase_BYTES,
-				&eField_tag, &ierr, tagName.length());
-		CHECK("Failure creating eField tag");
-		for (int i = 0; i < ents0d_size; i++) {
-			double eFieldX, eFieldY, eFieldZ;
-			iMesh_getDblData(meshInstance, ents0d[i], eFieldX_tag,
-					&eFieldX, &ierr);
-			CHECK("Failure getting eFieldX");
-			iMesh_getDblData(meshInstance, ents0d[i], eFieldY_tag,
-					&eFieldY, &ierr);
-			CHECK("Failure getting eFieldY");
-			iMesh_getDblData(meshInstance, ents0d[i], eFieldZ_tag,
-					&eFieldZ, &ierr);
-			CHECK("Failure getting eFieldZ");
-			vect3d eField(eFieldX,eFieldY,eFieldZ);
-			int eField_size = sizeof(vect3d);
-			iMesh_setData(meshInstance, ents0d[i], eField_tag, &eField,
-					eField_size, &ierr);
-			CHECK("Failure setting eField");
+		try {
+			this->convertComponentTagsToVectorTag("eField");
+		} catch (string& error) {
+			cout << error << endl;
 		}
-		iMesh_destroyTag(meshInstance, eFieldX_tag, 1, &ierr);
-		CHECK("Failed to destroy eFieldX tag");
-		iMesh_destroyTag(meshInstance, eFieldY_tag, 1, &ierr);
-		CHECK("Failed to destroy eFieldY tag");
-		iMesh_destroyTag(meshInstance, eFieldZ_tag, 1, &ierr);
-		CHECK("Failed to destroy eFieldZ tag");
 	} else {
 		// FMDB's importVTK can't handle our tags, so use custom version
 		ierr = custom_importVTK((mMesh *)mesh, inputMeshFile.c_str());
 		CHECK("Load failed");
 		vtkInputMesh = true;
 	}
+//	// TODO: debugging
+//	cout << inputMeshFile << " " << vtkInputMesh << endl;
 
 	// store adjacency info for fast access
 	adjacentTetsMap = getAdjacentsMap(iBase_REGION, iBase_REGION,
@@ -234,23 +192,59 @@ void Mesh::save(string outputMeshFile) {
 	int options_len = 0;
 	int ierr;
 	// destroy eField tag since VisIt doesn't understand
+	this->convertVectorTagToComponentTags("eField");
+	/* save the mesh */
+	iMesh_save(meshInstance, rootEntitySet, outputMeshFile.c_str(),
+			options, &ierr, outputMeshFile.length(), options_len);
+	CHECK("Save failed");
+	// recreate eField tag and destroy component tags
+	this->convertComponentTagsToVectorTag("eField");
+}
+
+iBase_TagHandle Mesh::createTag(string tagName, int size, int type) {
+	int ierr;
+	iBase_TagHandle tag;
+
+	iMesh_createTag(meshInstance, tagName.c_str(), size, type,
+			&tag, &ierr, tagName.length());
+	// TODO: include name of tag in error
+	// TODO: maybe throw in stead of using CHECK
+	CHECK("Failure creating eField tag");
+
+	return tag;
+}
+
+iBase_TagHandle Mesh::getTag(string tagName) {
+	int ierr;
+	iBase_TagHandle tag;
+	iMesh_getTagHandle(meshInstance, tagName.c_str(),
+			&tag, &ierr, tagName.length());
+	if (ierr != iBase_SUCCESS)
+		throw ("Failed to get " + tagName + " tag.");
+
+	return tag;
+}
+
+
+void Mesh::destroyTag(string tagName) {
+	int ierr;
+	iBase_TagHandle tag=this->getTag(tagName);
+	iMesh_destroyTag(meshInstance, tag, 1, &ierr);
+	CHECK("Failed to destroy tag");
+}
+
+void Mesh::convertVectorTagToComponentTags(string vectorTagName) {
 	entHandle *ents0d = NULL;
 	int ents0d_alloc = 0, ents0d_size;
-	iBase_TagHandle eField_tag;
-	string tagName = "eField";
-	iMesh_getTagHandle(meshInstance, tagName.c_str(),
-			&eField_tag, &ierr, tagName.length());
-	CHECK("Failed to get eField tag");
-	iBase_TagHandle eFieldX_tag, eFieldY_tag, eFieldZ_tag;
-	iMesh_createTag(meshInstance, "eFieldX", 1, iBase_DOUBLE,
-			&eFieldX_tag, &ierr, 7);
-	CHECK("Failure creating eField tag");
-	iMesh_createTag(meshInstance, "eFieldY", 1, iBase_DOUBLE,
-			&eFieldY_tag, &ierr, 7);
-	CHECK("Failure creating eField tag");
-	iMesh_createTag(meshInstance, "eFieldZ", 1, iBase_DOUBLE,
-			&eFieldZ_tag, &ierr, 7);
-	CHECK("Failure creating eField tag");
+	int ierr;
+	iBase_TagHandle vectorTag=this->getTag(vectorTagName);
+
+	iBase_TagHandle componentTagX, componentTagY, componentTagZ;
+	componentTagX = this->createTag(vectorTagName+"X", 1, iBase_DOUBLE);
+	componentTagY = this->createTag(vectorTagName+"Y", 1, iBase_DOUBLE);
+	componentTagZ = this->createTag(vectorTagName+"Z", 1, iBase_DOUBLE);
+
+	// TODO: clean this up, separating out into functions hiding iMesh details
 	iMesh_getEntities(meshInstance, rootEntitySet,
 			iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
 			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
@@ -258,56 +252,58 @@ void Mesh::save(string outputMeshFile) {
 	for (int i = 0; i < ents0d_size; i++) {
 		vector<entHandle> superCellFaces =
 				this->getSuperCellFaces(ents0d[i]);
-		vect3d eField(0.,0.,0.);
-		vect3d *eField_ptr = &eField;
+		vect3d vectorData(0.,0.,0.);
+		vect3d *vectorData_ptr = &vectorData;
 		int eField_alloc = sizeof(vect3d);
 		int eField_size = sizeof(vect3d);
-		iMesh_getData(meshInstance, ents0d[i], eField_tag, &eField_ptr,
+		iMesh_getData(meshInstance, ents0d[i], vectorTag, &vectorData_ptr,
 				&eField_alloc, &eField_size, &ierr);
-		CHECK("Failure getting eField tag");
-		iMesh_setDblData(meshInstance, ents0d[i], eFieldX_tag,
-				(double)eField[0], &ierr);
-		CHECK("Failure setting eFieldX tag");
-		iMesh_setDblData(meshInstance, ents0d[i], eFieldY_tag,
-				(double)eField[1], &ierr);
-		CHECK("Failure setting eFieldY tag");
-		iMesh_setDblData(meshInstance, ents0d[i], eFieldZ_tag,
-				(double)eField[2], &ierr);
-		CHECK("Failure setting eFieldZ tag");
+		CHECK("Failure getting vector data");
+		iMesh_setDblData(meshInstance, ents0d[i], componentTagX,
+				(double)vectorData[0], &ierr);
+		CHECK("Failure setting component data");
+		iMesh_setDblData(meshInstance, ents0d[i], componentTagY,
+				(double)vectorData[1], &ierr);
+		CHECK("Failure setting component data");
+		iMesh_setDblData(meshInstance, ents0d[i], componentTagZ,
+				(double)vectorData[2], &ierr);
+		CHECK("Failure setting component data");
 	}
-	iMesh_destroyTag(meshInstance, eField_tag, 1, &ierr);
-	CHECK("Failed to destroy eField tag");
-	/* save the mesh */
-	iMesh_save(meshInstance, rootEntitySet, outputMeshFile.c_str(),
-			options, &ierr, outputMeshFile.length(), options_len);
-	CHECK("Save failed");
-	// recreate eField tag and destroy component tags
-	iMesh_createTag(meshInstance, "eField", sizeof(vect3d), iBase_BYTES,
-			&eField_tag, &ierr, 6);
-	CHECK("Failure creating eField tag");
+	this->destroyTag(vectorTagName);
+}
+
+void Mesh::convertComponentTagsToVectorTag(string vectorTagName) {
+	entHandle *ents0d = NULL;
+	int ents0d_alloc = 0, ents0d_size;
+	int ierr;
+	iBase_TagHandle vectorTag;
+	vectorTag = this->createTag(vectorTagName, sizeof(vect3d), iBase_BYTES);
+
+	iBase_TagHandle componentTagX=this->getTag(vectorTagName+"X");
+	iBase_TagHandle componentTagY=this->getTag(vectorTagName+"Y");
+	iBase_TagHandle componentTagZ=this->getTag(vectorTagName+"Z");
+
+	// TODO: clean this up, separating out into functions hiding iMesh details
 	for (int i = 0; i < ents0d_size; i++) {
-		double eFieldX, eFieldY, eFieldZ;
-		iMesh_getDblData(meshInstance, ents0d[i], eFieldX_tag,
-				&eFieldX, &ierr);
-		CHECK("Failure setting eFieldX tag");
-		iMesh_getDblData(meshInstance, ents0d[i], eFieldY_tag,
-				&eFieldY, &ierr);
-		CHECK("Failure setting eFieldY tag");
-		iMesh_getDblData(meshInstance, ents0d[i], eFieldZ_tag,
-				&eFieldZ, &ierr);
-		CHECK("Failure setting eFieldZ tag");
-		vect3d eField(eFieldX,eFieldY,eFieldZ);
-		int eField_size = sizeof(vect3d);
-		iMesh_setData(meshInstance, ents0d[i], eField_tag, &eField,
-				eField_size, &ierr);
-		CHECK("Failure getting eField tag");
+		double componentX, componentY, componentZ;
+		iMesh_getDblData(meshInstance, ents0d[i], componentTagX,
+				&componentX, &ierr);
+		CHECK("Failure getting component");
+		iMesh_getDblData(meshInstance, ents0d[i], componentTagY,
+				&componentY, &ierr);
+		CHECK("Failure getting component");
+		iMesh_getDblData(meshInstance, ents0d[i], componentTagZ,
+				&componentZ, &ierr);
+		CHECK("Failure getting component");
+		vect3d vectorData(componentX,componentY,componentZ);
+		iMesh_setData(meshInstance, ents0d[i], vectorTag, &vectorData,
+				sizeof(vect3d), &ierr);
+		CHECK("Failure setting vector data");
 	}
-	iMesh_destroyTag(meshInstance, eFieldX_tag, 1, &ierr);
-	CHECK("Failed to destroy eFieldX tag");
-	iMesh_destroyTag(meshInstance, eFieldY_tag, 1, &ierr);
-	CHECK("Failed to destroy eFieldY tag");
-	iMesh_destroyTag(meshInstance, eFieldZ_tag, 1, &ierr);
-	CHECK("Failed to destroy eFieldZ tag");
+
+	this->destroyTag(vectorTagName+"X");
+	this->destroyTag(vectorTagName+"Y");
+	this->destroyTag(vectorTagName+"Z");
 }
 
 #ifdef MESHER
