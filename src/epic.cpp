@@ -34,12 +34,47 @@ int main(int argc, char *argv[]) {
 //	cout << "  Process " << mpiId << " says 'Hello, world!'\n";
 #endif
 
-	if (argc<3) {
-		printf("usage: %s meshin meshout\n", argv[0]);
-		exit(1);
+	string inputMeshFile, outputFile;
+	// TODO: make names more transparent?
+	{
+		namespace po = boost::program_options;
+	    try {
+	        po::options_description desc("Allowed options");
+	        desc.add_options()
+	            ("help", "produce help message")
+	            ("inputFile", po::value<string>(&inputMeshFile), "input file")
+	            ("outputFile", po::value<string>(&outputFile), "output file")
+	        ;
+
+	        po::variables_map vm;
+	        po::store(po::parse_command_line(argc, argv, desc), vm);
+	        po::notify(vm);
+
+	        if (vm.count("help")) {
+	            cout << desc << "\n";
+	            exit(1);
+	        }
+
+	        if (vm.count("inputFile")) {
+	            cout << "Input file: " << inputMeshFile << endl;
+	        } else {
+	            cout << "Error: --inputFile was not set" << endl;
+	            exit(1);
+	        }
+	        if (vm.count("ouputFile")) {
+	            cout << "Output file: " << inputMeshFile << endl;
+	        } else {
+	            cout << "Error: --outputFile was not set" << endl;
+	            exit(1);
+	        }
+	    } catch(exception& e) {
+	        cerr << "error: " << e.what() << "\n";
+	        exit(1);
+	    } catch(...) {
+	        cerr << "Exception of unknown type!\n";
+	    }
 	}
 
-	string inputMeshFile(argv[1]);
 	Mesh mesh(inputMeshFile);
 	mesh.printElementNumbers();
 
@@ -239,7 +274,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (mpiId == 0)
-		mesh.save(argv[2]);
+		mesh.save(outputFile);
 
 	if (mpiId == 0) {
 		if (densityFile)
