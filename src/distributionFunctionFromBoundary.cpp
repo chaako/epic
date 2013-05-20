@@ -3,7 +3,7 @@
 void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 		void *integrandContainer_ptr, unsigned fdim, double *fval) {
 	assert(ndim==3);
-	assert(fdim==1);
+//	assert(fdim==1);
 	Mesh *mesh_ptr = ((IntegrandContainer*)integrandContainer_ptr)->mesh_ptr;
 	entHandle node =
 			((IntegrandContainer*)integrandContainer_ptr)->node;
@@ -47,24 +47,28 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 	Orbit orbit(mesh_ptr,node,velocity,charge);
 //	orbit.integrate(*electricField_ptr, *potentialField_ptr,
 //			*faceTypeField_ptr, *vertexTypeField_ptr, orbitOutFile);
+	// TODO: find better way to distinguish orbits in output
+	extern_orbitNumber++;
+//	orbit.integrate(*potentialField_ptr, *electricField_ptr,
+//			*faceTypeField_ptr, *vertexTypeField_ptr,
+//			*shortestEdgeField_ptr, orbitOutFile, extern_orbitNumber);
 	orbit.integrate(*potentialField_ptr, *electricField_ptr,
 			*faceTypeField_ptr, *vertexTypeField_ptr,
-			*shortestEdgeField_ptr, orbitOutFile);
-	*fval = 0.;
+			*shortestEdgeField_ptr, NULL, extern_orbitNumber);
+//	// TODO: more transparent handling of external ExB drift?
+//	vect3d finalVelocity = orbit.finalVelocity - VEXB;
+	vect3d finalVelocity = orbit.finalVelocity;
+	fval[0] = 0.;
 	// TODO: shouldn't hard-code domain here
 	if ( orbit.finalFaceType==5
 			&& !orbit.negativeEnergy) {
-		*fval = 1./pow(2.*M_PI,3./2.);
-//		// TODO: more transparent handling of external ExB drift?
-//		vect3d finalVelocity = orbit.finalVelocity - VEXB;
-		vect3d finalVelocity = orbit.finalVelocity;
-		*fval *= exp(-pow(finalVelocity.norm(),2.)/2.);
-		*fval /= exp(-pow(v,2.)/2.);
-		*fval *= M_PI;
-		*fval *= (1.+x[0])*sqrt(-log((1.+x[0])/2.));
+		fval[0] = 1./pow(2.*M_PI,3./2.);
+		fval[0] *= exp(-(pow(finalVelocity.norm(),2.)-pow(v,2.))/2.);
+		fval[0] *= M_PI;
+		fval[0] *= (1.+x[0])*sqrt(-log((1.+x[0])/2.));
 		// TODO: if fix outer potential this may not give equal ion and electron dens.
 		if (charge*orbit.finalPotential>0.)
-			*fval *= exp(-charge*orbit.finalPotential);
+			fval[0] *= exp(-charge*orbit.finalPotential);
 	} else if (orbit.finalPosition.norm()>1.) {
 //		std::cout << "orbit terminated with final position in domain:" <<
 //				std::endl << orbit.finalPosition.transpose() << " r=" <<
@@ -72,9 +76,23 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 //				" " << orbit.negativeEnergy << std::endl;
 //		std::cout << ".";
 	}
+	// TODO: don't hard-code moment order?
+	if (fdim>=4) {
+		for (int i=0; i<4; i++)
+			fval[i+1] = fval[0]*finalVelocity[i];
+	}
+	if (fdim>=5)
+		fval[4] = fval[0]*0.5*pow(finalVelocity.norm(),2.);
+	// TODO: better way than integrating orbit again for output?
+	if (orbitOutFile) {
+		orbit.integrate(*potentialField_ptr, *electricField_ptr,
+				*faceTypeField_ptr, *vertexTypeField_ptr,
+//				*shortestEdgeField_ptr, orbitOutFile, *fval);
+				*shortestEdgeField_ptr, orbitOutFile, exp(-pow(finalVelocity.norm(),2.)/2.));
+	}
 	if (((IntegrandContainer*)integrandContainer_ptr)->outFile) {
 		fprintf(((IntegrandContainer*)integrandContainer_ptr)->outFile,
-				"%f %f %f %f\n", x[0], x[1], x[2], *fval);
+				"%f %f %f %f\n", x[0], x[1], x[2], fval[0]);
 	}
 }
 
@@ -82,14 +100,15 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 int distributionFunctionFromBoundaryCuba(const int *ndim, const double x[],
   const int *ncomp, double f[], void *integrandContainer_ptr) {
 	assert(*ndim==3);
-	assert(*ncomp==1);
+//	assert(*ncomp==1);
 	double y[3];
 	for (int i=0; i<*ndim; i++) {
 		y[i] = 2.*x[i]-1;
 	}
 	distributionFunctionFromBoundary((unsigned)*ndim, y,
 			integrandContainer_ptr, *ncomp, f);
-	*f *= pow(2.,(double)*ndim);
+	for (int i=0; i<*ncomp; i++)
+		f[i] *= pow(2.,(double)*ndim);
 
 	return 0;
 }

@@ -680,7 +680,7 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 //			nodePosition[0]>1.8 && nodePosition[1]<1.4 && nodePosition[1]>0.8
 //			&& charge>0.) {
 //	if (vertexType[node]==4 && charge>0.) {
-//	vect3d desiredNodePosition(-0.933033, -0.00264569, -0.0744521);
+//	vect3d desiredNodePosition(0.908757, 0.411679, 0.0684252);
 //	if ((desiredNodePosition-nodePosition).norm()<1e-2 && charge>0.) {
 //		doThisNode = true;
 //		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
@@ -709,15 +709,27 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 	int actualNumberOfOrbits=0;
 	int failureType=0;
 	double probabilityThatTrueError=0.;
-	if (doThisNode)
-//	adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
-//			vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
-	// TODO: Turn off smoothing flag bit
-	Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
-			(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
-			numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
-			NULL, &actualNumberOfOrbits, &failureType,
-			&density, error, &probabilityThatTrueError);
+	if (doThisNode) {
+//		adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
+//				vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
+		// TODO: Turn off smoothing flag bit
+//		Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
+//				(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
+//				numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
+//				NULL, &actualNumberOfOrbits, &failureType,
+//				&density, error, &probabilityThatTrueError);
+		double moments[5];
+		double errors[5];
+		double probabilities[5];
+		Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
+				(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
+				numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
+				NULL, &actualNumberOfOrbits, &failureType,
+				moments, errors, probabilities);
+		density = moments[0];
+		*error = errors[0];
+		probabilityThatTrueError = probabilities[0];
+	}
 	// TODO: make potential perturbation more robust, transparent, and flexible
 	potentialField[node] -= potentialPerturbation;
 	if (integrandContainer.outFile)

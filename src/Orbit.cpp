@@ -537,9 +537,7 @@ Orbit::~Orbit() {
 
 void Orbit::integrate(PotentialField& potentialField, ElectricField& electricField,
 		Field<int>& faceTypeField, CodeField& vertexTypeField,
-		ShortestEdgeField shortestEdgeField, FILE *outFile) {
-	// TODO: find better way to distinguish orbits in output
-	extern_orbitNumber++;
+		ShortestEdgeField shortestEdgeField, FILE *outFile, double orbitLabelValue) {
 	// TODO: need some clever way to set tMax and/or detect trapped orbits
 //	double dt=min(0.005,0.005/initialVelocity.norm()), tMax=100;
 //	double dt=min(0.01,0.01/initialVelocity.norm()), tMax=100;
@@ -622,8 +620,9 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 //	for (double t=0.; t<tMax; t+=dt) {
 	double t=0;
 	double numberOfStepsPerRegion = 3.;
+	int numberOfSteps = 100000*numberOfStepsPerRegion;
 	// TODO: set max number of steps more cleverly (since also need to limit by accel)
-	for (int iT=0; iT<100000*numberOfStepsPerRegion  && !negativeEnergy; iT++) {
+	for (int iT=0; iT<numberOfSteps  && !negativeEnergy; iT++) {
 		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
 				/(fabs(currentVelocity[2])+VEXB.norm()+SMALL_VELOCITY)/
 //				/(fabs(currentVelocity[2])+DELTA_LENGTH)/
@@ -958,12 +957,14 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 			// TODO: fix occasional very large coordinate values
 //			// TODO: comment this out unless using spheres mesh
 //			if (currentPosition.norm()<=5.)
-			fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
-					currentPosition[2], extern_orbitNumber);
-//			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
+//			fprintf(outFile, "%f %f %f %d\n", currentPosition[0], currentPosition[1],
+//					currentPosition[2], extern_orbitNumber);
+			fprintf(outFile, "%f %f %f %f\n", currentPosition[0], currentPosition[1],
 //					currentPosition[2], currentEnergy);
 //					currentPosition[2], currentPotential);
+//					currentPosition[2], 0.5*pow((currentVelocity+VEXB).norm(),2.));
 //					currentPosition[2], eFieldR);
+					currentPosition[2], orbitLabelValue);
 		}
 		if (endLoop)
 			break;
