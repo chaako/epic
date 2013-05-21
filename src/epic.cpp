@@ -35,44 +35,63 @@ int main(int argc, char *argv[]) {
 #endif
 
 	string inputMeshFile, outputFile;
+	vector<vect3d> evaluationPositions;
+	extern_evalPositions_ptr = &evaluationPositions;
+	bool doLuDecomposition, stopAfterEvalPos;
 	// TODO: make names more transparent?
 	{
 		namespace po = boost::program_options;
-	    try {
-	        po::options_description desc("Allowed options");
-	        desc.add_options()
-	            ("help", "produce help message")
-	            ("inputFile", po::value<string>(&inputMeshFile), "input file")
-	            ("outputFile", po::value<string>(&outputFile), "output file")
-	        ;
+		try {
+			vector<double> evalPosX, evalPosY, evalPosZ;
+			po::options_description desc("Allowed options");
+			desc.add_options()
+					("help", "produce help message")
+					("inputFile", po::value<string>(&inputMeshFile), "input file")
+					("outputFile", po::value<string>(&outputFile), "output file")
+					("evalPositionX,x", po::value< vector<double> >(&evalPosX), "evaluation position(s) x")
+					("evalPositionY,y", po::value< vector<double> >(&evalPosY), "evaluation position(s) y")
+					("evalPositionZ,z", po::value< vector<double> >(&evalPosZ), "evaluation position(s) z")
+					("doLuDecomposition", po::value<bool>(&doLuDecomposition)->default_value(true),
+							"whether to do LU decomposition (true/false)")
+					("stopAfterEvalPos", po::value<bool>(&stopAfterEvalPos)->default_value(false),
+							"whether to stop after evaluating at positions (true/false)")
+			;
 
-	        po::variables_map vm;
-	        po::store(po::parse_command_line(argc, argv, desc), vm);
-	        po::notify(vm);
+			po::variables_map vm;
+			po::store(po::parse_command_line(argc, argv, desc), vm);
+			po::notify(vm);
 
-	        if (vm.count("help")) {
-	            cout << desc << "\n";
-	            exit(1);
-	        }
+			if (vm.count("help")) {
+				cout << desc << "\n";
+				exit(1);
+			}
 
-	        if (vm.count("inputFile")) {
-	            cout << "Input file: " << inputMeshFile << endl;
-	        } else {
-	            cout << "Error: --inputFile was not set" << endl;
-	            exit(1);
-	        }
-	        if (vm.count("ouputFile")) {
-	            cout << "Output file: " << inputMeshFile << endl;
-	        } else {
-	            cout << "Error: --outputFile was not set" << endl;
-	            exit(1);
-	        }
-	    } catch(exception& e) {
-	        cerr << "error: " << e.what() << "\n";
-	        exit(1);
-	    } catch(...) {
-	        cerr << "Exception of unknown type!\n";
-	    }
+			if (vm.count("inputFile")) {
+				cout << "Input file: " << inputMeshFile << endl;
+			} else {
+				cout << "Error: --inputFile was not set" << endl;
+				exit(1);
+			}
+			if (vm.count("outputFile")) {
+				cout << "Output file: " << inputMeshFile << endl;
+			} else {
+				cout << "Error: --outputFile was not set" << endl;
+				exit(1);
+			}
+
+			int numberOfEvalPositions=min(min(evalPosX.size(),evalPosY.size()),evalPosZ.size());
+			if (numberOfEvalPositions>0) {
+				cout << "Number of evaluation positions requested: " <<
+						numberOfEvalPositions << endl;
+				for (int i=0; i<numberOfEvalPositions; i++)
+					evaluationPositions.push_back(vect3d(evalPosX[i],evalPosY[i],evalPosZ[i]));
+			}
+		} catch(exception& e) {
+			cerr << "error: " << e.what() << "\n";
+			exit(1);
+		} catch(...) {
+			cerr << "Exception of unknown type!\n";
+		}
 	}
 
 	Mesh mesh(inputMeshFile);
@@ -101,8 +120,7 @@ int main(int argc, char *argv[]) {
 		cout << endl << "Setting vertex codes..." << endl;
 	vertexType.calcField(faceType);
 	PotentialField potential(&mesh,string("potential"));
-//	ElectricField eField(&mesh,string("eField"));
-	ElectricField eField(&mesh,string("eField"),vertexType);
+	ElectricField eField(&mesh,string("eField"),vertexType,doLuDecomposition);
 	DensityField density(&mesh,string("density"));
 	DensityField ionDensity(&mesh,string("ionDensity"));
 	DensityField electronDensity(&mesh,string("electronDensity"));
@@ -142,9 +160,11 @@ int main(int argc, char *argv[]) {
 		ionDensity.calcField(eField, potential, faceType, vertexType,
 				shortestEdge, 1., noPotentialPerturbation,
 				densityFile);
-//		// TODO: shouldn't return before closing files etc...
-//		cout << "Not in main iteration loop...improve handling of existing fields." << endl;
-//		return 0;
+		if (stopAfterEvalPos) {
+			// TODO: shouldn't return before closing files etc...
+			cout << "Not in main iteration loop...improve handling of existing fields." << endl;
+			return 0;
+		}
 	} else {
 		if (mpiId == 0)
 			cout << endl << "Setting potential..." << endl;
@@ -291,8 +311,3 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
-
-clock_t extern_findTet=0, extern_checkIfInNewTet=0;
-
-// TODO: find better way to distinguish orbits in output
-int extern_orbitNumber = 0;

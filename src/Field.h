@@ -97,7 +97,8 @@ public:
 class ElectricField : public Field<vect3d> {
 public:
 	ElectricField(Mesh *inputMesh_ptr, string inputName);
-	ElectricField(Mesh *inputMesh_ptr, string inputName, CodeField vertexType);
+	ElectricField(Mesh *inputMesh_ptr, string inputName,
+			CodeField vertexType, bool doLuDecomposition);
 	virtual ~ElectricField() {}
 
 	void calcField(PotentialField potentialField);

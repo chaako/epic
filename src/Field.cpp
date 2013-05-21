@@ -13,8 +13,9 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName)
 }
 
 ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName,
-		CodeField vertexType)
+		CodeField vertexType, bool doLuDecomposition=true)
 		: Field<vect3d>(inputMesh_ptr, inputName, iBase_VERTEX) {
+	if (doLuDecomposition) {
 #ifdef HAVE_MPI
 	if (MPI::COMM_WORLD.Get_rank() == 0)
 #endif
@@ -106,6 +107,7 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName,
 	if(solver.info()!=Eigen::Success) {
 		// decomposition failed
 		throw;
+	}
 	}
 }
 
@@ -671,27 +673,22 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 			<< nodePosition.norm() << "_vert" << node << ".p3d";
 	integrandContainer.orbitOutFile = NULL;
 	bool doThisNode = true;
-	// TODO: don't hard-code output nodes
-//	if (node<5) {
-//	if (node==0) {
-//	if (node==5 || node==2540) {
-//	if (node==105) {
-//	if (nodePosition[2]<0.5 && nodePosition[2]>-0. && nodePosition[0]<2.5 &&
-//			nodePosition[0]>1.8 && nodePosition[1]<1.4 && nodePosition[1]>0.8
-//			&& charge>0.) {
-//	if (vertexType[node]==4 && charge>0.) {
-//	vect3d desiredNodePosition(0.908757, 0.411679, 0.0684252);
-//	if ((desiredNodePosition-nodePosition).norm()<1e-2 && charge>0.) {
-//		doThisNode = true;
-//		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
-//		fprintf(integrandContainer.outFile, "x y z f\n");
-//		integrandContainer.orbitOutFile =
-//				fopen(fileNameStreamOrbit.str().c_str(), "w");
-//		fprintf(integrandContainer.orbitOutFile, "x y z energy\n");
-//	} else {
-//		// TODO: decouple do and record
-//		doThisNode = false;
-//	}
+	// TODO: checking every evalPosition for every node is not efficient
+	for (int i=0; i<extern_evalPositions_ptr->size(); i++) {
+//		vect3d desiredNodePosition(0.908757, 0.411679, 0.0684252);
+		vect3d desiredNodePosition=extern_evalPositions_ptr->operator[](i);
+		if ((desiredNodePosition-nodePosition).norm()<1e-2 && charge>0.) {
+			doThisNode = true;
+			integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
+			fprintf(integrandContainer.outFile, "x y z f\n");
+			integrandContainer.orbitOutFile =
+					fopen(fileNameStreamOrbit.str().c_str(), "w");
+			fprintf(integrandContainer.orbitOutFile, "x y z energy\n");
+		} else {
+			// TODO: decouple do and record
+			doThisNode = false;
+		}
+	}
 	integrandContainer.charge = charge;
 	int vdim=3;
 	double xmin[vdim], xmax[vdim];

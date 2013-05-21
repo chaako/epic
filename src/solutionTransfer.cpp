@@ -96,8 +96,3 @@ int main(int argc, char *argv[]) {
 	}
 	return 0;
 }
-
-clock_t extern_findTet=0, extern_checkIfInNewTet=0;
-
-// TODO: find better way to distinguish orbits in output
-int extern_orbitNumber = 0;
