@@ -37,7 +37,8 @@ int main(int argc, char *argv[]) {
 	string inputMeshFile, outputFile;
 	vector<vect3d> evaluationPositions;
 	extern_evalPositions_ptr = &evaluationPositions;
-	bool doLuDecomposition, stopAfterEvalPos;
+	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest;
+	int secondsToSleepForDebugAttach;
 	// TODO: make names more transparent?
 	{
 		namespace po = boost::program_options;
@@ -55,6 +56,11 @@ int main(int argc, char *argv[]) {
 							"whether to do LU decomposition (true/false)")
 					("stopAfterEvalPos", po::value<bool>(&stopAfterEvalPos)->default_value(false),
 							"whether to stop after evaluating at positions (true/false)")
+					("secondsToSleepForDebugAttach",
+							po::value<int>(&secondsToSleepForDebugAttach)->default_value(0),
+							"seconds to sleep to allow debugger to attach")
+					("doPoissonTest", po::value<bool>(&doPoissonTest)->default_value(false),
+							"whether to run in Poisson-test mode (true/false)")
 			;
 
 			po::variables_map vm;
@@ -114,6 +120,14 @@ int main(int argc, char *argv[]) {
 		fprintf(potentialFile, "# r phi\n");
 	}
 
+    if (secondsToSleepForDebugAttach>0) {
+		char hostname[256];
+		gethostname(hostname, sizeof(hostname));
+		printf("mpiId %d: PID %d on %s ready for attach\n", mpiId, getpid(), hostname);
+		fflush(stdout);
+		sleep(secondsToSleepForDebugAttach);
+	}
+
 	Field<int> faceType(&mesh,string("cell_code"),iBase_FACE);
 	CodeField vertexType(&mesh,string("vertex_code"),iBase_VERTEX);
 	if (mpiId == 0)
@@ -141,10 +155,9 @@ int main(int argc, char *argv[]) {
 		cout << endl << "Setting density..." << endl;
 	ionDensity.calcField(vertexType, potential, 1.);
 
+
 	// TODO: add more robust detection and handling of existing fields
-	if (!mesh.vtkInputMesh) {
-//	// TODO: remove this hard-coded enable of Poisson test
-//	if (0 && !mesh.vtkInputMesh) {
+	if (!mesh.vtkInputMesh && !doPoissonTest) {
 		if (mpiId == 0)
 			cout << endl << ".sms file loaded, so assuming existing fields" << endl;
 //		if (mpiId == 0)
@@ -171,16 +184,14 @@ int main(int argc, char *argv[]) {
 		potential.calcField(vertexType);
 	}
 
-//	// Do Poisson test
-//	// TODO: for now need to remove eField reconstruction from load...shouldn't
-//	//       shouldn't use file extension as indication of restart vs clean start
-//	// TODO: make this a standard callable test?
-//	if (mpiId == 0)
-//		cout << endl << "Setting poissonCubeTest density..." << endl;
-//	ionDensity.poissonCubeTest();
-//	if (mpiId == 0)
-//		cout << endl << "Calculating electric field..." << endl;
-//	eField.calcField(&potential, vertexType, ionDensity);
+	if (doPoissonTest) {
+		if (mpiId == 0)
+			cout << endl << "Setting poissonCubeTest density..." << endl;
+		ionDensity.poissonCubeTest();
+		if (mpiId == 0)
+			cout << endl << "Calculating electric field..." << endl;
+		eField.calcField(&potential, vertexType, ionDensity);
+	}
 
 
 //	// Integrate a circular test orbit (need to deactivate trapped orbit rejection)
@@ -210,14 +221,20 @@ int main(int argc, char *argv[]) {
 		int periodLocation = outFile.rfind(".");
 		iterMeshFileName << outFile.substr(0,periodLocation)
 				<< setfill('0') << setw(2) << i << outFile.substr(periodLocation);
+//		// TODO: debugging
+//		cout << iterMeshFileName.str() << endl;
 		mesh.save(iterMeshFileName.str());
 		// mesh.save() destroys eField tag, so update
 		eField.updateTagHandle();
 	}
 
-//	// Exit for Poisson test
-//	// TODO: remove this
-//	return(0);
+	// Exit for Poisson test
+	if (doPoissonTest) {
+#ifdef HAVE_MPI
+		MPI::Finalize();
+#endif
+		return(0);
+	}
 
 	for (int i=1; i<2; i++) {
 		if (mpiId == 0)
