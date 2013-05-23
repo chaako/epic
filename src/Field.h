@@ -121,7 +121,9 @@ public:
 class DensityField : public Field<double> {
 	// Charge density
 public:
-	DensityField(Mesh *inputMesh_ptr, string inputName);
+	DensityField(Mesh *inputMesh_ptr, string inputName,
+			Field<vect3d> *inputAverageVelocity_ptr=NULL,
+			Field<double> *inputTemperature_ptr=NULL);
 	virtual ~DensityField() {}
 
 	void calcField();
@@ -138,7 +140,9 @@ public:
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
-			double potentialPerturbation, double *error);
+			double potentialPerturbation, double *error,
+			vect3d *averageVelocity, vect3d *averageVelocityError,
+			double *temperature, double *temperatureError);
 #ifdef HAVE_MPI
 	void requestDensityFromSlaves(ElectricField& electricField,
 			PotentialField potentialField,
@@ -153,6 +157,8 @@ public:
 			double potentialPerturbation);
 #endif
 
+	Field<vect3d> *averageVelocity_ptr;
+	Field<double> *temperature_ptr;
 };
 
 class PotentialField : public Field<double> {

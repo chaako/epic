@@ -29,9 +29,10 @@ Mesh::Mesh(string inputMeshFile) {
 		iMesh_load(mesh, root, inputMeshFile.c_str(), options, &ierr,
 				strlen(inputMeshFile.c_str()), options_len);
 		vtkInputMesh = false;
-		// recreate eField tag and destroy component tags
+		// recreate vector field tags and destroy component tags
 		try {
 			this->convertComponentTagsToVectorTag("eField");
+			this->convertComponentTagsToVectorTag("ionVelocity");
 		} catch (string& error) {
 			cout << error << endl;
 		}
@@ -191,14 +192,17 @@ void Mesh::save(string outputMeshFile) {
 	char *options = NULL;
 	int options_len = 0;
 	int ierr;
-	// destroy eField tag since VisIt doesn't understand
+	// destroy vector tags since VisIt doesn't understand
 	this->convertVectorTagToComponentTags("eField");
-	/* save the mesh */
+	this->convertVectorTagToComponentTags("ionVelocity");
+
 	iMesh_save(meshInstance, rootEntitySet, outputMeshFile.c_str(),
 			options, &ierr, outputMeshFile.length(), options_len);
 	CHECK("Save failed");
-	// recreate eField tag and destroy component tags
+
+	// recreate vector tags and destroy component tags
 	this->convertComponentTagsToVectorTag("eField");
+	this->convertComponentTagsToVectorTag("ionVelocity");
 }
 
 iBase_TagHandle Mesh::createTag(string tagName, int size, int type) {
@@ -209,7 +213,7 @@ iBase_TagHandle Mesh::createTag(string tagName, int size, int type) {
 			&tag, &ierr, tagName.length());
 	// TODO: include name of tag in error
 	// TODO: maybe throw in stead of using CHECK
-	CHECK("Failure creating eField tag");
+	CHECK("Failure creating tag");
 
 	return tag;
 }
@@ -254,10 +258,10 @@ void Mesh::convertVectorTagToComponentTags(string vectorTagName) {
 				this->getSuperCellFaces(ents0d[i]);
 		vect3d vectorData(0.,0.,0.);
 		vect3d *vectorData_ptr = &vectorData;
-		int eField_alloc = sizeof(vect3d);
-		int eField_size = sizeof(vect3d);
+		int alloc = sizeof(vect3d);
+		int size = sizeof(vect3d);
 		iMesh_getData(meshInstance, ents0d[i], vectorTag, &vectorData_ptr,
-				&eField_alloc, &eField_size, &ierr);
+				&alloc, &size, &ierr);
 		CHECK("Failure getting vector data");
 		iMesh_setDblData(meshInstance, ents0d[i], componentTagX,
 				(double)vectorData[0], &ierr);

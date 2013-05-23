@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 			if (vm.count("outputFile")) {
-				cout << "Output file: " << inputMeshFile << endl;
+				cout << "Output file: " << outputFile << endl;
 			} else {
 				cout << "Error: --outputFile was not set" << endl;
 				exit(1);
@@ -135,8 +135,11 @@ int main(int argc, char *argv[]) {
 	vertexType.calcField(faceType);
 	PotentialField potential(&mesh,string("potential"));
 	ElectricField eField(&mesh,string("eField"),vertexType,doLuDecomposition);
+	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
+	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
+	// TODO: updating other moments through density not very clean/transparent
 	DensityField density(&mesh,string("density"));
-	DensityField ionDensity(&mesh,string("ionDensity"));
+	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature);
 	DensityField electronDensity(&mesh,string("electronDensity"));
 	DensityField ionDensityPositivePerturbation(&mesh,string("PPionDensity"));
 	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"));

@@ -538,8 +538,11 @@ void PotentialField::calcField(DensityField ionDensity,
 		fprintf(outFile, "\n\n\n\n");
 }
 
-DensityField::DensityField(Mesh *inputMesh_ptr, string inputName)
+DensityField::DensityField(Mesh *inputMesh_ptr, string inputName,
+		Field<vect3d> *inputAverageVelocity_ptr, Field<double> *inputTemperature_ptr)
 		: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {
+	averageVelocity_ptr = inputAverageVelocity_ptr;
+	temperature_ptr = inputTemperature_ptr;
 }
 
 void DensityField::calcField() {}
@@ -577,6 +580,8 @@ void DensityField::calcField(ElectricField& electricField,
 	int mpiId = 0;
 #ifdef HAVE_MPI
 	double *density = new double[entities.size()];
+	vect3d *averageVelocity = new vect3d[entities.size()];
+	double *temperature = new double[entities.size()];
 	// TODO: Am assuming here that fields are identical on master and slaves
 	mpiId = MPI::COMM_WORLD.Get_rank();
 	if (mpiId == 0) {
@@ -592,18 +597,31 @@ void DensityField::calcField(ElectricField& electricField,
 				shortestEdge, charge, potentialPerturbation);
 	}
 	MPI::COMM_WORLD.Bcast(density, entities.size(), MPI::DOUBLE, 0);
+	MPI::COMM_WORLD.Bcast(averageVelocity, entities.size()*sizeof(vect3d), MPI::BYTE, 0);
+	MPI::COMM_WORLD.Bcast(temperature, entities.size(), MPI::DOUBLE, 0);
 	for (int node=0; node<entities.size(); node++) {
 		this->setField(entities[node], density[node]);
+		averageVelocity_ptr->setField(entities[node], averageVelocity[node]);
+		temperature_ptr->setField(entities[node], temperature[node]);
 	}
+	delete[] density;
+	delete[] averageVelocity;
+	delete[] temperature;
 #else
 	extern_findTet=0;
 	clock_t startClock = clock(); // timing
 	for (int node=0; node<entities.size(); node++) {
 		double error;
+		vect3d averageVelocity, averageVelocityError;
+		double temperature, temperatureError;
 	    double density = this->calculateDensity(node, electricField,
 				potentialField, faceType, vertexType, shortestEdge,
-				charge, potentialPerturbation, &error);
+				charge, potentialPerturbation, &error,
+				&averageVelocity, &averageVelocityError,
+				&temperature, &temperatureError);
 		this->setField(entities[node], density);
+		averageVelocity_ptr->setField(entities[node], averageVelocity);
+		temperature_ptr->setField(entities[node], temperature);
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		cout << nodePosition.norm() << " " << density << " " << error << endl;
 		if (outFile)
@@ -638,7 +656,9 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 		PotentialField potentialField,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdgeField, double charge,
-		double potentialPerturbation, double *error) {
+		double potentialPerturbation, double *error,
+		vect3d *averageVelocity, vect3d *averageVelocityError,
+		double *temperature, double *temperatureError) {
 	// TODO: Need unified way of specifying unperturbed boundary plasma
 	if (vertexType[node]==5) {
 		return 1.;
@@ -725,6 +745,14 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 				moments, errors, probabilities);
 		density = moments[0];
 		*error = errors[0];
+		// TODO: assuming NDIM==3
+		assert (NDIM==3);
+		for (int i=0; i<NDIM; i++) {
+			averageVelocity->operator[](i) = moments[i+1];
+			averageVelocityError->operator[](i) = errors[i+1];
+		}
+		*temperature = moments[4];
+		*temperatureError = errors[4];
 		probabilityThatTrueError = probabilities[0];
 	}
 	// TODO: make potential perturbation more robust, transparent, and flexible
@@ -756,7 +784,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 
 	// Process incoming density and send new nodes until all done
 	while (node<entities.size()) {
-		MPI::Status status = this->receiveDensity(outFile);
+		status = this->receiveDensity(outFile);
 		MPI::COMM_WORLD.Send(&node, 1, MPI::INT, status.Get_source(),
 				WORKTAG);
 		node++;
@@ -766,7 +794,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	// TODO: could run into problems here if fewer nodes than processes?
 	assert(nProcesses<entities.size());
 	for (int rank=1; rank<nProcesses; ++rank) {
-		this->receiveDensity(outFile);
+		status = this->receiveDensity(outFile);
 	}
 
 	// Send empty message with DIETAG to signal done with nodes
@@ -780,12 +808,21 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 MPI::Status DensityField::receiveDensity(FILE *outFile) {
 	MPI::Status status;
 	double density[2];
+	vect3d averageVelocity[2];
+	double temperature[2];
 	MPI::COMM_WORLD.Recv(&density[0], 2, MPI::DOUBLE, MPI_ANY_SOURCE,
 			MPI_ANY_TAG, status);
-	int incomingNode = status.Get_tag();
-	if (incomingNode>=0 && incomingNode<entities.size())
-		this->setField(entities[incomingNode], density[0]);
-	vect3d nodePosition = mesh_ptr->getCoordinates(entities[incomingNode]);
+	int node = status.Get_tag();
+	int source = status.Get_source();
+	MPI::COMM_WORLD.Recv(&averageVelocity[0], 2*sizeof(vect3d), MPI::BYTE,
+			source, node, status);
+	MPI::COMM_WORLD.Recv(&temperature[0], 2, MPI::DOUBLE, source, node, status);
+	if (node>=0 && node<entities.size()) {
+		this->setField(entities[node], density[0]);
+		averageVelocity_ptr->setField(entities[node], averageVelocity[0]);
+		temperature_ptr->setField(entities[node], temperature[0]);
+	}
+	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //	cout << nodePosition.norm() << " " << density[0] << " " <<
 //			density[1] << endl;
 	if (outFile)
@@ -810,11 +847,17 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 			return;
 		}
 		double density[2];
+		vect3d averageVelocity[2];
+		double temperature[2];
 		density[0] = this->calculateDensity(node, electricField,
 				potentialField, faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation,
-				&density[1]);
+				&density[1],
+				&averageVelocity[0], &averageVelocity[1],
+				&temperature[0], &temperature[1]);
 		MPI::COMM_WORLD.Send(&density[0], 2, MPI::DOUBLE, 0, node);
+		MPI::COMM_WORLD.Send(&averageVelocity[0], 2*sizeof(vect3d), MPI::BYTE, 0, node);
+		MPI::COMM_WORLD.Send(&temperature[0], 2, MPI::DOUBLE, 0, node);
 	}
 }
 #endif
