@@ -710,7 +710,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 
 	    dt = additionalDtToExitRegion;
 		t+=dt;
-		assert(!isnan(currentPosition.norm()));
+		if (isnan(currentPosition.norm()))
+				throw string("currentPosition is NaN in Orbit.cpp");
 		vect3d previousPosition = currentPosition;
 		vect3d previousVelocity = currentVelocity;
 		entHandle previousElement = velocityAndAcceleration.currentElement;
@@ -753,10 +754,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				currentPosition = positionAndVelocity[0];
 				currentVelocity = positionAndVelocity[1];
 				currentElement = velocityAndAcceleration.currentElement;
-				// TODO: this isn't elegant, but under this scheme should always be in new tet
-				assert(currentElement!=previousElement);
-//				if (currentElement==previousElement)
-//					cout << "Did not step to new element...something is wrong.";
+				if (currentElement==previousElement)
+					throw string("Did not step to new element...something is wrong.");
 				// TODO: change this to use regionIndex
 				foundTet = mesh_ptr->checkIfInTet(currentPosition, currentElement);
 				if (!foundTet) {

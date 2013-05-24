@@ -114,7 +114,8 @@ int custom_importVTK(mMesh *mesh, const char *fName)
      }
   
     fscanf(in,"%s %d",entity_type, &num_cells2);
-    assert(num_cells==num_cells2);
+	if (num_cells!=num_cells2)
+		throw string("problem in custom_mImportVTK");
     for(j=0; j<num_cells; ++j)
     {
       if(!list_cells.empty())

@@ -160,7 +160,8 @@ public:
 		double omega = -charge*B.norm()/mass; // minus sign since integrating backwards
 
 		// TODO: generalize to any unitB
-		assert(unitB[0]==0. && unitB[1]==0);
+		if (unitB[0]=!0. || unitB[1]!=0.)
+			throw string("Currently only support B in z-direction.");
 		vect3d pos = x[0];
 		vect3d vel = x[1];
 		boost::unwrap_ref(odeSystem)(x, dxdt);
@@ -228,7 +229,8 @@ public:
 		double omega = -charge*B.norm()/mass; // minus sign since integrating backwards
 
 		// TODO: generalize to any unitB
-		assert(unitB[0]==0. && unitB[1]==0);
+		if (unitB[0]=!0. || unitB[1]!=0.)
+			throw string("Currently only support B in z-direction.");
 		vect3d pos = x[0];
 		vect3d vel = x[1];
 		boost::unwrap_ref(odeSystem)(x, dxdt);

@@ -130,7 +130,8 @@ void ElectricField::calcField(PotentialField potentialField) {
 		int elementIndex=i;
 		potentialField.evalFieldAndDeriv(&potential, &potentialDerivative,
 				centroid, &elementIndex, 1);
-		assert(elementIndex==i);
+		if (elementIndex!=i)
+			throw string("problem in ElectricField::calcField");
 		vector<int> adjacentVertices =
 				mesh_ptr->adjacentEntitiesVectors[iBase_REGION][i][iBase_VERTEX];
 		for (int l=0; l<NDIM; l++) {
@@ -405,8 +406,10 @@ void PotentialField::calcField(CodeField vertexType) {
 
 void PotentialField::calcField(DensityField ionDensity,
 		DensityField electronDensity, CodeField vertexType, FILE *outFile) {
-	assert(ionDensity.mesh_ptr == mesh_ptr);
-	assert(electronDensity.mesh_ptr == mesh_ptr);
+	if (ionDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
+	if (electronDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
 	for (int i=0; i<entities.size(); i++) {
 		// TODO: remove this restriction on vertices
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
@@ -442,7 +445,8 @@ void PotentialField::calcField(DensityField ionDensity,
 
 void PotentialField::calcField(DensityField ionDensity,
 		CodeField vertexType, FILE *outFile) {
-	assert(ionDensity.mesh_ptr == mesh_ptr);
+	if (ionDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
 	for (int i=0; i<entities.size(); i++) {
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
 
@@ -475,8 +479,10 @@ void PotentialField::calcField(DensityField ionDensity,
 		DensityField electronDensityPP, DensityField electronDensityNP,
 		CodeField vertexType, double positivePotentialPerturbation,
 		double negativePotentialPerturbation, FILE *outFile) {
-	assert(ionDensity.mesh_ptr == mesh_ptr);
-	assert(electronDensity.mesh_ptr == mesh_ptr);
+	if (ionDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
+	if (electronDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
 	for (int i=0; i<entities.size(); i++) {
 		// TODO: remove this restriction on vertices
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
@@ -746,7 +752,8 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 		density = moments[0];
 		*error = errors[0];
 		// TODO: assuming NDIM==3
-		assert (NDIM==3);
+		if (NDIM!=3)
+			throw string("can only handle NDIM==3");
 		for (int i=0; i<NDIM; i++) {
 			averageVelocity->operator[](i) = moments[i+1];
 			averageVelocityError->operator[](i) = errors[i+1];
@@ -792,7 +799,8 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 
 	// Process any outstanding densities
 	// TODO: could run into problems here if fewer nodes than processes?
-	assert(nProcesses<entities.size());
+	if (nProcesses>=entities.size())
+		throw string("have assumed more processes than mesh nodes in parallelization");
 	for (int rank=1; rank<nProcesses; ++rank) {
 		status = this->receiveDensity(outFile);
 	}

@@ -361,7 +361,8 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 				mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions);
 	}
 	field *= 0.;
-	assert(currentFields.size()==linearBasisFunctions.rows());
+	if (currentFields.size()!=linearBasisFunctions.rows())
+		throw string("problem in getField");
 	for (int i=0;i<linearBasisFunctions.rows();i++) {
 		field += linearBasisFunctions[i]*currentFields[i];
 	}
@@ -371,7 +372,8 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 //		cout << errorBases.rows() << " " << errorCoefficients.rows() <<
 //				" " << errorBases.cols() << " " << errorCoefficients.cols() <<
 //				endl;
-		assert(errorBases.rows()==errorCoefficients.rows());
+		if (errorBases.rows()!=errorCoefficients.rows())
+			throw string("problem in getField()");
 //		cout << errorCoefficients.transpose() << endl;
 //		cout << errorBases.transpose() << endl << endl;
 //		cout << field << endl;
@@ -393,7 +395,8 @@ void Field<T>::evalField(T *fieldValue,
 	// TODO: should evalField just be getField?
 	// TODO: too much code-duplication with evalFieldAndDeriv
 	// Can only do 1st order interpolation of non-doubles
-	assert(interpolationOrder==1);
+	if (interpolationOrder!=1)
+		throw string("can only do first order interpolation of non-doubles");
 	if (position==currentPosition &&
 			interpolationOrder==currentInterpolationOrder) {
 		*fieldValue = currentFieldValue;
@@ -457,7 +460,8 @@ void Field<T>::evalField(T *fieldValue,
 		*fieldValue = T();
 		// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
 		*fieldValue *= 0.;
-		assert(currentFields.size()==linearBasisFunctions.rows());
+		if (currentFields.size()!=linearBasisFunctions.rows())
+			throw string("problem in evalField");
 		for (int i=0;i<linearBasisFunctions.rows();i++) {
 			*fieldValue += linearBasisFunctions[i]*currentFields[i];
 		}
@@ -545,20 +549,23 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 		*fieldValue = T();
 		// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
 		*fieldValue *= 0.;
-		assert(currentFields.size()==linearBasisFunctions.rows());
+		if (currentFields.size()!=linearBasisFunctions.rows())
+			throw string("problem in evalFieldAndDeriv");
 		for (int i=0;i<linearBasisFunctions.rows();i++) {
 			*fieldValue += linearBasisFunctions[i]*currentFields[i];
 		}
 		if (interpolationOrder>1) {
 			this->getErrorCoefficients(currentRegionIndex,
 					interpolationOrder, &errorCoefficients);
-			assert(errorBases.rows()==errorCoefficients.rows());
+			if (errorBases.rows()!=errorCoefficients.rows())
+				throw string("problem in evelFieldAndDeriv()");
 			*fieldValue += errorCoefficients.dot(errorBases);
 		}
 		*entityIndex = currentRegionIndex;
 
 		// TODO: remove this check and cast (just for debugging)
-		assert(!isnan((double)*fieldValue));
+		if (isnan((double)*fieldValue))
+			throw string("NaN in evalFieldAndDeriv");
 
 		for (int j=0; j<NDIM; j++) {
 			vect3d perturbedPosition = position +
@@ -688,11 +695,11 @@ Eigen::VectorXd Field<T>::getErrorCoefficients(
 					errorBases = mesh_ptr->evaluateCubicErrorBases(
 							linearBasisFunctions);
 				} else {
-					// TODO: specify exception
-					throw;
+					throw string("problem in getErrorCoefficients");
 				}
 				// TODO: could probably use block operations here
-				assert(errorBases.rows()==evaluatedErrorBases.cols());
+				if (errorBases.rows()!=evaluatedErrorBases.cols())
+					throw string("problem in getErrorCoefficients");
 				for (int j=0;j<errorBases.rows();j++) {
 					evaluatedErrorBases(i,j) = errorBases[j];
 				}
@@ -700,8 +707,10 @@ Eigen::VectorXd Field<T>::getErrorCoefficients(
 				T interpolatedField;
 				interpolatedField *= 0.;
 				// TODO: could get fields even if element!=currentElement
-				assert(element==currentElement);
-				assert(currentFields.size()==linearBasisFunctions.rows());
+				if (element!=currentElement)
+					throw string("problem in getErrorCoefficients");
+				if (currentFields.size()!=linearBasisFunctions.rows())
+					throw string("problem in getErrorCoefficients");
 				// TODO: could make this loop a function
 				for (int j=0;j<linearBasisFunctions.rows();j++) {
 					interpolatedField +=
@@ -766,7 +775,8 @@ void Field<T>::getErrorCoefficients(
 			// TODO: specify exception
 			throw;
 		}
-		assert(errorCoefficients->rows()==errorBasesSize);
+		if (errorCoefficients->rows()!=errorBasesSize)
+			throw string("problem in getErrorCoefficients");
 		// TODO: only dealing with doubles for now
 		if (boost::is_same<T,double>::value) {
 			vector<int> &surroundingVertices =
@@ -793,7 +803,8 @@ void Field<T>::getErrorCoefficients(
 					throw;
 				}
 				// TODO: could probably use block operations here
-				assert(errorBases.rows()==evaluatedErrorBases.cols());
+				if (errorBases.rows()!=evaluatedErrorBases.cols())
+					throw string("problem in getErrorCoefficients");
 				for (int j=0;j<errorBases.rows();j++) {
 					evaluatedErrorBases(i,j) = errorBases[j];
 				}
@@ -801,8 +812,10 @@ void Field<T>::getErrorCoefficients(
 				T interpolatedField;
 				interpolatedField *= 0.;
 				// TODO: could get fields even if element!=currentElement
-				assert(elementIndex==currentRegionIndex);
-				assert(currentFields.size()==linearBasisFunctions.rows());
+				if (elementIndex!=currentRegionIndex)
+					throw string("problem in getErrorCoefficients");
+				if (currentFields.size()!=linearBasisFunctions.rows())
+					throw string("problem in getErrorCoefficients");
 				// TODO: could make this loop a function
 				for (int j=0;j<linearBasisFunctions.rows();j++) {
 					interpolatedField +=

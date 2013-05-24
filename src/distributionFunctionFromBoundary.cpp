@@ -2,7 +2,8 @@
 
 void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 		void *integrandContainer_ptr, unsigned fdim, double *fval) {
-	assert(ndim==3);
+	if (ndim!=3)
+		throw string("only handle ndim=3 in distributionFunctionFromBoundary");
 //	assert(fdim==1);
 	Mesh *mesh_ptr = ((IntegrandContainer*)integrandContainer_ptr)->mesh_ptr;
 	entHandle node =
@@ -52,9 +53,13 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 //	orbit.integrate(*potentialField_ptr, *electricField_ptr,
 //			*faceTypeField_ptr, *vertexTypeField_ptr,
 //			*shortestEdgeField_ptr, orbitOutFile, extern_orbitNumber);
-	orbit.integrate(*potentialField_ptr, *electricField_ptr,
-			*faceTypeField_ptr, *vertexTypeField_ptr,
-			*shortestEdgeField_ptr, NULL, extern_orbitNumber);
+	try {
+		orbit.integrate(*potentialField_ptr, *electricField_ptr,
+				*faceTypeField_ptr, *vertexTypeField_ptr,
+				*shortestEdgeField_ptr, NULL, extern_orbitNumber);
+	} catch (string& message) {
+		cout << "Caught in distributionFunctionFromBoundary():" << message << endl;
+	}
 //	// TODO: more transparent handling of external ExB drift?
 //	vect3d finalVelocity = orbit.finalVelocity - VEXB;
 	vect3d finalVelocity = orbit.finalVelocity;
@@ -85,10 +90,14 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 		fval[4] = fval[0]*0.5*pow(finalVelocity.norm(),2.);
 	// TODO: better way than integrating orbit again for output?
 	if (orbitOutFile) {
-		orbit.integrate(*potentialField_ptr, *electricField_ptr,
-				*faceTypeField_ptr, *vertexTypeField_ptr,
-//				*shortestEdgeField_ptr, orbitOutFile, *fval);
-				*shortestEdgeField_ptr, orbitOutFile, exp(-pow(finalVelocity.norm(),2.)/2.));
+		try {
+			orbit.integrate(*potentialField_ptr, *electricField_ptr,
+					*faceTypeField_ptr, *vertexTypeField_ptr,
+//					*shortestEdgeField_ptr, orbitOutFile, *fval);
+					*shortestEdgeField_ptr, orbitOutFile, exp(-pow(finalVelocity.norm(),2.)/2.));
+		} catch (string& message) {
+			cout << "Caught in distributionFunctionFromBoundary():" << message << endl;
+		}
 	}
 	if (((IntegrandContainer*)integrandContainer_ptr)->outFile) {
 		fprintf(((IntegrandContainer*)integrandContainer_ptr)->outFile,
@@ -99,7 +108,8 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 
 int distributionFunctionFromBoundaryCuba(const int *ndim, const double x[],
   const int *ncomp, double f[], void *integrandContainer_ptr) {
-	assert(*ndim==3);
+	if (*ndim!=3)
+		throw string("only handle ndim=3 in distributionFunctionFromBoundaryCuba");
 //	assert(*ncomp==1);
 	double y[3];
 	for (int i=0; i<*ndim; i++) {
