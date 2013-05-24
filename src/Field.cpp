@@ -744,7 +744,7 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 		double moments[5];
 		double errors[5];
 		double probabilities[5];
-		Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
+		Vegas(NDIM, 1+NDIM+1, &distributionFunctionFromBoundaryCuba,
 				(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
 				numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
 				NULL, &actualNumberOfOrbits, &failureType,
