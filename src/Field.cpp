@@ -749,6 +749,10 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 				numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
 				NULL, &actualNumberOfOrbits, &failureType,
 				moments, errors, probabilities);
+		// TODO: just set NCOMP higher?
+		if (failureType<0)
+			cout << "failureType: " << failureType <<
+			" (Probably need to change NCOMP in cuba/Makefile.am)" << endl;
 		density = moments[0];
 		*error = errors[0];
 		// TODO: assuming NDIM==3

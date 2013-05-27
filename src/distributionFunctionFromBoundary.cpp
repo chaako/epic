@@ -83,7 +83,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 	}
 	// TODO: don't hard-code moment order?
 	if (fdim>=4) {
-		for (int i=0; i<4; i++)
+		for (int i=0; i<3; i++)
 			fval[i+1] = fval[0]*finalVelocity[i];
 	}
 	if (fdim>=5)
