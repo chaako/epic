@@ -220,10 +220,9 @@ int main(int argc, char *argv[]) {
 	if (mpiId == 0){
 		int i = 0;
 		stringstream iterMeshFileName;
-		string outFile(argv[2]);
-		int periodLocation = outFile.rfind(".");
-		iterMeshFileName << outFile.substr(0,periodLocation)
-				<< setfill('0') << setw(2) << i << outFile.substr(periodLocation);
+		int periodLocation = outputFile.rfind(".");
+		iterMeshFileName << outputFile.substr(0,periodLocation)
+				<< setfill('0') << setw(2) << i << outputFile.substr(periodLocation);
 //		// TODO: debugging
 //		cout << iterMeshFileName.str() << endl;
 		mesh.save(iterMeshFileName.str());

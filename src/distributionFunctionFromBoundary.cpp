@@ -59,6 +59,8 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 				*shortestEdgeField_ptr, NULL, extern_orbitNumber);
 	} catch (string& message) {
 		cout << "Caught in distributionFunctionFromBoundary():" << message << endl;
+	} catch (int code) {
+		cout << "Caught in distributionFunctionFromBoundary(): " << code << endl;
 	}
 //	// TODO: more transparent handling of external ExB drift?
 //	vect3d finalVelocity = orbit.finalVelocity - VEXB;
@@ -97,6 +99,8 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 					*shortestEdgeField_ptr, orbitOutFile, exp(-pow(finalVelocity.norm(),2.)/2.));
 		} catch (string& message) {
 			cout << "Caught in distributionFunctionFromBoundary():" << message << endl;
+		} catch (int code) {
+			cout << "Caught in distributionFunctionFromBoundary(): " << code << endl;
 		}
 	}
 	if (((IntegrandContainer*)integrandContainer_ptr)->outFile) {
