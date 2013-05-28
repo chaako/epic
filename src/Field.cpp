@@ -596,6 +596,8 @@ void DensityField::calcField(ElectricField& electricField,
 				shortestEdge, charge, potentialPerturbation, outFile);
 		for (int node=0; node<entities.size(); node++) {
 			density[node] = this->getField(entities[node]);
+			averageVelocity[node] = averageVelocity_ptr->getField(entities[node]);
+			temperature[node] = temperature_ptr->getField(entities[node]);
 		}
 	} else {
 		DensityField::processDensityRequests(electricField,
