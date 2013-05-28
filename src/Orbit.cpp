@@ -25,7 +25,9 @@ Orbit::Orbit(Mesh *inputMesh_ptr, entHandle inputNode,
 			// TODO: change this to be flag not to pursue orbit (what about reflecting electrons?)
 			currentElement = inputNode;
 		} else {
-			throw;
+			currentElement = inputNode;
+			// TODO: should catch throws by constructor
+//			throw string("numberOfRegionsWithinTolerance>1");
 		}
 	}
 //	// TODO: remove this

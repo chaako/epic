@@ -50,7 +50,7 @@ public:
 				// TODO: come up with better handling of this
 				currentElement = initialNode;
 			} else {
-				throw;
+				throw string("numberOfRegionsWithinTolerance>1");
 			}
 		}
 //		int dimension=potentialField.mesh_ptr->getEntityDimension(currentElement);
