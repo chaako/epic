@@ -764,8 +764,11 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 			averageVelocity->operator[](i) = moments[i+1];
 			averageVelocityError->operator[](i) = errors[i+1];
 		}
-		*temperature = moments[4];
-		*temperatureError = errors[4];
+		// Subtract ordered kinetic energy from second moment to get temperature
+		*temperature = moments[4] - 0.5*pow(averageVelocity->norm(),2.);
+		// TODO: calculate temperature error more carefully
+		*temperatureError = sqrt(pow(errors[4],2.) +
+				pow(0.5*averageVelocityError->norm(),2.));
 		probabilityThatTrueError = probabilities[0];
 	}
 	// TODO: make potential perturbation more robust, transparent, and flexible

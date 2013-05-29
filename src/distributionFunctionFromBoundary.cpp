@@ -73,9 +73,10 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 		fval[0] *= exp(-(pow(finalVelocity.norm(),2.)-pow(v,2.))/2.);
 		fval[0] *= M_PI;
 		fval[0] *= (1.+x[0])*sqrt(-log((1.+x[0])/2.));
-		// TODO: if fix outer potential this may not give equal ion and electron dens.
-		if (charge*orbit.finalPotential>0.)
-			fval[0] *= exp(-charge*orbit.finalPotential);
+//		// TODO: if fix outer potential this may not give equal ion and electron dens.
+//		// TODO: this doesn't work when including external E in potential
+//		if (charge*orbit.finalPotential>0.)
+//			fval[0] *= exp(-charge*orbit.finalPotential);
 	} else if (orbit.finalPosition.norm()>1.) {
 //		std::cout << "orbit terminated with final position in domain:" <<
 //				std::endl << orbit.finalPosition.transpose() << " r=" <<
@@ -84,19 +85,23 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 //		std::cout << ".";
 	}
 	// TODO: don't hard-code moment order?
+	// -VEXB since orbit.initialVelocity=-velocity
+	vect3d driftingVelocity = velocity - VEXB;
 	if (fdim>=4) {
 		for (int i=0; i<NDIM; i++)
-			fval[i+1] = fval[0]*finalVelocity[i];
+			fval[i+1] = fval[0]*driftingVelocity[i];
 	}
+	// Since average velocity isn't available yet, subtract off KE from T later
 	if (fdim>=5)
-		fval[4] = fval[0]*0.5*pow(finalVelocity.norm(),2.);
+		fval[4] = fval[0]*0.5*pow(driftingVelocity.norm(),2.);
 	// TODO: better way than integrating orbit again for output?
 	if (orbitOutFile) {
+		Orbit orbitForOutput(mesh_ptr,node,velocity,charge);
 		try {
-			orbit.integrate(*potentialField_ptr, *electricField_ptr,
+			orbitForOutput.integrate(*potentialField_ptr, *electricField_ptr,
 					*faceTypeField_ptr, *vertexTypeField_ptr,
-//					*shortestEdgeField_ptr, orbitOutFile, *fval);
-					*shortestEdgeField_ptr, orbitOutFile, exp(-pow(finalVelocity.norm(),2.)/2.));
+					*shortestEdgeField_ptr, orbitOutFile, fval[0]);
+//					*shortestEdgeField_ptr, orbitOutFile, exp(-pow(finalVelocity.norm(),2.)/2.));
 		} catch (string& message) {
 			cout << "Caught in distributionFunctionFromBoundary():" << message << endl;
 		} catch (int code) {
@@ -112,6 +117,9 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 
 int distributionFunctionFromBoundaryCuba(const int *ndim, const double x[],
   const int *ncomp, double f[], void *integrandContainer_ptr) {
+	// TODO: Can get weight and iteration number from Vegas as two additional
+	//       optional arguments, which would allow storing dist. func. for
+	//       computation of other moments after density integral is complete.
 	if (*ndim!=3)
 		throw string("only handle ndim=3 in distributionFunctionFromBoundaryCuba");
 //	assert(*ncomp==1);
