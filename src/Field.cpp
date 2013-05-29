@@ -669,6 +669,10 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 		double *temperature, double *temperatureError) {
 	// TODO: Need unified way of specifying unperturbed boundary plasma
 	if (vertexType[node]==5) {
+		*averageVelocity = -VEXB;
+		*averageVelocityError = vect3d(0.,0.,0.);
+		*temperature = 1.;
+		*temperatureError = 0.;
 		return 1.;
 //	} else if (vertexType[node]==4) {
 //		// TODO: don't need sheath entrance density if specifying potential,
