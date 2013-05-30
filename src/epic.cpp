@@ -310,7 +310,9 @@ int main(int argc, char *argv[]) {
 					<< setfill('0') << setw(2) << i << outputFile.substr(periodLocation);
 			mesh.save(iterMeshFileName.str());
 			// mesh.save() destroys eField tag, so update
+			// TODO: do this automatically?
 			eField.updateTagHandle();
+			ionVelocity.updateTagHandle();
 		}
 	}
 
