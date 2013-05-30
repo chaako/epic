@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	try {
 	Mesh mesh(inputMeshFile);
 	mesh.printElementNumbers();
 
@@ -227,7 +228,9 @@ int main(int argc, char *argv[]) {
 //		cout << iterMeshFileName.str() << endl;
 		mesh.save(iterMeshFileName.str());
 		// mesh.save() destroys eField tag, so update
+		// TODO: do this automatically?
 		eField.updateTagHandle();
+		ionVelocity.updateTagHandle();
 	}
 
 	// Exit for Poisson test
@@ -321,6 +324,15 @@ int main(int argc, char *argv[]) {
 			fclose(density_electronsFile);
 		if (potentialFile)
 			fclose(potentialFile);
+	}
+	} catch(exception& e) {
+		cerr << "error: " << e.what() << "\n";
+	} catch(string& message) {
+		cerr << "error: " << message << "\n";
+	} catch(int code) {
+		cerr << "error: " << code << "\n";
+	} catch(...) {
+		cerr << "Exception of unknown type!\n";
 	}
 
 #ifdef HAVE_MPI
