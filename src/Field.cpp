@@ -13,9 +13,9 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName)
 }
 
 ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName,
-		CodeField vertexType, bool doLuDecomposition=true)
+		CodeField vertexType, double debyeLength, bool doLuDecomposition=true)
 		: Field<vect3d>(inputMesh_ptr, inputName, iBase_VERTEX) {
-	if (doLuDecomposition) {
+	if (doLuDecomposition && debyeLength>0.) {
 #ifdef HAVE_MPI
 	if (MPI::COMM_WORLD.Get_rank() == 0)
 #endif
@@ -60,7 +60,6 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName,
 					potentialBoundaryVertexSet[jj] = true;
 				}
 			}
-			double debyeLength = 1.e0;
 			for (int k=0; k<adjacentVertices.size(); k++) {
 				int kk = adjacentVertices[k];
 				double basisBasisCoefficient = volume/20;
@@ -108,6 +107,12 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName,
 		// decomposition failed
 		throw;
 	}
+	} else {
+#ifdef HAVE_MPI
+	if (MPI::COMM_WORLD.Get_rank() == 0)
+#endif
+		cout << "Not computing the Poisson solve LU decomposition: doLuDecomposition = " <<
+		doLuDecomposition << ", debyeLength = " << debyeLength << endl << endl;
 	}
 }
 
@@ -183,7 +188,7 @@ void ElectricField::calcField(PotentialField potentialField) {
 }
 
 void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vertexType,
-		DensityField ionDensity) {
+		DensityField ionDensity, double debyeLength) {
 	int nVerts = entities.size();
 	int m = nVerts + nVerts*NDIM;
 	double potentialChange=1.;
@@ -251,7 +256,6 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 //					eFieldBoundaryVertexSet[jj] = true;
 //				}
 			}
-			double debyeLength = 1.e0;
 			for (int k=0; k<adjacentVertices.size(); k++) {
 				int kk = adjacentVertices[k];
 				double basisBasisCoefficient = volume/20;
@@ -384,21 +388,24 @@ PotentialField::PotentialField(PotentialField potential, string inputName)
 }
 
 
-void PotentialField::calcField(CodeField vertexType) {
+void PotentialField::calcField(CodeField vertexType, double debyeLength,
+		double boundaryPotential, double surfacePotential,
+		double sheathPotential) {
 	for (int i=0; i<entities.size(); i++) {
 		vect3d point = mesh_ptr->getCoordinates(entities[i]);
-		// TODO: Change this from just a test Coulomb field
-//		double potential = -1./point.norm();
 		double potential;
-		if (vertexType.getField(entities[i])==4) {
-			// TODO: don't hard-code sheath potential
-			potential = -1./2.;
-		} else if (vertexType.getField(entities[i])==5) {
-			// TODO: don't hard-code boudnary potential
-			potential = 0;
+		if (debyeLength==0.) {
+			if (vertexType.getField(entities[i])==4) {
+				potential = sheathPotential;
+			} else if (vertexType.getField(entities[i])==5) {
+				potential = boundaryPotential;
+			} else {
+				potential = boundaryPotential;
+			}
 		} else {
-			potential = 0;
-//			potential = -0.77;
+			// TODO: Change this from just a test Coulomb field
+			cout << "WARNING: Assuming spherical mesh in PotentialField::calcField" << endl;
+			double potential = surfacePotential/point.norm();
 		}
 		this->setField(entities[i], potential);
 	}
@@ -444,25 +451,28 @@ void PotentialField::calcField(DensityField ionDensity,
 }
 
 void PotentialField::calcField(DensityField ionDensity,
-		CodeField vertexType, FILE *outFile) {
+		CodeField vertexType, FILE *outFile, double boundaryPotential,
+		double sheathPotential, bool fixSheathPotential) {
 	if (ionDensity.mesh_ptr!=mesh_ptr)
 		throw string("mesh pointers not the same in potentialField::calcField");
 	for (int i=0; i<entities.size(); i++) {
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
 
 		double potential;
-		// TODO: don't hard-code boundary type and quasi-neutral operation
-//		if (vertexType.getField(entities[i])==4) {
-//			// TODO: don't hard-code sheath potential
-//			potential = -1./2.;
-//		} else
+		// TODO: don't hard-code boundary type
 		if (vertexType.getField(entities[i])==5) {
-			// TODO: don't hard-code boundary potential
-			potential = 0;
+			potential = boundaryPotential;
 		} else {
 			double currentPotential = this->getField(entities[i]);
 			double boltzmannPotential = log(ionDensity.getField(entities[i]));
 			potential = (currentPotential+boltzmannPotential)/2.;
+		}
+		if (fixSheathPotential) {
+			// TODO: think about possible influence of background E field
+			// TODO: don't hard-code boundary type
+			if (vertexType.getField(entities[i])==4) {
+				potential = sheathPotential;
+			}
 		}
 		this->setField(entities[i], potential);
 
@@ -647,12 +657,10 @@ void DensityField::calcField(ElectricField& electricField,
 		fprintf(outFile, "\n\n\n\n");
 }
 
-void DensityField::poissonCubeTest() {
+void DensityField::poissonCubeTest(double debyeLength) {
 	for (int i=0; i<entities.size(); i++) {
 		vect3d xyz = mesh_ptr->getCoordinates(entities[i]);
 		double chargeDensity = -0.9*sin(xyz[0]*M_PI)*sin(xyz[1]*M_PI)*sin(xyz[2]*M_PI);
-		// TODO: don't hard-code debye length
-		double debyeLength=1.;
 		double density = debyeLength*debyeLength*chargeDensity
 				+ exp(1./M_PI/M_PI/3.*chargeDensity);
 //		cout << density << " " << xyz.transpose() << endl;

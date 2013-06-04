@@ -37,8 +37,9 @@ int main(int argc, char *argv[]) {
 	string inputMeshFile, outputFile;
 	vector<vect3d> evaluationPositions;
 	extern_evalPositions_ptr = &evaluationPositions;
-	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest;
-	int secondsToSleepForDebugAttach;
+	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest, fixSheathPotential;
+	int secondsToSleepForDebugAttach, numberOfIterations;
+	double debyeLength, boundaryPotential, surfacePotential, sheathPotential;
 	// TODO: make names more transparent?
 	{
 		namespace po = boost::program_options;
@@ -49,6 +50,18 @@ int main(int argc, char *argv[]) {
 					("help", "produce help message")
 					("inputFile", po::value<string>(&inputMeshFile), "input file")
 					("outputFile", po::value<string>(&outputFile), "output file")
+					("numberOfIterations", po::value<int>(&numberOfIterations)->default_value(2),
+							"number of iterations")
+					("debyeLength", po::value<double>(&debyeLength)->default_value(0.),
+							"electron Debye length")
+					("boundaryPotential", po::value<double>(&boundaryPotential)->default_value(0.),
+							"potential at outer boundary")
+					("surfacePotential", po::value<double>(&surfacePotential)->default_value(-4.),
+							"potential at object surface")
+					("sheathPotential", po::value<double>(&sheathPotential)->default_value(-0.5),
+							"potential at sheath entrance (for debyeLength=0.)")
+					("fixSheathPotential", po::value<bool>(&fixSheathPotential)->default_value(false),
+							"fix potential at sheath entrance (true/false; for debyeLength=0.)")
 					("evalPositionX,x", po::value< vector<double> >(&evalPosX), "evaluation position(s) x")
 					("evalPositionY,y", po::value< vector<double> >(&evalPosY), "evaluation position(s) y")
 					("evalPositionZ,z", po::value< vector<double> >(&evalPosZ), "evaluation position(s) z")
@@ -101,9 +114,19 @@ int main(int argc, char *argv[]) {
 	}
 
 	try {
+	if (secondsToSleepForDebugAttach>0) {
+		char hostname[256];
+		gethostname(hostname, sizeof(hostname));
+		printf("mpiId %d: PID %d on %s ready for attach\n", mpiId, getpid(), hostname);
+		// TODO: this flush doesn't appear to be working...optimization problem?
+		fflush(stdout);
+		sleep(secondsToSleepForDebugAttach);
+	}
+
 	Mesh mesh(inputMeshFile);
 	mesh.printElementNumbers();
 
+	// TODO: replace this with something more flexible/modular?
 	FILE *densityFile=NULL;
 	FILE *density_electronsFile=NULL;
 	FILE *potentialFile=NULL;
@@ -121,36 +144,28 @@ int main(int argc, char *argv[]) {
 		fprintf(potentialFile, "# r phi\n");
 	}
 
-    if (secondsToSleepForDebugAttach>0) {
-		char hostname[256];
-		gethostname(hostname, sizeof(hostname));
-		printf("mpiId %d: PID %d on %s ready for attach\n", mpiId, getpid(), hostname);
-		fflush(stdout);
-		sleep(secondsToSleepForDebugAttach);
-	}
-
 	Field<int> faceType(&mesh,string("cell_code"),iBase_FACE);
 	CodeField vertexType(&mesh,string("vertex_code"),iBase_VERTEX);
 	if (mpiId == 0)
 		cout << endl << "Setting vertex codes..." << endl;
 	vertexType.calcField(faceType);
 	PotentialField potential(&mesh,string("potential"));
-	ElectricField eField(&mesh,string("eField"),vertexType,doLuDecomposition);
+	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
 	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
 	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
 	// TODO: updating other moments through density not very clean/transparent
-	DensityField density(&mesh,string("density"));
 	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature);
-	DensityField electronDensity(&mesh,string("electronDensity"));
-	DensityField ionDensityPositivePerturbation(&mesh,string("PPionDensity"));
-	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"));
-	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
-	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
+//	DensityField electronDensity(&mesh,string("electronDensity"));
+//	DensityField density(&mesh,string("density"));
+//	DensityField ionDensityPositivePerturbation(&mesh,string("PPionDensity"));
+//	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"));
+//	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
+//	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
 	ShortestEdgeField shortestEdge(&mesh,string("shortestEdge"));
 
 	double noPotentialPerturbation = 0.;
-	double positivePotentialPerturbation = 0.05;
-	double negativePotentialPerturbation = -0.05;
+//	double positivePotentialPerturbation = 0.05;
+//	double negativePotentialPerturbation = -0.05;
 
 	if (mpiId == 0)
 		cout << endl << "Calculating shortest edge of each region..." << endl;
@@ -158,6 +173,9 @@ int main(int argc, char *argv[]) {
 	if (mpiId == 0)
 		cout << endl << "Setting density..." << endl;
 	ionDensity.calcField(vertexType, potential, 1.);
+//	// TODO: implement Boltzman density calculation;
+//	electronDensity.calcField(potential, -1.);
+//	density.calcField(ionDensity, electronDensity);
 
 
 	// TODO: add more robust detection and handling of existing fields
@@ -180,21 +198,25 @@ int main(int argc, char *argv[]) {
 		if (stopAfterEvalPos) {
 			// TODO: shouldn't return before closing files etc...
 			cout << "Not in main iteration loop...improve handling of existing fields." << endl;
+#ifdef HAVE_MPI
+			MPI::Finalize();
+#endif
 			return 0;
 		}
 	} else {
 		if (mpiId == 0)
 			cout << endl << "Setting potential..." << endl;
-		potential.calcField(vertexType);
+		potential.calcField(vertexType, debyeLength, boundaryPotential,
+				surfacePotential, sheathPotential);
 	}
 
 	if (doPoissonTest) {
 		if (mpiId == 0)
 			cout << endl << "Setting poissonCubeTest density..." << endl;
-		ionDensity.poissonCubeTest();
+		ionDensity.poissonCubeTest(debyeLength);
 		if (mpiId == 0)
 			cout << endl << "Calculating electric field..." << endl;
-		eField.calcField(&potential, vertexType, ionDensity);
+		eField.calcField(&potential, vertexType, ionDensity, debyeLength);
 	}
 
 
@@ -227,7 +249,7 @@ int main(int argc, char *argv[]) {
 //		// TODO: debugging
 //		cout << iterMeshFileName.str() << endl;
 		mesh.save(iterMeshFileName.str());
-		// mesh.save() destroys eField tag, so update
+		// mesh.save() destroys vector tags, so update
 		// TODO: do this automatically?
 		eField.updateTagHandle();
 		ionVelocity.updateTagHandle();
@@ -241,14 +263,36 @@ int main(int argc, char *argv[]) {
 		return(0);
 	}
 
-	for (int i=1; i<2; i++) {
+	for (int i=1; i<numberOfIterations; i++) {
 		if (mpiId == 0)
 			cout << endl  << endl << "ITERATION " << i << endl;
-		if (mpiId == 0)
-			cout << endl << "Calculating electric field..." << endl;
-		eField.calcField(&potential, vertexType, ionDensity);
-//		eField.calcField(potential);
-//		eField.calcField_Gatsonis(potential);
+//		if (mpiId == 0)
+//			cout << endl << "Saving current potential..." << endl;
+//		stringstream potentialCopyName;
+//		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
+//		PotentialField potentialCopy(potential,potentialCopyName.str());
+		if (debyeLength==0.) {
+			if (mpiId == 0)
+				cout << endl << "Calculating updated potential..." << endl;
+			potential.calcField(ionDensity, vertexType, potentialFile, boundaryPotential,
+					sheathPotential, fixSheathPotential);
+//			potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
+//			potential.calcField(ionDensity,
+//					ionDensityPositivePerturbation, ionDensityNegativePerturbation,
+//					electronDensity,
+//					electronDensityPositivePerturbation, electronDensityNegativePerturbation,
+//					vertexType, positivePotentialPerturbation,
+//					negativePotentialPerturbation, potentialFile);
+			if (mpiId == 0)
+				cout << endl << "Calculating electric field from potential..." << endl;
+//			// TODO: parallelize FEM eField-from-potential solve
+//			eField.calcField(potential);
+			eField.calcField_Gatsonis(potential);
+		} else {
+			if (mpiId == 0)
+				cout << endl << "Calculating updated potential and electric field..." << endl;
+			eField.calcField(&potential, vertexType, ionDensity, debyeLength);
+		}
 //		if (mpiId == 0)
 //			cout << endl << "Calculating electron density..." << endl;
 //		electronDensity.calcField(eField, potential, faceType, vertexType,
@@ -267,7 +311,7 @@ int main(int argc, char *argv[]) {
 //				shortestEdge, -1., negativePotentialPerturbation,
 //				density_electronsFile);
 		if (mpiId == 0)
-			cout << endl << "Calculating ion charge-density..." << endl;
+			cout << endl << "Calculating ion density..." << endl;
 		ionDensity.calcField(eField, potential, faceType, vertexType,
 				shortestEdge, 1., noPotentialPerturbation,
 				densityFile);
@@ -286,21 +330,6 @@ int main(int argc, char *argv[]) {
 //		if (mpiId == 0)
 //			cout << endl << "Calculating charge density..." << endl;
 //		density.calcField(ionDensity, electronDensity);
-//		if (mpiId == 0)
-//			cout << endl << "Saving current potential..." << endl;
-//		stringstream potentialCopyName;
-//		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
-//		PotentialField potentialCopy(potential,potentialCopyName.str());
-//		if (mpiId == 0)
-//			cout << endl << "Calculating updated potential..." << endl;
-//		potential.calcField(ionDensity, vertexType, potentialFile);
-//		potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
-//		potential.calcField(ionDensity,
-//				ionDensityPositivePerturbation, ionDensityNegativePerturbation,
-//				electronDensity,
-//				electronDensityPositivePerturbation, electronDensityNegativePerturbation,
-//				vertexType, positivePotentialPerturbation,
-//				negativePotentialPerturbation, potentialFile);
 		if (mpiId == 0)
 			cout << endl << endl << endl;
 		if (mpiId == 0){
@@ -309,7 +338,7 @@ int main(int argc, char *argv[]) {
 			iterMeshFileName << outputFile.substr(0,periodLocation)
 					<< setfill('0') << setw(2) << i << outputFile.substr(periodLocation);
 			mesh.save(iterMeshFileName.str());
-			// mesh.save() destroys eField tag, so update
+			// mesh.save() destroys vector tags, so update
 			// TODO: do this automatically?
 			eField.updateTagHandle();
 			ionVelocity.updateTagHandle();

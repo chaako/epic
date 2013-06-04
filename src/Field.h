@@ -98,12 +98,12 @@ class ElectricField : public Field<vect3d> {
 public:
 	ElectricField(Mesh *inputMesh_ptr, string inputName);
 	ElectricField(Mesh *inputMesh_ptr, string inputName,
-			CodeField vertexType, bool doLuDecomposition);
+			CodeField vertexType, double debyeLength, bool doLuDecomposition);
 	virtual ~ElectricField() {}
 
 	void calcField(PotentialField potentialField);
 	void calcField(PotentialField *potentialField_ptr, CodeField vertexType,
-			DensityField ionDensity);
+			DensityField ionDensity, double debyeLength);
 	void calcField_Gatsonis(PotentialField potentialField);
 
 	Solver solver;
@@ -135,7 +135,7 @@ public:
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile=NULL);
-	void poissonCubeTest();
+	void poissonCubeTest(double debyeLength);
 	double calculateDensity(int node, ElectricField& electricField,
 			PotentialField potentialField,
 			Field<int> faceType, CodeField vertexType,
@@ -167,11 +167,14 @@ public:
 	PotentialField(PotentialField potential, string inputName);
 	virtual ~PotentialField() {}
 
-	void calcField(CodeField vertexType);
+	void calcField(CodeField vertexType, double debyeLength,
+			double boundaryPotential, double surfacePotential,
+			double sheathPotential);
 	void calcField(DensityField ionDensity, DensityField electronDensity,
 			CodeField vertexType, FILE *outFile);
 	void calcField(DensityField ionDensity,
-			CodeField vertexType, FILE *outFile);
+			CodeField vertexType, FILE *outFile, double boundaryPotential,
+			double sheathPotential, bool fixSheathPotential);
 	void calcField(DensityField ionDensity,
 			DensityField ionDensityPP, DensityField ionDensityNP,
 			DensityField electronDensity,
