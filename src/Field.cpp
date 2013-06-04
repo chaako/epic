@@ -773,13 +773,14 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 		if (NDIM!=3)
 			throw string("can only handle NDIM==3");
 		for (int i=0; i<NDIM; i++) {
-			averageVelocity->operator[](i) = moments[i+1];
-			averageVelocityError->operator[](i) = errors[i+1];
+			averageVelocity->operator[](i) = moments[i+1]/density;
+			// TODO: include density error
+			averageVelocityError->operator[](i) = errors[i+1]/density;
 		}
 		// Subtract ordered kinetic energy from second moment to get temperature
-		*temperature = moments[4] - 0.5*pow(averageVelocity->norm(),2.);
+		*temperature = moments[4]/density - 0.5*pow(averageVelocity->norm(),2.);
 		// TODO: calculate temperature error more carefully
-		*temperatureError = sqrt(pow(errors[4],2.) +
+		*temperatureError = sqrt(pow(errors[4]/density,2.) + pow(errors[0],2.) +
 				pow(0.5*averageVelocityError->norm(),2.));
 		probabilityThatTrueError = probabilities[0];
 	}

@@ -87,6 +87,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 	// TODO: don't hard-code moment order?
 	// -VEXB since orbit.initialVelocity=-velocity
 	vect3d driftingVelocity = velocity - VEXB;
+	// Since density isn't available yet, divide by it later
 	if (fdim>=4) {
 		for (int i=0; i<NDIM; i++)
 			fval[i+1] = fval[0]*driftingVelocity[i];
