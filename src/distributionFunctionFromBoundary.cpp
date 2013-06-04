@@ -94,7 +94,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 	}
 	// Since average velocity isn't available yet, subtract off KE from T later
 	if (fdim>=5)
-		fval[4] = fval[0]*0.5*pow(driftingVelocity.norm(),2.);
+		fval[4] = fval[0]*pow(driftingVelocity.norm(),2.)/3.;
 	// TODO: better way than integrating orbit again for output?
 	if (orbitOutFile) {
 		Orbit orbitForOutput(mesh_ptr,node,velocity,charge);
