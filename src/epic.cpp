@@ -149,12 +149,14 @@ int main(int argc, char *argv[]) {
 	if (mpiId == 0)
 		cout << endl << "Setting vertex codes..." << endl;
 	vertexType.calcField(faceType);
+	// TODO: create error fields with pointer in corresponding fields
 	PotentialField potential(&mesh,string("potential"));
 	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
 	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
 	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
 	// TODO: updating other moments through density not very clean/transparent
 	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature);
+	DensityField referenceElectronDensity(&mesh,string("referenceElectronDensity"));
 //	DensityField electronDensity(&mesh,string("electronDensity"));
 //	DensityField density(&mesh,string("density"));
 //	DensityField ionDensityPositivePerturbation(&mesh,string("PPionDensity"));
@@ -176,6 +178,18 @@ int main(int argc, char *argv[]) {
 //	// TODO: implement Boltzman density calculation;
 //	electronDensity.calcField(potential, -1.);
 //	density.calcField(ionDensity, electronDensity);
+//	DistributionFunction distributionFunction;
+	SpatialDependence densityProfile;
+	vect3d magneticAxis = B/B.norm();
+	SpatialDependence parallelTemperatureProfile;
+	SpatialDependence perpendicularTemperatureProfile;
+	SpatialDependence parallelDriftProfile(0.);
+	// TODO: consider including drift in evaluated velocities
+	vect3d perpendicularDrift(0.,0.,0.);
+	Maxwellian distributionFunction(densityProfile, magneticAxis,
+			parallelTemperatureProfile, perpendicularTemperatureProfile,
+			parallelDriftProfile, perpendicularDrift);
+	referenceElectronDensity.calcField(vertexType, distributionFunction, 1.);
 
 
 	// TODO: add more robust detection and handling of existing fields

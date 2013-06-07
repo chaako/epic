@@ -52,6 +52,7 @@ enum {
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp> // For sleep function
 #include <boost/numeric/odeint.hpp> // Not true boost library
+//#include <boost/numeric/quadrature/adaptive.hpp> // Not true boost library
 #include <boost/math/tools/roots.hpp>
 #include <set>
 //#include <type_traits> // Requires -std=c++0x compiler flag

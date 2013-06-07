@@ -8,6 +8,8 @@
 #ifndef CLASSES_H_
 #define CLASSES_H_
 
+#include "SpatialDependence.h"
+#include "DistributionFunction.h"
 #include "Mesh.h"
 #include "IntegrandContainer.h"
 #include "Solver.h"

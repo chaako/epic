@@ -657,6 +657,40 @@ void DensityField::calcField(ElectricField& electricField,
 		fprintf(outFile, "\n\n\n\n");
 }
 
+// TODO: figure out why get error if put include in typesAndDefinitions.h
+#include <boost/numeric/quadrature/adaptive.hpp> // Not true boost library
+//#include <boost/numeric/quadrature/kronrodgauss.hpp> // Not true boost library
+// TODO: make reference density its own class?
+void DensityField::calcField(CodeField& vertexType,
+		DistributionFunction& distributionFunction, double charge) {
+	for (int i=0; i<entities.size(); i++) {
+		vect3d position = mesh_ptr->getCoordinates(entities[i]);
+//		DistributionFunctionVy distFuncVy;
+//		distFuncVy.distFunc_ptr = &distributionFunction;
+//		distFuncVy.pos = position;
+		// TODO: shouldn't really be altering things passed by reference
+		distributionFunction.setPresetPosition(position);
+		double density, densityError;
+//		boost::numeric::quadrature::adaptive()(distFuncVy,-1.,1.,
+//				density, densityError);
+		boost::numeric::quadrature::adaptive()(distributionFunction,-1.,1.,
+				density, densityError);
+//		boost::numeric::quadrature::adaptive()(dynamic_cast<const Maxwellian&>(distributionFunction),-1.,1.,
+//				density, densityError);
+//		// TODO: figure out why 15 works but not 20 (only odd?)
+//		//       "N is defined for 15, 21, 31, 41 and 51"
+//		boost::numeric::quadrature::kronrod_gauss<15> integrator;
+//		integrator(dynamic_cast<const DistributionFunction&>(distribFunc),-1.,1.,
+//				density);
+		if (densityError/density>0.0001) {
+			cout << "Large reference density error: " << densityError <<
+					", n= " << density << ", pos= " << position.transpose() << endl;
+		}
+		this->setField(entities[i], density);
+	}
+
+}
+
 void DensityField::poissonCubeTest(double debyeLength) {
 	for (int i=0; i<entities.size(); i++) {
 		vect3d xyz = mesh_ptr->getCoordinates(entities[i]);

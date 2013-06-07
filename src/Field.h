@@ -135,6 +135,9 @@ public:
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile=NULL);
+	// TODO: make reference density its own class?
+	void calcField(CodeField& vertexType,
+			DistributionFunction& distributionFunction, double charge);
 	void poissonCubeTest(double debyeLength);
 	double calculateDensity(int node, ElectricField& electricField,
 			PotentialField potentialField,
