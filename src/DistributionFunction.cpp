@@ -60,8 +60,8 @@ double Maxwellian::operator()(vect3d position, vect3d velocity) const {
 	double density = density_ptr->operator()(position);
 	double parallelTemperature = parallelTemperature_ptr->operator()(position);
 	double perpendicularTemperature = perpendicularTemperature_ptr->operator()(position);
-	vect3d drift = perpendicularDrift +
-			parallelDrift_ptr->operator()(position)*magneticAxis;
+	vect3d parallelDrift = parallelDrift_ptr->operator()(position)*magneticAxis;
+	vect3d drift = perpendicularDrift + parallelDrift;
 	vect3d relativeVelocity = velocity-drift;
 	vect3d parallelRelativeVelocity = relativeVelocity.dot(magneticAxis)*magneticAxis;
 	vect3d perpendicularRelativeVelocity = relativeVelocity-parallelRelativeVelocity;
@@ -78,7 +78,9 @@ double Maxwellian::operator()(double xi) const {
 	double vy = xi/(1-xi*xi);
 	double parallelTemperature = parallelTemperature_ptr->operator()(presetPosition);
 	double perpendicularTemperature = perpendicularTemperature_ptr->operator()(presetPosition);
+	vect3d parallelDrift = parallelDrift_ptr->operator()(presetPosition)*magneticAxis;
+	vect3d drift = perpendicularDrift + parallelDrift;
 	return (1+xi*xi)/pow(1-xi*xi,2.)*2.*M_PI*sqrt(parallelTemperature*perpendicularTemperature)*
-			this->operator()(presetPosition, vect3d(0.,vy,0.));
+			this->operator()(presetPosition, vect3d(0.,vy,0.)+drift);
 }
 

@@ -179,10 +179,10 @@ int main(int argc, char *argv[]) {
 //	electronDensity.calcField(potential, -1.);
 //	density.calcField(ionDensity, electronDensity);
 //	DistributionFunction distributionFunction;
-	SpatialDependence densityProfile;
+	SpatialDependence densityProfile(1.);
 	vect3d magneticAxis = B/B.norm();
-	SpatialDependence parallelTemperatureProfile;
-	SpatialDependence perpendicularTemperatureProfile;
+	SpatialDependence parallelTemperatureProfile(1.);
+	SpatialDependence perpendicularTemperatureProfile(1.);
 	SpatialDependence parallelDriftProfile(0.);
 	// TODO: consider including drift in evaluated velocities
 	vect3d perpendicularDrift(0.,0.,0.);
