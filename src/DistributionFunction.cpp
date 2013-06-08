@@ -76,11 +76,16 @@ double Maxwellian::operator()(vect3d position, vect3d velocity) const {
 double Maxwellian::operator()(double xi) const {
 	// Integrated over x and z, and rescaled to interval (-1.,1.)
 	double vy = xi/(1-xi*xi);
-	double parallelTemperature = parallelTemperature_ptr->operator()(presetPosition);
-	double perpendicularTemperature = perpendicularTemperature_ptr->operator()(presetPosition);
-	vect3d parallelDrift = parallelDrift_ptr->operator()(presetPosition)*magneticAxis;
+	// TODO: don't restrict gradients to be in x-dir?
+	//       (for now only vy gives displacement in gradient dir)
+	vect3d relevantPerpendicularVelocity(0.,vy,0.);
+	vect3d guidingCenter = presetPosition -
+			magneticAxis.cross(relevantPerpendicularVelocity)/B.norm();
+	double parallelTemperature = parallelTemperature_ptr->operator()(guidingCenter);
+	double perpendicularTemperature = perpendicularTemperature_ptr->operator()(guidingCenter);
+	vect3d parallelDrift = parallelDrift_ptr->operator()(guidingCenter)*magneticAxis;
 	vect3d drift = perpendicularDrift + parallelDrift;
 	return (1+xi*xi)/pow(1-xi*xi,2.)*2.*M_PI*sqrt(parallelTemperature*perpendicularTemperature)*
-			this->operator()(presetPosition, vect3d(0.,vy,0.)+drift);
+			this->operator()(guidingCenter, relevantPerpendicularVelocity+drift);
 }
 

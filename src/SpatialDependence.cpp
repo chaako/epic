@@ -7,14 +7,14 @@
 
 #include "SpatialDependence.h"
 
-SpatialDependence::SpatialDependence() {
-	// TODO Auto-generated constructor stub
-	normalization = 1;
+SpatialDependence::SpatialDependence() :
+		normalization(1.),
+		direction(1.,0.,0.) {
 }
 
 SpatialDependence::SpatialDependence(double value) :
-		normalization(value) {
-	// TODO Auto-generated constructor stub
+		normalization(value),
+		direction(1.,0.,0.)  {
 }
 
 SpatialDependence::~SpatialDependence() {
@@ -23,4 +23,27 @@ SpatialDependence::~SpatialDependence() {
 
 double SpatialDependence::operator()(vect3d position) {
 	return normalization;
+}
+
+
+ExponentialDependence::ExponentialDependence(double scaleLength) :
+		scaleLength(scaleLength),
+		referencePosition(0.,0.,0.),
+		referenceValue(1.) {
+}
+
+ExponentialDependence::ExponentialDependence(double scaleLength,
+		vect3d referencePosition, double referenceValue) :
+		scaleLength(scaleLength),
+		referencePosition(referencePosition),
+		referenceValue(referenceValue) {
+}
+
+ExponentialDependence::~ExponentialDependence() {
+	// TODO Auto-generated destructor stub
+}
+
+double ExponentialDependence::operator()(vect3d position) {
+	vect3d relativePosition = position-referencePosition;
+	return referenceValue*exp(-relativePosition.dot(direction)/scaleLength);
 }

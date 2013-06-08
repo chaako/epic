@@ -44,6 +44,7 @@ public:
 	void destroyTag(string tagName);
 	void convertVectorTagToComponentTags(string vectorTagName);
 	void convertComponentTagsToVectorTag(string vectorTagName);
+	// TODO: write function for rotating mesh
 
 	void classifyBoundariesForMeshRefinement(Field<int> faceTypeField);
 	vect3d getCoordinates(entHandle node, bool useMap=false);

@@ -179,7 +179,8 @@ int main(int argc, char *argv[]) {
 //	electronDensity.calcField(potential, -1.);
 //	density.calcField(ionDensity, electronDensity);
 //	DistributionFunction distributionFunction;
-	SpatialDependence densityProfile(1.);
+//	SpatialDependence densityProfile(1.);
+	ExponentialDependence densityProfile(5.);
 	vect3d magneticAxis = B/B.norm();
 	SpatialDependence parallelTemperatureProfile(1.);
 	SpatialDependence perpendicularTemperatureProfile(1.);

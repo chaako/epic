@@ -16,9 +16,24 @@ public:
 	SpatialDependence(double value);
 	virtual ~SpatialDependence();
 
-	double operator()(vect3d position);
+	virtual double operator()(vect3d position);
 
 	double normalization;
+	vect3d direction;
+};
+
+class ExponentialDependence : public SpatialDependence {
+public:
+	ExponentialDependence(double scaleLength);
+	ExponentialDependence(double scaleLength, vect3d referencePosition,
+			double referenceValue);
+	virtual ~ExponentialDependence();
+
+	double operator()(vect3d position);
+
+	double scaleLength; // Allow to be negative
+	vect3d referencePosition;
+	double referenceValue;
 };
 
 #endif /* SPATIALDEPENDENCE_H_ */
