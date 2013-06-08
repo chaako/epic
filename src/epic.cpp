@@ -40,6 +40,8 @@ int main(int argc, char *argv[]) {
 	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest, fixSheathPotential;
 	int secondsToSleepForDebugAttach, numberOfIterations;
 	double debyeLength, boundaryPotential, surfacePotential, sheathPotential;
+	double densityGradient, parallelDriftGradient;
+	double parallelTemperatureGradient, perpendicularTemperatureGradient;
 	// TODO: make names more transparent?
 	{
 		namespace po = boost::program_options;
@@ -62,6 +64,14 @@ int main(int argc, char *argv[]) {
 							"potential at sheath entrance (for debyeLength=0.)")
 					("fixSheathPotential", po::value<bool>(&fixSheathPotential)->default_value(false),
 							"fix potential at sheath entrance (true/false; for debyeLength=0.)")
+					("densityGradient", po::value<double>(&densityGradient)->default_value(0.),
+							"density gradient")
+					("parallelTemperatureGradient", po::value<double>(&parallelTemperatureGradient)->default_value(0.),
+							"parallel temperature gradient")
+					("perpendicularTemperatureGradient", po::value<double>(&perpendicularTemperatureGradient)->default_value(0.),
+							"perpendicular temperature gradient")
+					("parallelDriftGradient", po::value<double>(&parallelDriftGradient)->default_value(0.),
+							"parallel drift gradient")
 					("evalPositionX,x", po::value< vector<double> >(&evalPosX), "evaluation position(s) x")
 					("evalPositionY,y", po::value< vector<double> >(&evalPosY), "evaluation position(s) y")
 					("evalPositionZ,z", po::value< vector<double> >(&evalPosZ), "evaluation position(s) z")
@@ -178,19 +188,50 @@ int main(int argc, char *argv[]) {
 //	// TODO: implement Boltzman density calculation;
 //	electronDensity.calcField(potential, -1.);
 //	density.calcField(ionDensity, electronDensity);
-//	DistributionFunction distributionFunction;
-//	SpatialDependence densityProfile(1.);
-	ExponentialDependence densityProfile(5.);
-	vect3d magneticAxis = B/B.norm();
-	SpatialDependence parallelTemperatureProfile(1.);
-	SpatialDependence perpendicularTemperatureProfile(1.);
-	SpatialDependence parallelDriftProfile(0.);
-	// TODO: consider including drift in evaluated velocities
-	vect3d perpendicularDrift(0.,0.,0.);
-	Maxwellian distributionFunction(densityProfile, magneticAxis,
-			parallelTemperatureProfile, perpendicularTemperatureProfile,
-			parallelDriftProfile, perpendicularDrift);
-	referenceElectronDensity.calcField(vertexType, distributionFunction, 1.);
+	{
+		SpatialDependence *densityProfile;
+		SpatialDependence *parallelTemperatureProfile;
+		SpatialDependence *perpendicularTemperatureProfile;
+		SpatialDependence *parallelDriftProfile;
+		if (densityGradient==0.) {
+			densityProfile = new SpatialDependence(1.);
+		} else {
+//			densityProfile = new ExponentialDependence(1./densityGradient);
+			densityProfile = new TanhDependence(1./densityGradient);
+		}
+		if (parallelTemperatureGradient==0.) {
+			parallelTemperatureProfile = new SpatialDependence(1.);
+		} else {
+//			parallelTemperatureProfile = new ExponentialDependence(1./parallelTemperatureGradient);
+			parallelTemperatureProfile = new TanhDependence(1./parallelTemperatureGradient);
+		}
+		if (perpendicularTemperatureGradient==0.) {
+			perpendicularTemperatureProfile = new SpatialDependence(1.);
+		} else {
+//			perpendicularTemperatureProfile = new ExponentialDependence(1./perpendicularTemperatureGradient);
+			perpendicularTemperatureProfile = new TanhDependence(1./perpendicularTemperatureGradient);
+		}
+		if (parallelDriftGradient==0.) {
+			parallelDriftProfile = new SpatialDependence(1.);
+		} else {
+//			parallelDriftProfile = new ExponentialDependence(1./parallelDriftGradient);
+			parallelDriftProfile = new TanhDependence(1./parallelDriftGradient,
+					vect3d(0.,0.,0.), 0., 1.);
+		}
+		vect3d magneticAxis = B/B.norm();
+		// TODO: consider including drift in evaluated velocities
+		vect3d perpendicularDrift(0.,0.,0.);
+//		DistributionFunction distributionFunction;
+		Maxwellian distributionFunction(*densityProfile, magneticAxis,
+				*parallelTemperatureProfile, *perpendicularTemperatureProfile,
+				*parallelDriftProfile, perpendicularDrift);
+		referenceElectronDensity.calcField(vertexType, distributionFunction, 1.);
+		// TODO: bad to leave references to destroyed objects in referenceElectronDensity
+		delete densityProfile;
+		delete parallelTemperatureProfile;
+		delete perpendicularTemperatureProfile;
+		delete parallelDriftProfile;
+}
 
 
 	// TODO: add more robust detection and handling of existing fields

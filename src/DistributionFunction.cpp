@@ -69,6 +69,9 @@ double Maxwellian::operator()(vect3d position, vect3d velocity) const {
 			density*exp(-pow(parallelRelativeVelocity.norm(),2.)/2./parallelTemperature)*
 			exp(-pow(perpendicularRelativeVelocity.norm(),2.)/2./perpendicularTemperature)/
 			pow(2.*M_PI,3./2.)/sqrt(parallelTemperature)/perpendicularTemperature;
+//	// TODO: debugging
+//	cout << distributionFunction << " " << position.transpose() << " " <<
+//			velocity.transpose() << endl;
 	return distributionFunction;
 }
 

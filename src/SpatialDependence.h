@@ -36,4 +36,18 @@ public:
 	double referenceValue;
 };
 
+class TanhDependence : public SpatialDependence {
+public:
+	TanhDependence(double scaleLength);
+	TanhDependence(double scaleLength, vect3d referencePosition,
+			double referenceValue, double normalization);
+	virtual ~TanhDependence();
+
+	double operator()(vect3d position);
+
+	double scaleLength; // Allow to be negative
+	vect3d referencePosition;
+	double referenceValue;
+};
+
 #endif /* SPATIALDEPENDENCE_H_ */
