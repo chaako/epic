@@ -133,7 +133,7 @@ public:
 			SpatialDependence& referenceTemperature, double charge);
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField& electricField,
-			PotentialField potentialField,
+			PotentialField& potentialField, DensityField& referenceDensity,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile=NULL);
@@ -142,7 +142,7 @@ public:
 			DistributionFunction& distributionFunction, double charge);
 	void poissonCubeTest(double debyeLength);
 	double calculateDensity(int node, ElectricField& electricField,
-			PotentialField potentialField,
+			PotentialField& potentialField, DensityField& referenceDensity,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, double *error,
@@ -156,7 +156,7 @@ public:
 			double potentialPerturbation, FILE *outFile);
 	MPI::Status receiveDensity(FILE *outFile);
 	void processDensityRequests(ElectricField& electricField,
-			PotentialField potentialField,
+			PotentialField& potentialField, DensityField& referenceDensity,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation);

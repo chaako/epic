@@ -609,7 +609,7 @@ void DensityField::calcField(DensityField ionDensity,
 }
 
 void DensityField::calcField(ElectricField& electricField,
-		PotentialField potentialField,
+		PotentialField& potentialField, DensityField& referenceDensity,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdge, double charge,
 		double potentialPerturbation, FILE *outFile) {
@@ -654,7 +654,8 @@ void DensityField::calcField(ElectricField& electricField,
 		vect3d averageVelocity, averageVelocityError;
 		double temperature, temperatureError;
 	    double density = this->calculateDensity(node, electricField,
-				potentialField, faceType, vertexType, shortestEdge,
+				potentialField, referenceDensity,
+				faceType, vertexType, shortestEdge,
 				charge, potentialPerturbation, &error,
 				&averageVelocity, &averageVelocityError,
 				&temperature, &temperatureError);
@@ -724,7 +725,7 @@ void DensityField::poissonCubeTest(double debyeLength) {
 }
 
 double DensityField::calculateDensity(int node, ElectricField& electricField,
-		PotentialField potentialField,
+		PotentialField& potentialField, DensityField& referenceDensity,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdgeField, double charge,
 		double potentialPerturbation, double *error,
@@ -919,7 +920,7 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 
 #ifdef HAVE_MPI
 void DensityField::processDensityRequests(ElectricField& electricField,
-		PotentialField potentialField,
+		PotentialField& potentialField, DensityField& referenceDensity,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdge, double charge,
 		double potentialPerturbation) {
@@ -936,7 +937,8 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		vect3d averageVelocity[2];
 		double temperature[2];
 		density[0] = this->calculateDensity(node, electricField,
-				potentialField, faceType, vertexType,
+				potentialField, referenceDensity,
+				faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation,
 				&density[1],
 				&averageVelocity[0], &averageVelocity[1],

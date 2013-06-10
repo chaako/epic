@@ -267,7 +267,7 @@ int main(int argc, char *argv[]) {
 //				density_electronsFile);
 		if (mpiId == 0)
 			cout << endl << "Calculating ion charge-density..." << endl;
-		ionDensity.calcField(eField, potential, faceType, vertexType,
+		ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
 				shortestEdge, 1., noPotentialPerturbation,
 				densityFile);
 		if (stopAfterEvalPos) {
@@ -387,7 +387,7 @@ int main(int argc, char *argv[]) {
 //				density_electronsFile);
 		if (mpiId == 0)
 			cout << endl << "Calculating ion density..." << endl;
-		ionDensity.calcField(eField, potential, faceType, vertexType,
+		ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
 				shortestEdge, 1., noPotentialPerturbation,
 				densityFile);
 //		if (mpiId == 0)
