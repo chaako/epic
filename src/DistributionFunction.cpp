@@ -84,7 +84,7 @@ double Maxwellian::operator()(double xi) const {
 	vect3d relevantPerpendicularVelocity(0.,vy,0.);
 	// TODO: check sign of Larmor vector subtraction
 	vect3d guidingCenter = presetPosition +
-			magneticAxis.cross(relevantPerpendicularVelocity)/B.norm();
+			magneticAxis.cross(relevantPerpendicularVelocity)/extern_B.norm();
 	double parallelTemperature = parallelTemperature_ptr->operator()(guidingCenter);
 	double perpendicularTemperature = perpendicularTemperature_ptr->operator()(guidingCenter);
 	vect3d parallelDrift = parallelDrift_ptr->operator()(guidingCenter)*magneticAxis;

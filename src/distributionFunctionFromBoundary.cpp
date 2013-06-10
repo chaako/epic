@@ -75,10 +75,10 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 //		fval[0] = 1./pow(2.*M_PI,3./2.);
 //		fval[0] *= exp(-pow(finalVelocity.norm(),2.)/2.);
 		// TODO: this breaks if B=0
-		vect3d magneticAxis = B/B.norm();
+		vect3d magneticAxis = extern_B/extern_B.norm();
 		// TODO: check sign of Larmor vector subtraction
 		vect3d guidingCenter = finalPosition +
-				magneticAxis.cross(finalVelocity)/B.norm();
+				magneticAxis.cross(finalVelocity)/extern_B.norm();
 		double distributionFunction =
 				distributionFunction_ptr->operator()(guidingCenter, finalVelocity);
 		fval[0] = distributionFunction;

@@ -94,7 +94,7 @@ public:
 		state_type dxdt;
 		// TODO: should get B from odeSystem, though Cyclotronic integrator
 		//       is meant for uniform B so external is fine in that sense
-		vect3d unitB = B/B.norm();
+		vect3d unitB = extern_B/extern_B.norm();
 		double charge = boost::unwrap_ref(odeSystem).charge;
 		// TODO: figure out how to distinguish electron and ion masses
 		double mass = 1.;
@@ -102,7 +102,7 @@ public:
 		if (charge<0)
 			charge *= sqrt(1836.); // sqrt to also account for v_th difference
 		// TODO: think through rotation signs since backwards in time (appears correct)
-		double rotationAngle = -dt*charge*B.norm()/mass;
+		double rotationAngle = -dt*charge*extern_B.norm()/mass;
 		// TODO: determine how Eigen rotation handles large angles
 //		int wholePeriods = rotationAngle/(2.*M_PI);
 //		rotationAngle -= 2.*M_PI*wholePeriods;
@@ -118,7 +118,7 @@ public:
 		x[0] += dt/2. * x[1].dot(unitB) * unitB;
 		// TODO: handle EXB differently?
 		x[0] += velExB*dt/2.;
-		larmorVector = -mass*x[1].cross(unitB)/charge/B.norm();
+		larmorVector = -mass*x[1].cross(unitB)/charge/extern_B.norm();
 		rotatedLarmorVector =
 				Eigen::AngleAxisd(rotationAngle/2., unitB) * larmorVector;
 		x[0] += rotatedLarmorVector - larmorVector;
@@ -132,7 +132,7 @@ public:
 		x[0] += dt/2. * x[1].dot(unitB) * unitB;
 		// TODO: handle EXB differently?
 		x[0] += velExB*dt/2.;
-		larmorVector = -mass*x[1].cross(unitB)/charge/B.norm();
+		larmorVector = -mass*x[1].cross(unitB)/charge/extern_B.norm();
 		rotatedLarmorVector =
 				Eigen::AngleAxisd(rotationAngle/2., unitB) * larmorVector;
 		x[0] += rotatedLarmorVector - larmorVector;
@@ -151,14 +151,14 @@ public:
 		state_type dxdt;
 		// TODO: should get B from odeSystem, though Taylor integrator
 		//       is meant for uniform B so external is fine in that sense
-		vect3d unitB = B/B.norm();
+		vect3d unitB = extern_B/extern_B.norm();
 		double charge = boost::unwrap_ref(odeSystem).charge;
 		// TODO: figure out how to distinguish electron and ion masses
 		double mass = 1.;
 		// TODO: replace this opaque hack to account for mass difference
 		if (charge<0)
 			charge *= sqrt(1836.); // sqrt to also account for v_th difference
-		double omega = -charge*B.norm()/mass; // minus sign since integrating backwards
+		double omega = -charge*extern_B.norm()/mass; // minus sign since integrating backwards
 
 		// TODO: generalize to any unitB
 		if (unitB[0]!=0. || unitB[1]!=0.)
@@ -220,14 +220,14 @@ public:
 		state_type dxdt;
 		// TODO: should get B from odeSystem, though Drift integrator
 		//       is meant for uniform B so external is fine in that sense
-		vect3d unitB = B/B.norm();
+		vect3d unitB = extern_B/extern_B.norm();
 		double charge = boost::unwrap_ref(odeSystem).charge;
 		// TODO: figure out how to distinguish electron and ion masses
 		double mass = 1.;
 		// TODO: replace this opaque hack to account for mass difference
 		if (charge<0)
 			charge *= sqrt(1836.); // sqrt to also account for v_th difference
-		double omega = -charge*B.norm()/mass; // minus sign since integrating backwards
+		double omega = -charge*extern_B.norm()/mass; // minus sign since integrating backwards
 
 		// TODO: generalize to any unitB
 		if (unitB[0]!=0. || unitB[1]!=0.)

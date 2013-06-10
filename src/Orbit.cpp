@@ -605,7 +605,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	// TODO: do this more cleanly
 	if (foundTet) {
 	initialPotential = velocityAndAcceleration.currentPotential;
-	double driftPotential=E.dot(initialPosition);
+	double driftPotential=extern_E.dot(initialPosition);
 	initialPotential += driftPotential;
 	initialEnergy = 0.5*pow((initialVelocity+extern_VEXB).norm(),2.)
 //	initialEnergy = 0.5*pow(initialVelocity.norm(),2.)
@@ -771,7 +771,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				// TODO: this doesn't account for final step, but as long as boundary
 				//       is at potential zero it shouldn't matter for orbits with non-zero weight
 				//       (actually, am using finalPotential later)
-				driftPotential = E.dot(currentPosition);
+				driftPotential = extern_E.dot(currentPosition);
 				currentPotential = velocityAndAcceleration.currentPotential;
 				currentPotential += driftPotential;
 				currentEnergy = 0.5*pow((currentVelocity+extern_VEXB).norm(),2.)

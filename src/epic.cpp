@@ -54,9 +54,9 @@ int main(int argc, char *argv[]) {
 					("outputFile", po::value<string>(&outputFile), "output file")
 					("numberOfIterations", po::value<int>(&numberOfIterations)->default_value(2),
 							"number of iterations")
-					("magneticFieldStrength", po::value<double>(&B[2])->default_value(0.),
+					("magneticFieldStrength", po::value<double>(&extern_B[2])->default_value(0.),
 							"magnetic field strength")
-					("electricFieldStrength", po::value<double>(&E[0])->default_value(0.),
+					("electricFieldStrength", po::value<double>(&extern_E[0])->default_value(0.),
 							"electric field strength")
 					("debyeLength", po::value<double>(&debyeLength)->default_value(0.),
 							"electron Debye length")
@@ -127,8 +127,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if (B.norm()>0.)
-		extern_VEXB = E.cross(B)/pow(B.norm(),2.);
+	if (extern_B.norm()>0.)
+		extern_VEXB = extern_E.cross(extern_B)/pow(extern_B.norm(),2.);
 
 	try {
 	if (secondsToSleepForDebugAttach>0) {
@@ -238,7 +238,7 @@ int main(int argc, char *argv[]) {
 				boost::shared_ptr<SpatialDependence>(
 						new TanhDependence(1./parallelDriftGradient,vect3d(0.,0.,0.), 0., 1.));
 	}
-	vect3d magneticAxis = B/B.norm();
+	vect3d magneticAxis = extern_B/extern_B.norm();
 	// TODO: consider including drift in evaluated velocities
 	vect3d perpendicularDrift(0.,0.,0.);
 //	DistributionFunction distributionFunction;

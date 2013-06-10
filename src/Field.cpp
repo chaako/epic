@@ -230,7 +230,7 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 				if (!potentialBoundaryVertexSet[jj]) {
 					coefficients.push_back(Eigen::Triplet<double>(jj, jj, 1.));
 					// TODO: hard-coding zero potential of ExB-field as origin here
-					double shieldedPotential=vertexPosition.dot(E);
+					double shieldedPotential=vertexPosition.dot(extern_E);
 					// TODO: Don't hard-code object potential
 					b[jj] = -4. - shieldedPotential;
 //					b[jj] = potential;
