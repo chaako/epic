@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
 	}
 	if (parallelDriftGradient==0.) {
 		parallelDriftProfile_ptr =
-				boost::shared_ptr<SpatialDependence>(new SpatialDependence(1.));
+				boost::shared_ptr<SpatialDependence>(new SpatialDependence(0.));
 	} else {
 //		parallelDriftProfile_ptr =
 //				boost::shared_ptr<SpatialDependence>(
@@ -243,6 +243,7 @@ int main(int argc, char *argv[]) {
 	potential.setReferenceElectronDensity(referenceElectronDensity);
 	// TODO: Allow parallel electron temperature to differ from ions?
 	potential.setReferenceElectronTemperature(*parallelTemperatureProfile_ptr.get());
+	ionDensity.setDistributionFunction(distributionFunction);
 
 
 	// TODO: add more robust detection and handling of existing fields

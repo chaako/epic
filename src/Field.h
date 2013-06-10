@@ -160,8 +160,11 @@ public:
 			double potentialPerturbation);
 #endif
 
+	void setDistributionFunction(DistributionFunction& distributionFunction);
+
 	Field<vect3d> *averageVelocity_ptr;
 	Field<double> *temperature_ptr;
+	DistributionFunction *distributionFunction_ptr;
 };
 
 class PotentialField : public Field<double> {

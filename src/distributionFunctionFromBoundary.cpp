@@ -18,6 +18,8 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 			((IntegrandContainer*)integrandContainer_ptr)->vertexTypeField_ptr;
 	ShortestEdgeField *shortestEdgeField_ptr =
 			((IntegrandContainer*)integrandContainer_ptr)->shortestEdgeField_ptr;
+	DistributionFunction *distributionFunction_ptr =
+			((IntegrandContainer*)integrandContainer_ptr)->distributionFunction_ptr;
 	double charge = ((IntegrandContainer*)integrandContainer_ptr)->charge;
 	FILE *orbitOutFile = ((IntegrandContainer*)integrandContainer_ptr)->orbitOutFile;
 	vect3d velocity;
@@ -65,12 +67,26 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 //	// TODO: more transparent handling of external ExB drift?
 //	vect3d finalVelocity = orbit.finalVelocity - VEXB;
 	vect3d finalVelocity = orbit.finalVelocity;
+	vect3d finalPosition = orbit.finalPosition;
 	fval[0] = 0.;
 	// TODO: shouldn't hard-code domain here
 	if ( orbit.finalFaceType==5
 			&& !orbit.negativeEnergy) {
-		fval[0] = 1./pow(2.*M_PI,3./2.);
-		fval[0] *= exp(-(pow(finalVelocity.norm(),2.)-pow(v,2.))/2.);
+//		fval[0] = 1./pow(2.*M_PI,3./2.);
+//		fval[0] *= exp(-pow(finalVelocity.norm(),2.)/2.);
+		// TODO: this breaks if B=0
+		vect3d magneticAxis = B/B.norm();
+		// TODO: check sign of Larmor vector subtraction
+		vect3d guidingCenter = finalPosition +
+				magneticAxis.cross(finalVelocity)/B.norm();
+		double distributionFunction =
+				distributionFunction_ptr->operator()(guidingCenter, finalVelocity);
+		fval[0] = distributionFunction;
+//		// TODO: debugging
+//		cout << fval[0] << " " << guidingCenter.transpose() << " " <<
+//				finalVelocity.transpose() << endl;
+		// TODO: exp(v^2/) could be very large, multiplied by very small distribution function...inaccurate?
+		fval[0] *= exp(pow(v,2.)/2.);
 		fval[0] *= M_PI;
 		fval[0] *= (1.+x[0])*sqrt(-log((1.+x[0])/2.));
 //		// TODO: if fix outer potential this may not give equal ion and electron dens.

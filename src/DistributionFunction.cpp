@@ -82,7 +82,8 @@ double Maxwellian::operator()(double xi) const {
 	// TODO: don't restrict gradients to be in x-dir?
 	//       (for now only vy gives displacement in gradient dir)
 	vect3d relevantPerpendicularVelocity(0.,vy,0.);
-	vect3d guidingCenter = presetPosition -
+	// TODO: check sign of Larmor vector subtraction
+	vect3d guidingCenter = presetPosition +
 			magneticAxis.cross(relevantPerpendicularVelocity)/B.norm();
 	double parallelTemperature = parallelTemperature_ptr->operator()(guidingCenter);
 	double perpendicularTemperature = perpendicularTemperature_ptr->operator()(guidingCenter);

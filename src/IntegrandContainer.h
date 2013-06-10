@@ -14,6 +14,7 @@ class CodeField;
 class ElectricField;
 class PotentialField;
 class ShortestEdgeField;
+class Distributionfunction;
 
 class IntegrandContainer {
 public:
@@ -27,6 +28,7 @@ public:
 	Field<int> *faceTypeField_ptr;
 	CodeField *vertexTypeField_ptr;
 	ShortestEdgeField *shortestEdgeField_ptr;
+	DistributionFunction *distributionFunction_ptr;
 	FILE *outFile;
 	FILE *orbitOutFile;
 	double charge;

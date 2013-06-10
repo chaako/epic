@@ -611,6 +611,7 @@ void DensityField::calcField(ElectricField& electricField,
 		double potentialPerturbation, FILE *outFile) {
 	int mpiId = 0;
 #ifdef HAVE_MPI
+	// TODO: Change this to using smart pointer
 	double *density = new double[entities.size()];
 	vect3d *averageVelocity = new vect3d[entities.size()];
 	double *temperature = new double[entities.size()];
@@ -752,6 +753,7 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 	integrandContainer.faceTypeField_ptr = &faceType;
 	integrandContainer.vertexTypeField_ptr = &vertexType;
 	integrandContainer.shortestEdgeField_ptr = &shortestEdgeField;
+	integrandContainer.distributionFunction_ptr = distributionFunction_ptr;
 	stringstream fileNameStream;
 //	fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
 //			<< "_vert" << node << ".p3d";
@@ -941,6 +943,11 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 	}
 }
 #endif
+
+void DensityField::setDistributionFunction(DistributionFunction& distributionFunction){
+	this->distributionFunction_ptr = &distributionFunction;
+}
+
 
 CodeField::CodeField(Mesh *inputMesh_ptr, string inputName, int elementType)
 		: Field<int>(inputMesh_ptr, inputName, elementType) {
