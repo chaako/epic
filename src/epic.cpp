@@ -188,50 +188,59 @@ int main(int argc, char *argv[]) {
 //	// TODO: implement Boltzman density calculation;
 //	electronDensity.calcField(potential, -1.);
 //	density.calcField(ionDensity, electronDensity);
-	{
-		SpatialDependence *densityProfile;
-		SpatialDependence *parallelTemperatureProfile;
-		SpatialDependence *perpendicularTemperatureProfile;
-		SpatialDependence *parallelDriftProfile;
-		if (densityGradient==0.) {
-			densityProfile = new SpatialDependence(1.);
-		} else {
-//			densityProfile = new ExponentialDependence(1./densityGradient);
-			densityProfile = new TanhDependence(1./densityGradient);
-		}
-		if (parallelTemperatureGradient==0.) {
-			parallelTemperatureProfile = new SpatialDependence(1.);
-		} else {
-//			parallelTemperatureProfile = new ExponentialDependence(1./parallelTemperatureGradient);
-			parallelTemperatureProfile = new TanhDependence(1./parallelTemperatureGradient);
-		}
-		if (perpendicularTemperatureGradient==0.) {
-			perpendicularTemperatureProfile = new SpatialDependence(1.);
-		} else {
-//			perpendicularTemperatureProfile = new ExponentialDependence(1./perpendicularTemperatureGradient);
-			perpendicularTemperatureProfile = new TanhDependence(1./perpendicularTemperatureGradient);
-		}
-		if (parallelDriftGradient==0.) {
-			parallelDriftProfile = new SpatialDependence(1.);
-		} else {
-//			parallelDriftProfile = new ExponentialDependence(1./parallelDriftGradient);
-			parallelDriftProfile = new TanhDependence(1./parallelDriftGradient,
-					vect3d(0.,0.,0.), 0., 1.);
-		}
-		vect3d magneticAxis = B/B.norm();
-		// TODO: consider including drift in evaluated velocities
-		vect3d perpendicularDrift(0.,0.,0.);
-//		DistributionFunction distributionFunction;
-		Maxwellian distributionFunction(*densityProfile, magneticAxis,
-				*parallelTemperatureProfile, *perpendicularTemperatureProfile,
-				*parallelDriftProfile, perpendicularDrift);
-		referenceElectronDensity.calcField(vertexType, distributionFunction, 1.);
-		// TODO: bad to leave references to destroyed objects in referenceElectronDensity
-		delete densityProfile;
-		delete parallelTemperatureProfile;
-		delete perpendicularTemperatureProfile;
-		delete parallelDriftProfile;
-}
+	boost::shared_ptr<SpatialDependence> densityProfile_ptr;
+	boost::shared_ptr<SpatialDependence> parallelTemperatureProfile_ptr;
+	boost::shared_ptr<SpatialDependence> perpendicularTemperatureProfile_ptr;
+	boost::shared_ptr<SpatialDependence> parallelDriftProfile_ptr;
+	if (densityGradient==0.) {
+		densityProfile_ptr = boost::shared_ptr<SpatialDependence>(new SpatialDependence(1.));
+	} else {
+//		densityProfile_ptr =
+//				boost::shared_ptr<SpatialDependence>(new ExponentialDependence(1./densityGradient));
+		densityProfile_ptr =
+				boost::shared_ptr<SpatialDependence>(new TanhDependence(1./densityGradient));
+	}
+	if (parallelTemperatureGradient==0.) {
+		parallelTemperatureProfile_ptr =
+				boost::shared_ptr<SpatialDependence>(new SpatialDependence(1.));
+	} else {
+//		parallelTemperatureProfile_ptr =
+//				boost::shared_ptr<SpatialDependence>(
+//						new ExponentialDependence(1./parallelTemperatureGradient));
+		parallelTemperatureProfile_ptr =
+				boost::shared_ptr<SpatialDependence>(new TanhDependence(1./parallelTemperatureGradient));
+	}
+	if (perpendicularTemperatureGradient==0.) {
+		perpendicularTemperatureProfile_ptr =
+				boost::shared_ptr<SpatialDependence>(new SpatialDependence(1.));
+	} else {
+//		perpendicularTemperatureProfile_ptr =
+//				boost::shared_ptr<SpatialDependence>(
+//						new ExponentialDependence(1./perpendicularTemperatureGradient));
+		perpendicularTemperatureProfile_ptr =
+				boost::shared_ptr<SpatialDependence>(new TanhDependence(1./perpendicularTemperatureGradient));
+	}
+	if (parallelDriftGradient==0.) {
+		parallelDriftProfile_ptr =
+				boost::shared_ptr<SpatialDependence>(new SpatialDependence(1.));
+	} else {
+//		parallelDriftProfile_ptr =
+//				boost::shared_ptr<SpatialDependence>(
+//						new ExponentialDependence(1./parallelDriftGradient));
+		parallelDriftProfile_ptr =
+				boost::shared_ptr<SpatialDependence>(
+						new TanhDependence(1./parallelDriftGradient,vect3d(0.,0.,0.), 0., 1.));
+	}
+	vect3d magneticAxis = B/B.norm();
+	// TODO: consider including drift in evaluated velocities
+	vect3d perpendicularDrift(0.,0.,0.);
+//	DistributionFunction distributionFunction;
+	// TODO: pass smart pointers to maintain reference count?
+	Maxwellian distributionFunction(*densityProfile_ptr.get(), magneticAxis,
+			*parallelTemperatureProfile_ptr.get(), *perpendicularTemperatureProfile_ptr.get(),
+			*parallelDriftProfile_ptr.get(), perpendicularDrift);
+	referenceElectronDensity.calcField(vertexType, distributionFunction, 1.);
+	potential.setReferenceElectronDensity(referenceElectronDensity);
 
 
 	// TODO: add more robust detection and handling of existing fields

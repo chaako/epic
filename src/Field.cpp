@@ -554,6 +554,11 @@ void PotentialField::calcField(DensityField ionDensity,
 		fprintf(outFile, "\n\n\n\n");
 }
 
+void PotentialField::setReferenceElectronDensity(DensityField& referenceElectronDensity){
+	this->referenceElectronDensity_ptr = &referenceElectronDensity;
+}
+
+
 DensityField::DensityField(Mesh *inputMesh_ptr, string inputName,
 		Field<vect3d> *inputAverageVelocity_ptr, Field<double> *inputTemperature_ptr)
 		: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {

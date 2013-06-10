@@ -187,6 +187,9 @@ public:
 			double negativePotentialPerturbation,
 			FILE *outFile);
 
+	void setReferenceElectronDensity(DensityField& referenceElectronDensity);
+
+	DensityField *referenceElectronDensity_ptr;
 };
 
 class ShortestEdgeField : public Field<double> {
