@@ -128,8 +128,9 @@ public:
 	virtual ~DensityField() {}
 
 	void calcField();
-	void calcField(CodeField vertexType,
-			PotentialField potential, double charge);
+	void calcField(CodeField& vertexType,
+			PotentialField& potential, DensityField& referenceDensity,
+			SpatialDependence& referenceTemperature, double charge);
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField& electricField,
 			PotentialField potentialField,

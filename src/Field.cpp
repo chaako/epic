@@ -579,17 +579,21 @@ DensityField::DensityField(Mesh *inputMesh_ptr, string inputName,
 
 void DensityField::calcField() {}
 
-void DensityField::calcField(CodeField vertexType,
-		PotentialField potential, double charge) {
+void DensityField::calcField(CodeField& vertexType,
+		PotentialField& potential, DensityField& referenceDensity,
+		SpatialDependence& referenceTemperature, double charge) {
 	// TODO: get rid of hard-coding here
 	for (int i=0; i<entities.size(); i++) {
-		double density=1.;
+		vect3d position=mesh_ptr->getCoordinates(entities[i]);
+		double density=referenceDensity[entities[i]];
+		double temperature=referenceTemperature(position);
+		// TODO: this isn't very general
 		if (vertexType.getField(entities[i])==4) {
-			density = -1./2.;
+			density *= -1./2.;
 		} else if (vertexType.getField(entities[i])==5) {
-			density = 1.;
+			density *= 1.;
 		} else {
-			density = exp(charge*potential[i]);
+			density *= exp(potential[i]/temperature);
 		}
 		this->setField(entities[i], density);
 	}
