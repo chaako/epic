@@ -622,7 +622,7 @@ entHandle Mesh::findStartingTet(vect3d const &position,
 //	vect3d perturbedPosition =
 //			position + sqrt(DELTA_LENGTH)*(velocity+VEXB)/(velocity+VEXB).norm();
 	// TODO: standardize this
-	vect3d perturbedPosition = position + (velocity+VEXB)*SMALL_TIME;
+	vect3d perturbedPosition = position + (velocity+extern_VEXB)*SMALL_TIME;
 	vector<entHandle> adjacentElements=getAdjacentEntities(vertex, iBase_REGION);
 	int numberOfRegionsWithinTolerance=0;
 	for (int i=0; i<adjacentElements.size(); i++) {

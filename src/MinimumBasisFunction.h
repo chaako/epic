@@ -9,6 +9,7 @@
 #define MINIMUMBASISFUNCTION_H_
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 
 //class Mesh;
 //template<int n> class VelocityAndAcceleration;

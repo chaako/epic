@@ -13,6 +13,7 @@
 #endif
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 
 #ifdef HAVE_MPI
 #ifndef MESHER

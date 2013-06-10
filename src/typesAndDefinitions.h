@@ -103,11 +103,4 @@ const int INTERPOLATIONORDER=1;
 typedef Eigen::Matrix<double,NDIM,1> vect3d;
 typedef iBase_EntityHandle entHandle;
 
-const vect3d B(0.,0.,1.);
-//const vect3d E(0.,0.,0.);
-//const vect3d B(0.,0.,10.);
-const vect3d E(1.,0.,0.);
-// TODO: sort out units of E and B (electrons vs. ions etc.)
-const vect3d VEXB = E.cross(B)/pow(B.norm(),2.);
-
 #endif /* TYPES_H_ */

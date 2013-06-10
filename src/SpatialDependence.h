@@ -9,6 +9,7 @@
 #define SPATIALDEPENDENCE_H_
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 
 class SpatialDependence {
 public:

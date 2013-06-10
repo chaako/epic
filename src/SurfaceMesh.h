@@ -9,6 +9,7 @@
 #define SURFACEMESH_H_
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 
 #include "FMDB.h"
 #include "MeshAdapt.h"

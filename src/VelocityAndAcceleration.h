@@ -9,6 +9,7 @@
 #define VELOCITYANDACCELERATION_H_
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 //#include <boost/array.hpp>
 //#include "iMesh.h"
 //#include "Eigen/Dense"

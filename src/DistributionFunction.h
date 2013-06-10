@@ -9,6 +9,7 @@
 #define DISTRIBUTIONFUNCTION_H_
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 #include "SpatialDependence.h"
 
 class DistributionFunction {

@@ -546,7 +546,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	double dt=min(0.02,0.02/initialVelocity.norm()), tMax=100;
 //	vect3d currentPosition = initialPosition;
 	// TODO: should be consistent about starting position
-	vect3d currentPosition = initialPosition + (initialVelocity+VEXB)*SMALL_TIME;
+	vect3d currentPosition = initialPosition + (initialVelocity+extern_VEXB)*SMALL_TIME;
 	vect3d currentVelocity = initialVelocity;
 	// TODO: shouldn't hard-code quasi-neutral operation
 	double phiSurface = -4;
@@ -607,7 +607,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	initialPotential = velocityAndAcceleration.currentPotential;
 	double driftPotential=E.dot(initialPosition);
 	initialPotential += driftPotential;
-	initialEnergy = 0.5*pow((initialVelocity+VEXB).norm(),2.)
+	initialEnergy = 0.5*pow((initialVelocity+extern_VEXB).norm(),2.)
 //	initialEnergy = 0.5*pow(initialVelocity.norm(),2.)
 		+ charge*initialPotential;
 	double currentPotential=initialPotential;
@@ -626,7 +626,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	// TODO: set max number of steps more cleverly (since also need to limit by accel)
 	for (int iT=0; iT<numberOfSteps  && !negativeEnergy; iT++) {
 		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
-				/(fabs(currentVelocity[2])+VEXB.norm()+SMALL_VELOCITY)/
+				/(fabs(currentVelocity[2])+extern_VEXB.norm()+SMALL_VELOCITY)/
 //				/(fabs(currentVelocity[2])+DELTA_LENGTH)/
 				numberOfStepsPerRegion;
 //				/currentVelocity.norm()/5.;
@@ -774,7 +774,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				driftPotential = E.dot(currentPosition);
 				currentPotential = velocityAndAcceleration.currentPotential;
 				currentPotential += driftPotential;
-				currentEnergy = 0.5*pow((currentVelocity+VEXB).norm(),2.)
+				currentEnergy = 0.5*pow((currentVelocity+extern_VEXB).norm(),2.)
 //				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
 //					+ charge*velocityAndAcceleration.currentPotential;
 					+ charge*(currentPotential);

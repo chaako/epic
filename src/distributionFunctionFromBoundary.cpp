@@ -85,6 +85,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 //		// TODO: debugging
 //		cout << fval[0] << " " << guidingCenter.transpose() << " " <<
 //				finalVelocity.transpose() << endl;
+		// TODO: adjust change of variables to local reference distribution?
 		// TODO: exp(v^2/) could be very large, multiplied by very small distribution function...inaccurate?
 		fval[0] *= exp(pow(v,2.)/2.);
 		fval[0] *= M_PI;
@@ -102,7 +103,7 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 	}
 	// TODO: don't hard-code moment order?
 	// -VEXB since orbit.initialVelocity=-velocity
-	vect3d driftingVelocity = velocity - VEXB;
+	vect3d driftingVelocity = velocity - extern_VEXB;
 	// Since density isn't available yet, divide by it later
 	if (fdim>=4) {
 		for (int i=0; i<NDIM; i++)

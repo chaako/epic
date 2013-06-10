@@ -54,6 +54,10 @@ int main(int argc, char *argv[]) {
 					("outputFile", po::value<string>(&outputFile), "output file")
 					("numberOfIterations", po::value<int>(&numberOfIterations)->default_value(2),
 							"number of iterations")
+					("magneticFieldStrength", po::value<double>(&B[2])->default_value(0.),
+							"magnetic field strength")
+					("electricFieldStrength", po::value<double>(&E[0])->default_value(0.),
+							"electric field strength")
 					("debyeLength", po::value<double>(&debyeLength)->default_value(0.),
 							"electron Debye length")
 					("boundaryPotential", po::value<double>(&boundaryPotential)->default_value(0.),
@@ -122,6 +126,9 @@ int main(int argc, char *argv[]) {
 			cerr << "Exception of unknown type!\n";
 		}
 	}
+
+	if (B.norm()>0.)
+		extern_VEXB = E.cross(B)/pow(B.norm(),2.);
 
 	try {
 	if (secondsToSleepForDebugAttach>0) {

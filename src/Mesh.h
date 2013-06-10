@@ -15,6 +15,7 @@
 #endif
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 
 //#include <map>
 //#include <vector>
