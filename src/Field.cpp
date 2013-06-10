@@ -261,6 +261,7 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 				double basisBasisCoefficient = volume/20;
 				if (jj==kk)
 					basisBasisCoefficient *= 2.;
+				// TODO: use referenceElectronDensity in electron response
 				if (!potentialBoundaryVertexSet[jj]) {
 					coefficients.push_back(Eigen::Triplet<double>(jj, kk,
 							basisBasisCoefficient/debyeLength/debyeLength*
@@ -294,6 +295,7 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 				b[jj] += 1/debyeLength/debyeLength*
 //						(ionDensity[jj] - exp(potential)*(1.-potential))*
 						// TODO: check that this works for potential~1
+						// TODO: use referenceElectronDensity in electron response
 						(ionDensity[jj] - (exp(potential)-potential))*
 						volume/4.;
 			}
@@ -464,7 +466,12 @@ void PotentialField::calcField(DensityField ionDensity,
 			potential = boundaryPotential;
 		} else {
 			double currentPotential = this->getField(entities[i]);
-			double boltzmannPotential = log(ionDensity.getField(entities[i]));
+			double referenceDensity = referenceElectronDensity_ptr->getField(entities[i]);
+			double referenceElectronTemperature =
+					referenceElectronTemperature_ptr->operator()(nodePosition);
+			double boltzmannPotential = boundaryPotential +
+					referenceElectronTemperature*
+					log(ionDensity.getField(entities[i])/referenceDensity);
 			potential = (currentPotential+boltzmannPotential)/2.;
 		}
 		if (fixSheathPotential) {
@@ -556,6 +563,10 @@ void PotentialField::calcField(DensityField ionDensity,
 
 void PotentialField::setReferenceElectronDensity(DensityField& referenceElectronDensity){
 	this->referenceElectronDensity_ptr = &referenceElectronDensity;
+}
+
+void PotentialField::setReferenceElectronTemperature(SpatialDependence& referenceElectronTemperature){
+	this->referenceElectronTemperature_ptr = &referenceElectronTemperature;
 }
 
 

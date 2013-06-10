@@ -241,6 +241,8 @@ int main(int argc, char *argv[]) {
 			*parallelDriftProfile_ptr.get(), perpendicularDrift);
 	referenceElectronDensity.calcField(vertexType, distributionFunction, 1.);
 	potential.setReferenceElectronDensity(referenceElectronDensity);
+	// TODO: Allow parallel electron temperature to differ from ions?
+	potential.setReferenceElectronTemperature(*parallelTemperatureProfile_ptr.get());
 
 
 	// TODO: add more robust detection and handling of existing fields

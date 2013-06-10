@@ -188,8 +188,10 @@ public:
 			FILE *outFile);
 
 	void setReferenceElectronDensity(DensityField& referenceElectronDensity);
+	void setReferenceElectronTemperature(SpatialDependence& referenceElectronTemperature);
 
 	DensityField *referenceElectronDensity_ptr;
+	SpatialDependence *referenceElectronTemperature_ptr;
 };
 
 class ShortestEdgeField : public Field<double> {
