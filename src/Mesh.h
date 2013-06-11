@@ -60,6 +60,7 @@ public:
 			int dimension);
 	vector<int> getAdjacentEntitiesIndices(int entityIndex, int dimension,
 			int adjacentsDimension);
+	bool vertexLessThan(entHandle a, entHandle b);
 	vector<entHandle> getEntities(int dimension);
 	entHandle getRandomVertex();
 	vector<entHandle> getFaces(entHandle element);

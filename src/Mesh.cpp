@@ -636,6 +636,12 @@ entHandle Mesh::findStartingTet(vect3d const &position,
 	return startingTet;
 }
 
+bool Mesh::vertexLessThan(entHandle a, entHandle b) {
+	vect3d aPos = this->getCoordinates(a);
+	vect3d bPos = this->getCoordinates(b);
+	return vect3dLessThan(aPos, bPos);
+}
+
 vector<entHandle> Mesh::getEntities(int dimension) {
 	int ierr;
 	entHandle *ents = NULL;
@@ -647,6 +653,9 @@ vector<entHandle> Mesh::getEntities(int dimension) {
 	vector<entHandle> elements(ents_size);
 	for (int i = 0; i < ents_size; i++) {
 		elements[i] = ents[i];
+	}
+	if (dimension==0) {
+		sort(elements.begin(), elements.end(), boost::bind(&Mesh::vertexLessThan, this, _1, _2));
 	}
 	if (ents) free(ents);
 	ents_alloc = 0;
