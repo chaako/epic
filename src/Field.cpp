@@ -743,7 +743,8 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 		for (int i=0; i<extern_evalPositions_ptr->size(); i++) {
 			vect3d desiredNodePosition=extern_evalPositions_ptr->operator[](i);
 			// TODO: don't hard-code distance threshold
-			doThisNode = doThisNode || (desiredNodePosition-nodePosition).norm()<1e-2;
+			doThisNode = doThisNode ||
+					(desiredNodePosition-nodePosition).norm()<NODE_DISTANCE_THRESHOLD;
 			// TODO: decouple do and record
 			recordThisNode = doThisNode;
 		}
@@ -886,7 +887,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	// Process any outstanding densities
 	// TODO: could run into problems here if fewer nodes than processes?
 	if (nProcesses>=entities.size())
-		throw string("have assumed more processes than mesh nodes in parallelization");
+		throw string("have assumed more nodes than processes in parallelization");
 	for (int rank=1; rank<nProcesses; ++rank) {
 		status = this->receiveDensity(outFile);
 	}
@@ -903,12 +904,15 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 	MPI::Status status;
 	double density[2];
 	vect3d averageVelocity[2];
+	vect3d incomingNodePosition;
 	double temperature[2];
 	MPI::COMM_WORLD.Recv(&density[0], 2, MPI::DOUBLE, MPI_ANY_SOURCE,
 			MPI_ANY_TAG, status);
 	int node = status.Get_tag();
 	int source = status.Get_source();
 	MPI::COMM_WORLD.Recv(&averageVelocity[0], 2*sizeof(vect3d), MPI::BYTE,
+			source, node, status);
+	MPI::COMM_WORLD.Recv(&incomingNodePosition, sizeof(vect3d), MPI::BYTE,
 			source, node, status);
 	MPI::COMM_WORLD.Recv(&temperature[0], 2, MPI::DOUBLE, source, node, status);
 	if (node>=0 && node<entities.size()) {
@@ -917,6 +921,11 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 		temperature_ptr->setField(entities[node], temperature[0]);
 	}
 	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
+	if ((nodePosition-incomingNodePosition).norm()>NODE_DISTANCE_THRESHOLD) {
+		cout << "ERROR: node position on slave different than on master " <<
+				nodePosition.transpose() << " vs " <<
+				incomingNodePosition.transpose() << endl;
+	}
 //	cout << nodePosition.norm() << " " << density[0] << " " <<
 //			density[1] << endl;
 	if (outFile)
@@ -942,6 +951,7 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		}
 		double density[2];
 		vect3d averageVelocity[2];
+		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 		double temperature[2];
 		density[0] = this->calculateDensity(node, electricField,
 				potentialField, referenceDensity,
@@ -952,6 +962,7 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 				&temperature[0], &temperature[1]);
 		MPI::COMM_WORLD.Send(&density[0], 2, MPI::DOUBLE, 0, node);
 		MPI::COMM_WORLD.Send(&averageVelocity[0], 2*sizeof(vect3d), MPI::BYTE, 0, node);
+		MPI::COMM_WORLD.Send(&nodePosition, sizeof(vect3d), MPI::BYTE, 0, node);
 		MPI::COMM_WORLD.Send(&temperature[0], 2, MPI::DOUBLE, 0, node);
 	}
 }

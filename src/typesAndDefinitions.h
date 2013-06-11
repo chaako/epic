@@ -19,6 +19,7 @@ const double VOLUME_TOLERANCE=0.;
 const double LENGTH_TOLERANCE=1.e-10;
 const double DELTA_LENGTH=1.e-5;
 //const double DELTA_LENGTH=1.e-5;
+const double NODE_DISTANCE_THRESHOLD=1.e-3;
 const double SMALL_VELOCITY=1.e-1;
 const double SMALL_TIME=1.e-8;
 
