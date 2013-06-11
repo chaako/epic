@@ -731,122 +731,129 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 		double potentialPerturbation, double *error,
 		vect3d *averageVelocity, vect3d *averageVelocityError,
 		double *temperature, double *temperatureError) {
+	double density=0.;
+	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
+	bool doThisNode = false;
+	bool recordThisNode = false;
+	if (extern_evalPositions_ptr->size()==0) {
+		doThisNode = true;
+	} else {
+		// TODO: checking every evalPosition for every node is not efficient
+		//       (evalPosition list probably short enough not to matter)
+		for (int i=0; i<extern_evalPositions_ptr->size(); i++) {
+			vect3d desiredNodePosition=extern_evalPositions_ptr->operator[](i);
+			// TODO: don't hard-code distance threshold
+			doThisNode = doThisNode || (desiredNodePosition-nodePosition).norm()<1e-2;
+			// TODO: decouple do and record
+			recordThisNode = doThisNode;
+		}
+	}
 	// TODO: Need unified way of specifying unperturbed boundary plasma
 	if (vertexType[node]==5) {
 		*averageVelocity = -extern_VEXB;
 		*averageVelocityError = vect3d(0.,0.,0.);
 		*temperature = 1.;
 		*temperatureError = 0.;
-		return referenceDensity[node];
+		density = referenceDensity[node];
 //	} else if (vertexType[node]==4) {
 //		// TODO: don't need sheath entrance density if specifying potential,
 //		//       but might be interested in it or other moments later
 //		// TODO: could make below analytic expression for planar electron dens.
 //		return exp(-0.5);
-	}
-//	// TODO: remove this
-//	if (node%100!=1) {
-//		return 1.;
-//	}
-	double density=0.;
-	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
-	IntegrandContainer integrandContainer;
-	integrandContainer.mesh_ptr = mesh_ptr;
-	integrandContainer.node = entities[node];
-	integrandContainer.electricField_ptr = &electricField;
-	integrandContainer.potentialField_ptr = &potentialField;
-	integrandContainer.faceTypeField_ptr = &faceType;
-	integrandContainer.vertexTypeField_ptr = &vertexType;
-	integrandContainer.shortestEdgeField_ptr = &shortestEdgeField;
-	integrandContainer.distributionFunction_ptr = distributionFunction_ptr;
-	stringstream fileNameStream;
-//	fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
-//			<< "_vert" << node << ".p3d";
-	fileNameStream << "distFunc/distributionFunction_q" << charge << "_r"
-			<< nodePosition.norm() << "_vert" << node << ".p3d";
-	integrandContainer.outFile = NULL;
-	stringstream fileNameStreamOrbit;
-	fileNameStreamOrbit << "orbits/orbits_q" << charge << "_r"
-			<< nodePosition.norm() << "_vert" << node << ".p3d";
-	integrandContainer.orbitOutFile = NULL;
-	bool doThisNode = true;
-	// TODO: checking every evalPosition for every node is not efficient
-	for (int i=0; i<extern_evalPositions_ptr->size(); i++) {
-//		vect3d desiredNodePosition(0.908757, 0.411679, 0.0684252);
-		vect3d desiredNodePosition=extern_evalPositions_ptr->operator[](i);
-		if ((desiredNodePosition-nodePosition).norm()<1e-2 && charge>0.) {
-			doThisNode = true;
+	} else {
+		IntegrandContainer integrandContainer;
+		integrandContainer.mesh_ptr = mesh_ptr;
+		integrandContainer.node = entities[node];
+		integrandContainer.electricField_ptr = &electricField;
+		integrandContainer.potentialField_ptr = &potentialField;
+		integrandContainer.faceTypeField_ptr = &faceType;
+		integrandContainer.vertexTypeField_ptr = &vertexType;
+		integrandContainer.shortestEdgeField_ptr = &shortestEdgeField;
+		integrandContainer.distributionFunction_ptr = distributionFunction_ptr;
+		integrandContainer.outFile = NULL;
+		integrandContainer.orbitOutFile = NULL;
+		if (recordThisNode) {
+			stringstream fileNameStream;
+//			fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
+//					<< "_vert" << node << ".p3d";
+			fileNameStream << "distFunc/distributionFunction_q" << charge << "_r"
+					<< nodePosition.norm() << "_vert" << node << ".p3d";
 			integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
 			fprintf(integrandContainer.outFile, "x y z f\n");
+			stringstream fileNameStreamOrbit;
+			fileNameStreamOrbit << "orbits/orbits_q" << charge << "_r"
+					<< nodePosition.norm() << "_vert" << node << ".p3d";
 			integrandContainer.orbitOutFile =
 					fopen(fileNameStreamOrbit.str().c_str(), "w");
 			fprintf(integrandContainer.orbitOutFile, "x y z energy\n");
-		} else {
-			// TODO: decouple do and record
-			doThisNode = false;
 		}
-	}
-	integrandContainer.charge = charge;
-	int vdim=3;
-	double xmin[vdim], xmax[vdim];
-	for (int j=0; j<vdim; j++) {
-		xmin[j] = -1.;
-		xmax[j] = 1.;
-	}
-	// TODO: should make number of orbits adaptive
-	int numberOfOrbits=100;
-//	if (charge<0.)
-//	if (charge>0.)
-//		numberOfOrbits*=10;
-	// TODO: make potential perturbation more robust, transparent, and flexible
-	potentialField[node] += potentialPerturbation;
-	int actualNumberOfOrbits=0;
-	int failureType=0;
-	double probabilityThatTrueError=0.;
-	if (doThisNode) {
-//		adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
-//				vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
-		// TODO: Turn off smoothing flag bit
-//		Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
-//				(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
-//				numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
-//				NULL, &actualNumberOfOrbits, &failureType,
-//				&density, error, &probabilityThatTrueError);
-		double moments[5];
-		double errors[5];
-		double probabilities[5];
-		Vegas(NDIM, 1+NDIM+1, &distributionFunctionFromBoundaryCuba,
-				(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
-				numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
-				NULL, &actualNumberOfOrbits, &failureType,
-				moments, errors, probabilities);
-		// TODO: just set NCOMP higher?
-		if (failureType<0)
-			cout << "failureType: " << failureType <<
-			" (Probably need to change NCOMP in cuba/Makefile.am)" << endl;
-		density = moments[0];
-		*error = errors[0];
-		// TODO: assuming NDIM==3
-		if (NDIM!=3)
-			throw string("can only handle NDIM==3");
-		for (int i=0; i<NDIM; i++) {
-			averageVelocity->operator[](i) = moments[i+1]/density;
-			// TODO: include density error
-			averageVelocityError->operator[](i) = errors[i+1]/density;
+		integrandContainer.charge = charge;
+		int vdim=3;
+		double xmin[vdim], xmax[vdim];
+		for (int j=0; j<vdim; j++) {
+			xmin[j] = -1.;
+			xmax[j] = 1.;
 		}
-		// Subtract ordered kinetic energy from second moment to get temperature
-		*temperature = moments[4]/density - pow(averageVelocity->norm(),2.)/3.;
-		// TODO: calculate temperature error more carefully
-		*temperatureError = sqrt(pow(errors[4]/density,2.) + pow(errors[0],2.) +
-				pow(0.5*averageVelocityError->norm(),2.));
-		probabilityThatTrueError = probabilities[0];
+		// TODO: should make number of orbits adaptive
+		int numberOfOrbits=100;
+//		if (charge<0.)
+//		if (charge>0.)
+//			numberOfOrbits*=10;
+		// TODO: make potential perturbation more robust, transparent, and flexible
+		potentialField[node] += potentialPerturbation;
+		int actualNumberOfOrbits=0;
+		int failureType=0;
+		double probabilityThatTrueError=0.;
+		if (doThisNode) {
+//			adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
+//					vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
+			// TODO: Turn off smoothing flag bit
+//			Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
+//					(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
+//					numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
+//					NULL, &actualNumberOfOrbits, &failureType,
+//					&density, error, &probabilityThatTrueError);
+			double moments[5];
+			double errors[5];
+			double probabilities[5];
+			Vegas(NDIM, 1+NDIM+1, &distributionFunctionFromBoundaryCuba,
+					(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
+					numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
+					NULL, &actualNumberOfOrbits, &failureType,
+					moments, errors, probabilities);
+			// TODO: just set NCOMP higher?
+			if (failureType<0)
+				cout << "failureType: " << failureType <<
+				" (Probably need to change NCOMP in cuba/Makefile.am)" << endl;
+			density = moments[0];
+			*error = errors[0];
+			// TODO: assuming NDIM==3
+			if (NDIM!=3)
+				throw string("can only handle NDIM==3");
+			for (int i=0; i<NDIM; i++) {
+				averageVelocity->operator[](i) = moments[i+1]/density;
+				// TODO: include density error
+				averageVelocityError->operator[](i) = errors[i+1]/density;
+			}
+			// Subtract ordered kinetic energy from second moment to get temperature
+			*temperature = moments[4]/density - pow(averageVelocity->norm(),2.)/3.;
+			// TODO: calculate temperature error more carefully
+			*temperatureError = sqrt(pow(errors[4]/density,2.) + pow(errors[0],2.) +
+					pow(0.5*averageVelocityError->norm(),2.));
+			probabilityThatTrueError = probabilities[0];
+		}
+		// TODO: make potential perturbation more robust, transparent, and flexible
+		potentialField[node] -= potentialPerturbation;
+		if (integrandContainer.outFile)
+			fclose(integrandContainer.outFile);
+		if (integrandContainer.orbitOutFile)
+			fclose(integrandContainer.orbitOutFile);
 	}
-	// TODO: make potential perturbation more robust, transparent, and flexible
-	potentialField[node] -= potentialPerturbation;
-	if (integrandContainer.outFile)
-		fclose(integrandContainer.outFile);
-	if (integrandContainer.orbitOutFile)
-		fclose(integrandContainer.orbitOutFile);
+//	// TODO: debugging
+//	if (recordThisNode) {
+//		cout << nodePosition.transpose() << " " << node << " " << vertexType[node] <<
+//				" " << vertexType[entities[node]] << " " << density << endl;
+//	}
 	return density;
 }
 
