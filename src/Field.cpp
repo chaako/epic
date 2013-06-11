@@ -632,7 +632,7 @@ void DensityField::calcField(ElectricField& electricField,
 		}
 	} else {
 		DensityField::processDensityRequests(electricField,
-				potentialField, faceType, vertexType,
+				potentialField, referenceDensity, faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation);
 	}
 	MPI::COMM_WORLD.Bcast(density, entities.size(), MPI::DOUBLE, 0);
@@ -737,7 +737,7 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 		*averageVelocityError = vect3d(0.,0.,0.);
 		*temperature = 1.;
 		*temperatureError = 0.;
-		return 1.;
+		return referenceDensity[node];
 //	} else if (vertexType[node]==4) {
 //		// TODO: don't need sheath entrance density if specifying potential,
 //		//       but might be interested in it or other moments later
