@@ -10,12 +10,12 @@
 
 #include "typesAndDefinitions.h"
 
+#include "variables.h"
+
 #include "classes.h"
 class mMesh;
 
 #include "functions.h"
-
-#include "variables.h"
 
 
 #endif /* EPIC_H_ */

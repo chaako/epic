@@ -13,8 +13,9 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName)
 }
 
 ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName,
-		CodeField vertexType)
+		CodeField vertexType, double debyeLength, bool doLuDecomposition=true)
 		: Field<vect3d>(inputMesh_ptr, inputName, iBase_VERTEX) {
+	if (doLuDecomposition && debyeLength>0.) {
 #ifdef HAVE_MPI
 	if (MPI::COMM_WORLD.Get_rank() == 0)
 #endif
@@ -59,7 +60,6 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName,
 					potentialBoundaryVertexSet[jj] = true;
 				}
 			}
-			double debyeLength = 1.e0;
 			for (int k=0; k<adjacentVertices.size(); k++) {
 				int kk = adjacentVertices[k];
 				double basisBasisCoefficient = volume/20;
@@ -107,6 +107,13 @@ ElectricField::ElectricField(Mesh *inputMesh_ptr, string inputName,
 		// decomposition failed
 		throw;
 	}
+	} else {
+#ifdef HAVE_MPI
+	if (MPI::COMM_WORLD.Get_rank() == 0)
+#endif
+		cout << "Not computing the Poisson solve LU decomposition: doLuDecomposition = " <<
+		doLuDecomposition << ", debyeLength = " << debyeLength << endl << endl;
+	}
 }
 
 void ElectricField::calcField(PotentialField potentialField) {
@@ -128,7 +135,8 @@ void ElectricField::calcField(PotentialField potentialField) {
 		int elementIndex=i;
 		potentialField.evalFieldAndDeriv(&potential, &potentialDerivative,
 				centroid, &elementIndex, 1);
-		assert(elementIndex==i);
+		if (elementIndex!=i)
+			throw string("problem in ElectricField::calcField");
 		vector<int> adjacentVertices =
 				mesh_ptr->adjacentEntitiesVectors[iBase_REGION][i][iBase_VERTEX];
 		for (int l=0; l<NDIM; l++) {
@@ -180,7 +188,7 @@ void ElectricField::calcField(PotentialField potentialField) {
 }
 
 void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vertexType,
-		DensityField ionDensity) {
+		DensityField ionDensity, double debyeLength) {
 	int nVerts = entities.size();
 	int m = nVerts + nVerts*NDIM;
 	double potentialChange=1.;
@@ -222,7 +230,7 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 				if (!potentialBoundaryVertexSet[jj]) {
 					coefficients.push_back(Eigen::Triplet<double>(jj, jj, 1.));
 					// TODO: hard-coding zero potential of ExB-field as origin here
-					double shieldedPotential=vertexPosition.dot(E);
+					double shieldedPotential=vertexPosition.dot(extern_E);
 					// TODO: Don't hard-code object potential
 					b[jj] = -4. - shieldedPotential;
 //					b[jj] = potential;
@@ -248,12 +256,12 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 //					eFieldBoundaryVertexSet[jj] = true;
 //				}
 			}
-			double debyeLength = 1.e0;
 			for (int k=0; k<adjacentVertices.size(); k++) {
 				int kk = adjacentVertices[k];
 				double basisBasisCoefficient = volume/20;
 				if (jj==kk)
 					basisBasisCoefficient *= 2.;
+				// TODO: use referenceElectronDensity in electron response
 				if (!potentialBoundaryVertexSet[jj]) {
 					coefficients.push_back(Eigen::Triplet<double>(jj, kk,
 							basisBasisCoefficient/debyeLength/debyeLength*
@@ -287,6 +295,7 @@ void ElectricField::calcField(PotentialField *potentialField_ptr, CodeField vert
 				b[jj] += 1/debyeLength/debyeLength*
 //						(ionDensity[jj] - exp(potential)*(1.-potential))*
 						// TODO: check that this works for potential~1
+						// TODO: use referenceElectronDensity in electron response
 						(ionDensity[jj] - (exp(potential)-potential))*
 						volume/4.;
 			}
@@ -381,21 +390,24 @@ PotentialField::PotentialField(PotentialField potential, string inputName)
 }
 
 
-void PotentialField::calcField(CodeField vertexType) {
+void PotentialField::calcField(CodeField vertexType, double debyeLength,
+		double boundaryPotential, double surfacePotential,
+		double sheathPotential) {
 	for (int i=0; i<entities.size(); i++) {
 		vect3d point = mesh_ptr->getCoordinates(entities[i]);
-		// TODO: Change this from just a test Coulomb field
-//		double potential = -1./point.norm();
 		double potential;
-		if (vertexType.getField(entities[i])==4) {
-			// TODO: don't hard-code sheath potential
-			potential = -1./2.;
-		} else if (vertexType.getField(entities[i])==5) {
-			// TODO: don't hard-code boudnary potential
-			potential = 0;
+		if (debyeLength==0.) {
+			if (vertexType.getField(entities[i])==4) {
+				potential = sheathPotential;
+			} else if (vertexType.getField(entities[i])==5) {
+				potential = boundaryPotential;
+			} else {
+				potential = boundaryPotential;
+			}
 		} else {
-			potential = 0;
-//			potential = -0.77;
+			// TODO: Change this from just a test Coulomb field
+			cout << "WARNING: Assuming spherical mesh in PotentialField::calcField" << endl;
+			double potential = surfacePotential/point.norm();
 		}
 		this->setField(entities[i], potential);
 	}
@@ -403,8 +415,10 @@ void PotentialField::calcField(CodeField vertexType) {
 
 void PotentialField::calcField(DensityField ionDensity,
 		DensityField electronDensity, CodeField vertexType, FILE *outFile) {
-	assert(ionDensity.mesh_ptr == mesh_ptr);
-	assert(electronDensity.mesh_ptr == mesh_ptr);
+	if (ionDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
+	if (electronDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
 	for (int i=0; i<entities.size(); i++) {
 		// TODO: remove this restriction on vertices
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
@@ -439,24 +453,33 @@ void PotentialField::calcField(DensityField ionDensity,
 }
 
 void PotentialField::calcField(DensityField ionDensity,
-		CodeField vertexType, FILE *outFile) {
-	assert(ionDensity.mesh_ptr == mesh_ptr);
+		CodeField vertexType, FILE *outFile, double boundaryPotential,
+		double sheathPotential, bool fixSheathPotential) {
+	if (ionDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
 	for (int i=0; i<entities.size(); i++) {
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
 
 		double potential;
-		// TODO: don't hard-code boundary type and quasi-neutral operation
-//		if (vertexType.getField(entities[i])==4) {
-//			// TODO: don't hard-code sheath potential
-//			potential = -1./2.;
-//		} else
+		// TODO: don't hard-code boundary type
 		if (vertexType.getField(entities[i])==5) {
-			// TODO: don't hard-code boundary potential
-			potential = 0;
+			potential = boundaryPotential;
 		} else {
 			double currentPotential = this->getField(entities[i]);
-			double boltzmannPotential = log(ionDensity.getField(entities[i]));
+			double referenceDensity = referenceElectronDensity_ptr->getField(entities[i]);
+			double referenceElectronTemperature =
+					referenceElectronTemperature_ptr->operator()(nodePosition);
+			double boltzmannPotential = boundaryPotential +
+					referenceElectronTemperature*
+					log(ionDensity.getField(entities[i])/referenceDensity);
 			potential = (currentPotential+boltzmannPotential)/2.;
+		}
+		if (fixSheathPotential) {
+			// TODO: think about possible influence of background E field
+			// TODO: don't hard-code boundary type
+			if (vertexType.getField(entities[i])==4) {
+				potential = sheathPotential;
+			}
 		}
 		this->setField(entities[i], potential);
 
@@ -473,8 +496,10 @@ void PotentialField::calcField(DensityField ionDensity,
 		DensityField electronDensityPP, DensityField electronDensityNP,
 		CodeField vertexType, double positivePotentialPerturbation,
 		double negativePotentialPerturbation, FILE *outFile) {
-	assert(ionDensity.mesh_ptr == mesh_ptr);
-	assert(electronDensity.mesh_ptr == mesh_ptr);
+	if (ionDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
+	if (electronDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
 	for (int i=0; i<entities.size(); i++) {
 		// TODO: remove this restriction on vertices
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
@@ -536,23 +561,39 @@ void PotentialField::calcField(DensityField ionDensity,
 		fprintf(outFile, "\n\n\n\n");
 }
 
-DensityField::DensityField(Mesh *inputMesh_ptr, string inputName)
+void PotentialField::setReferenceElectronDensity(DensityField& referenceElectronDensity){
+	this->referenceElectronDensity_ptr = &referenceElectronDensity;
+}
+
+void PotentialField::setReferenceElectronTemperature(SpatialDependence& referenceElectronTemperature){
+	this->referenceElectronTemperature_ptr = &referenceElectronTemperature;
+}
+
+
+DensityField::DensityField(Mesh *inputMesh_ptr, string inputName,
+		Field<vect3d> *inputAverageVelocity_ptr, Field<double> *inputTemperature_ptr)
 		: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {
+	averageVelocity_ptr = inputAverageVelocity_ptr;
+	temperature_ptr = inputTemperature_ptr;
 }
 
 void DensityField::calcField() {}
 
-void DensityField::calcField(CodeField vertexType,
-		PotentialField potential, double charge) {
+void DensityField::calcField(CodeField& vertexType,
+		PotentialField& potential, DensityField& referenceDensity,
+		SpatialDependence& referenceTemperature, double charge) {
 	// TODO: get rid of hard-coding here
 	for (int i=0; i<entities.size(); i++) {
-		double density=1.;
+		vect3d position=mesh_ptr->getCoordinates(entities[i]);
+		double density=referenceDensity[entities[i]];
+		double temperature=referenceTemperature(position);
+		// TODO: this isn't very general
 		if (vertexType.getField(entities[i])==4) {
-			density = -1./2.;
+			density *= -1./2.;
 		} else if (vertexType.getField(entities[i])==5) {
-			density = 1.;
+			density *= 1.;
 		} else {
-			density = exp(charge*potential[i]);
+			density *= exp(potential[i]/temperature);
 		}
 		this->setField(entities[i], density);
 	}
@@ -568,13 +609,16 @@ void DensityField::calcField(DensityField ionDensity,
 }
 
 void DensityField::calcField(ElectricField& electricField,
-		PotentialField potentialField,
+		PotentialField& potentialField, DensityField& referenceDensity,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdge, double charge,
 		double potentialPerturbation, FILE *outFile) {
 	int mpiId = 0;
 #ifdef HAVE_MPI
+	// TODO: Change this to using smart pointer
 	double *density = new double[entities.size()];
+	vect3d *averageVelocity = new vect3d[entities.size()];
+	double *temperature = new double[entities.size()];
 	// TODO: Am assuming here that fields are identical on master and slaves
 	mpiId = MPI::COMM_WORLD.Get_rank();
 	if (mpiId == 0) {
@@ -583,25 +627,41 @@ void DensityField::calcField(ElectricField& electricField,
 				shortestEdge, charge, potentialPerturbation, outFile);
 		for (int node=0; node<entities.size(); node++) {
 			density[node] = this->getField(entities[node]);
+			averageVelocity[node] = averageVelocity_ptr->getField(entities[node]);
+			temperature[node] = temperature_ptr->getField(entities[node]);
 		}
 	} else {
 		DensityField::processDensityRequests(electricField,
-				potentialField, faceType, vertexType,
+				potentialField, referenceDensity, faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation);
 	}
 	MPI::COMM_WORLD.Bcast(density, entities.size(), MPI::DOUBLE, 0);
+	MPI::COMM_WORLD.Bcast(averageVelocity, entities.size()*sizeof(vect3d), MPI::BYTE, 0);
+	MPI::COMM_WORLD.Bcast(temperature, entities.size(), MPI::DOUBLE, 0);
 	for (int node=0; node<entities.size(); node++) {
 		this->setField(entities[node], density[node]);
+		averageVelocity_ptr->setField(entities[node], averageVelocity[node]);
+		temperature_ptr->setField(entities[node], temperature[node]);
 	}
+	delete[] density;
+	delete[] averageVelocity;
+	delete[] temperature;
 #else
 	extern_findTet=0;
 	clock_t startClock = clock(); // timing
 	for (int node=0; node<entities.size(); node++) {
 		double error;
+		vect3d averageVelocity, averageVelocityError;
+		double temperature, temperatureError;
 	    double density = this->calculateDensity(node, electricField,
-				potentialField, faceType, vertexType, shortestEdge,
-				charge, potentialPerturbation, &error);
+				potentialField, referenceDensity,
+				faceType, vertexType, shortestEdge,
+				charge, potentialPerturbation, &error,
+				&averageVelocity, &averageVelocityError,
+				&temperature, &temperatureError);
 		this->setField(entities[node], density);
+		averageVelocity_ptr->setField(entities[node], averageVelocity);
+		temperature_ptr->setField(entities[node], temperature);
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		cout << nodePosition.norm() << " " << density << " " << error << endl;
 		if (outFile)
@@ -619,12 +679,44 @@ void DensityField::calcField(ElectricField& electricField,
 		fprintf(outFile, "\n\n\n\n");
 }
 
-void DensityField::poissonCubeTest() {
+// TODO: figure out why get error if put include in typesAndDefinitions.h
+#include <boost/numeric/quadrature/adaptive.hpp> // Not true boost library
+//#include <boost/numeric/quadrature/kronrodgauss.hpp> // Not true boost library
+// TODO: make reference density its own class?
+void DensityField::calcField(CodeField& vertexType,
+		DistributionFunction& distributionFunction, double charge) {
+	for (int i=0; i<entities.size(); i++) {
+		vect3d position = mesh_ptr->getCoordinates(entities[i]);
+//		DistributionFunctionVy distFuncVy;
+//		distFuncVy.distFunc_ptr = &distributionFunction;
+//		distFuncVy.pos = position;
+		// TODO: shouldn't really be altering things passed by reference
+		distributionFunction.setPresetPosition(position);
+		double density, densityError;
+//		boost::numeric::quadrature::adaptive()(distFuncVy,-1.,1.,
+//				density, densityError);
+		boost::numeric::quadrature::adaptive()(distributionFunction,-1.,1.,
+				density, densityError);
+//		boost::numeric::quadrature::adaptive()(dynamic_cast<const Maxwellian&>(distributionFunction),-1.,1.,
+//				density, densityError);
+//		// TODO: figure out why 15 works but not 20 (only odd?)
+//		//       "N is defined for 15, 21, 31, 41 and 51"
+//		boost::numeric::quadrature::kronrod_gauss<15> integrator;
+//		integrator(dynamic_cast<const DistributionFunction&>(distribFunc),-1.,1.,
+//				density);
+		if (densityError/density>0.0001) {
+			cout << "Large reference density error: " << densityError <<
+					", n= " << density << ", pos= " << position.transpose() << endl;
+		}
+		this->setField(entities[i], density);
+	}
+
+}
+
+void DensityField::poissonCubeTest(double debyeLength) {
 	for (int i=0; i<entities.size(); i++) {
 		vect3d xyz = mesh_ptr->getCoordinates(entities[i]);
 		double chargeDensity = -0.9*sin(xyz[0]*M_PI)*sin(xyz[1]*M_PI)*sin(xyz[2]*M_PI);
-		// TODO: don't hard-code debye length
-		double debyeLength=1.;
 		double density = debyeLength*debyeLength*chargeDensity
 				+ exp(1./M_PI/M_PI/3.*chargeDensity);
 //		cout << density << " " << xyz.transpose() << endl;
@@ -633,109 +725,136 @@ void DensityField::poissonCubeTest() {
 }
 
 double DensityField::calculateDensity(int node, ElectricField& electricField,
-		PotentialField potentialField,
+		PotentialField& potentialField, DensityField& referenceDensity,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdgeField, double charge,
-		double potentialPerturbation, double *error) {
+		double potentialPerturbation, double *error,
+		vect3d *averageVelocity, vect3d *averageVelocityError,
+		double *temperature, double *temperatureError) {
+	double density=0.;
+	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
+	bool doThisNode = false;
+	bool recordThisNode = false;
+	if (extern_evalPositions_ptr->size()==0) {
+		doThisNode = true;
+	} else {
+		// TODO: checking every evalPosition for every node is not efficient
+		//       (evalPosition list probably short enough not to matter)
+		for (int i=0; i<extern_evalPositions_ptr->size(); i++) {
+			vect3d desiredNodePosition=extern_evalPositions_ptr->operator[](i);
+			// TODO: don't hard-code distance threshold
+			doThisNode = doThisNode ||
+					(desiredNodePosition-nodePosition).norm()<NODE_DISTANCE_THRESHOLD;
+			// TODO: decouple do and record
+			recordThisNode = doThisNode;
+		}
+	}
 	// TODO: Need unified way of specifying unperturbed boundary plasma
 	if (vertexType[node]==5) {
-		return 1.;
+		*averageVelocity = -extern_VEXB;
+		*averageVelocityError = vect3d(0.,0.,0.);
+		*temperature = 1.;
+		*temperatureError = 0.;
+		density = referenceDensity[node];
 //	} else if (vertexType[node]==4) {
 //		// TODO: don't need sheath entrance density if specifying potential,
 //		//       but might be interested in it or other moments later
 //		// TODO: could make below analytic expression for planar electron dens.
 //		return exp(-0.5);
+	} else {
+		IntegrandContainer integrandContainer;
+		integrandContainer.mesh_ptr = mesh_ptr;
+		integrandContainer.node = entities[node];
+		integrandContainer.electricField_ptr = &electricField;
+		integrandContainer.potentialField_ptr = &potentialField;
+		integrandContainer.faceTypeField_ptr = &faceType;
+		integrandContainer.vertexTypeField_ptr = &vertexType;
+		integrandContainer.shortestEdgeField_ptr = &shortestEdgeField;
+		integrandContainer.distributionFunction_ptr = distributionFunction_ptr;
+		integrandContainer.outFile = NULL;
+		integrandContainer.orbitOutFile = NULL;
+		if (recordThisNode) {
+			stringstream fileNameStream;
+//			fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
+//					<< "_vert" << node << ".p3d";
+			fileNameStream << "distFunc/distributionFunction_q" << charge << "_r"
+					<< nodePosition.norm() << "_vert" << node << ".p3d";
+			integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
+			fprintf(integrandContainer.outFile, "x y z f\n");
+			stringstream fileNameStreamOrbit;
+			fileNameStreamOrbit << "orbits/orbits_q" << charge << "_r"
+					<< nodePosition.norm() << "_vert" << node << ".p3d";
+			integrandContainer.orbitOutFile =
+					fopen(fileNameStreamOrbit.str().c_str(), "w");
+			fprintf(integrandContainer.orbitOutFile, "x y z energy\n");
+		}
+		integrandContainer.charge = charge;
+		int vdim=3;
+		double xmin[vdim], xmax[vdim];
+		for (int j=0; j<vdim; j++) {
+			xmin[j] = -1.;
+			xmax[j] = 1.;
+		}
+		// TODO: should make number of orbits adaptive
+		int numberOfOrbits=100;
+//		if (charge<0.)
+//		if (charge>0.)
+//			numberOfOrbits*=10;
+		// TODO: make potential perturbation more robust, transparent, and flexible
+		potentialField[node] += potentialPerturbation;
+		int actualNumberOfOrbits=0;
+		int failureType=0;
+		double probabilityThatTrueError=0.;
+		if (doThisNode) {
+//			adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
+//					vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
+			// TODO: Turn off smoothing flag bit
+//			Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
+//					(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
+//					numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
+//					NULL, &actualNumberOfOrbits, &failureType,
+//					&density, error, &probabilityThatTrueError);
+			double moments[5];
+			double errors[5];
+			double probabilities[5];
+			Vegas(NDIM, 1+NDIM+1, &distributionFunctionFromBoundaryCuba,
+					(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
+					numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
+					NULL, &actualNumberOfOrbits, &failureType,
+					moments, errors, probabilities);
+			// TODO: just set NCOMP higher?
+			if (failureType<0)
+				cout << "failureType: " << failureType <<
+				" (Probably need to change NCOMP in cuba/Makefile.am)" << endl;
+			density = moments[0];
+			*error = errors[0];
+			// TODO: assuming NDIM==3
+			if (NDIM!=3)
+				throw string("can only handle NDIM==3");
+			for (int i=0; i<NDIM; i++) {
+				averageVelocity->operator[](i) = moments[i+1]/density;
+				// TODO: include density error
+				averageVelocityError->operator[](i) = errors[i+1]/density;
+			}
+			// Subtract ordered kinetic energy from second moment to get temperature
+			*temperature = moments[4]/density - pow(averageVelocity->norm(),2.)/3.;
+			// TODO: calculate temperature error more carefully
+			*temperatureError = sqrt(pow(errors[4]/density,2.) + pow(errors[0],2.) +
+					pow(0.5*averageVelocityError->norm(),2.));
+			probabilityThatTrueError = probabilities[0];
+		}
+		// TODO: make potential perturbation more robust, transparent, and flexible
+		potentialField[node] -= potentialPerturbation;
+		if (integrandContainer.outFile)
+			fclose(integrandContainer.outFile);
+		if (integrandContainer.orbitOutFile)
+			fclose(integrandContainer.orbitOutFile);
 	}
-//	// TODO: remove this
-//	if (node%100!=1) {
-//		return 1.;
+//	// TODO: debugging
+//	if (recordThisNode) {
+//		cout << nodePosition.transpose() << " " << node << " " << vertexType[node] <<
+//				" " << vertexType[entities[node]] << " " << density << endl;
 //	}
-	double density=0.;
-	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
-	IntegrandContainer integrandContainer;
-	integrandContainer.mesh_ptr = mesh_ptr;
-	integrandContainer.node = entities[node];
-	integrandContainer.electricField_ptr = &electricField;
-	integrandContainer.potentialField_ptr = &potentialField;
-	integrandContainer.faceTypeField_ptr = &faceType;
-	integrandContainer.vertexTypeField_ptr = &vertexType;
-	integrandContainer.shortestEdgeField_ptr = &shortestEdgeField;
-	stringstream fileNameStream;
-//	fileNameStream << "distFunc/distributionFunction_r" << nodePosition.norm()
-//			<< "_vert" << node << ".p3d";
-	fileNameStream << "distFunc/distributionFunction_q" << charge << "_r"
-			<< nodePosition.norm() << "_vert" << node << ".p3d";
-	integrandContainer.outFile = NULL;
-	stringstream fileNameStreamOrbit;
-	fileNameStreamOrbit << "orbits/orbits_q" << charge << "_r"
-			<< nodePosition.norm() << "_vert" << node << ".p3d";
-	integrandContainer.orbitOutFile = NULL;
-	bool doThisNode = true;
-	// TODO: don't hard-code output nodes
-//	if (node<5) {
-//	if (node==0) {
-//	if (node==5 || node==2540) {
-//	if (node==105) {
-//	if (nodePosition[2]<0.5 && nodePosition[2]>-0. && nodePosition[0]<2.5 &&
-//			nodePosition[0]>1.8 && nodePosition[1]<1.4 && nodePosition[1]>0.8
-//			&& charge>0.) {
-//	if (vertexType[node]==4 && charge>0.) {
-//	vect3d desiredNodePosition(0.908757, 0.411679, 0.0684252);
-//	if ((desiredNodePosition-nodePosition).norm()<1e-2 && charge>0.) {
-//		doThisNode = true;
-//		integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
-//		fprintf(integrandContainer.outFile, "x y z f\n");
-//		integrandContainer.orbitOutFile =
-//				fopen(fileNameStreamOrbit.str().c_str(), "w");
-//		fprintf(integrandContainer.orbitOutFile, "x y z energy\n");
-//	} else {
-//		// TODO: decouple do and record
-//		doThisNode = false;
-//	}
-	integrandContainer.charge = charge;
-	int vdim=3;
-	double xmin[vdim], xmax[vdim];
-	for (int j=0; j<vdim; j++) {
-		xmin[j] = -1.;
-		xmax[j] = 1.;
-	}
-	// TODO: should make number of orbits adaptive
-	int numberOfOrbits=100;
-//	if (charge<0.)
-//	if (charge>0.)
-//		numberOfOrbits*=10;
-	// TODO: make potential perturbation more robust, transparent, and flexible
-	potentialField[node] += potentialPerturbation;
-	int actualNumberOfOrbits=0;
-	int failureType=0;
-	double probabilityThatTrueError=0.;
-	if (doThisNode) {
-//		adapt_integrate(1, &distributionFunctionFromBoundary, (void*)&integrandContainer,
-//				vdim, xmin, xmax, numberOfOrbits, 1.e-5, 1.e-5, &density, error);
-		// TODO: Turn off smoothing flag bit
-//		Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
-//				(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
-//				numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
-//				NULL, &actualNumberOfOrbits, &failureType,
-//				&density, error, &probabilityThatTrueError);
-		double moments[5];
-		double errors[5];
-		double probabilities[5];
-		Vegas(NDIM, 1, &distributionFunctionFromBoundaryCuba,
-				(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
-				numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
-				NULL, &actualNumberOfOrbits, &failureType,
-				moments, errors, probabilities);
-		density = moments[0];
-		*error = errors[0];
-		probabilityThatTrueError = probabilities[0];
-	}
-	// TODO: make potential perturbation more robust, transparent, and flexible
-	potentialField[node] -= potentialPerturbation;
-	if (integrandContainer.outFile)
-		fclose(integrandContainer.outFile);
-	if (integrandContainer.orbitOutFile)
-		fclose(integrandContainer.orbitOutFile);
 	return density;
 }
 
@@ -759,7 +878,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 
 	// Process incoming density and send new nodes until all done
 	while (node<entities.size()) {
-		MPI::Status status = this->receiveDensity(outFile);
+		status = this->receiveDensity(outFile);
 		MPI::COMM_WORLD.Send(&node, 1, MPI::INT, status.Get_source(),
 				WORKTAG);
 		node++;
@@ -767,9 +886,10 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 
 	// Process any outstanding densities
 	// TODO: could run into problems here if fewer nodes than processes?
-	assert(nProcesses<entities.size());
+	if (nProcesses>=entities.size())
+		throw string("have assumed more nodes than processes in parallelization");
 	for (int rank=1; rank<nProcesses; ++rank) {
-		this->receiveDensity(outFile);
+		status = this->receiveDensity(outFile);
 	}
 
 	// Send empty message with DIETAG to signal done with nodes
@@ -783,12 +903,29 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 MPI::Status DensityField::receiveDensity(FILE *outFile) {
 	MPI::Status status;
 	double density[2];
+	vect3d averageVelocity[2];
+	vect3d incomingNodePosition;
+	double temperature[2];
 	MPI::COMM_WORLD.Recv(&density[0], 2, MPI::DOUBLE, MPI_ANY_SOURCE,
 			MPI_ANY_TAG, status);
-	int incomingNode = status.Get_tag();
-	if (incomingNode>=0 && incomingNode<entities.size())
-		this->setField(entities[incomingNode], density[0]);
-	vect3d nodePosition = mesh_ptr->getCoordinates(entities[incomingNode]);
+	int node = status.Get_tag();
+	int source = status.Get_source();
+	MPI::COMM_WORLD.Recv(&averageVelocity[0], 2*sizeof(vect3d), MPI::BYTE,
+			source, node, status);
+	MPI::COMM_WORLD.Recv(&incomingNodePosition, sizeof(vect3d), MPI::BYTE,
+			source, node, status);
+	MPI::COMM_WORLD.Recv(&temperature[0], 2, MPI::DOUBLE, source, node, status);
+	if (node>=0 && node<entities.size()) {
+		this->setField(entities[node], density[0]);
+		averageVelocity_ptr->setField(entities[node], averageVelocity[0]);
+		temperature_ptr->setField(entities[node], temperature[0]);
+	}
+	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
+	if ((nodePosition-incomingNodePosition).norm()>NODE_DISTANCE_THRESHOLD) {
+		cout << "ERROR: node position on slave different than on master " <<
+				nodePosition.transpose() << " vs " <<
+				incomingNodePosition.transpose() << endl;
+	}
 //	cout << nodePosition.norm() << " " << density[0] << " " <<
 //			density[1] << endl;
 	if (outFile)
@@ -799,7 +936,7 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 
 #ifdef HAVE_MPI
 void DensityField::processDensityRequests(ElectricField& electricField,
-		PotentialField potentialField,
+		PotentialField& potentialField, DensityField& referenceDensity,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdge, double charge,
 		double potentialPerturbation) {
@@ -813,14 +950,28 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 			return;
 		}
 		double density[2];
+		vect3d averageVelocity[2];
+		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
+		double temperature[2];
 		density[0] = this->calculateDensity(node, electricField,
-				potentialField, faceType, vertexType,
+				potentialField, referenceDensity,
+				faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation,
-				&density[1]);
+				&density[1],
+				&averageVelocity[0], &averageVelocity[1],
+				&temperature[0], &temperature[1]);
 		MPI::COMM_WORLD.Send(&density[0], 2, MPI::DOUBLE, 0, node);
+		MPI::COMM_WORLD.Send(&averageVelocity[0], 2*sizeof(vect3d), MPI::BYTE, 0, node);
+		MPI::COMM_WORLD.Send(&nodePosition, sizeof(vect3d), MPI::BYTE, 0, node);
+		MPI::COMM_WORLD.Send(&temperature[0], 2, MPI::DOUBLE, 0, node);
 	}
 }
 #endif
+
+void DensityField::setDistributionFunction(DistributionFunction& distributionFunction){
+	this->distributionFunction_ptr = &distributionFunction;
+}
+
 
 CodeField::CodeField(Mesh *inputMesh_ptr, string inputName, int elementType)
 		: Field<int>(inputMesh_ptr, inputName, elementType) {

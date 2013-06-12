@@ -67,6 +67,7 @@ superlu/SuperLU_4.3
 superlu/make.inc
 superlu/SuperLU_DIST_3.2
 python/Python-2.7.3
+quadrature/boostable
 
 # Install directories
 bin

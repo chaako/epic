@@ -29,9 +29,10 @@ Mesh::Mesh(string inputMeshFile) {
 		iMesh_load(mesh, root, inputMeshFile.c_str(), options, &ierr,
 				strlen(inputMeshFile.c_str()), options_len);
 		vtkInputMesh = false;
-		// recreate eField tag and destroy component tags
+		// recreate vector field tags and destroy component tags
 		try {
 			this->convertComponentTagsToVectorTag("eField");
+			this->convertComponentTagsToVectorTag("ionVelocity");
 		} catch (string& error) {
 			cout << error << endl;
 		}
@@ -56,7 +57,8 @@ Mesh::Mesh(string inputMeshFile) {
 	map<entHandle,vector<entHandle> >::iterator iter;
 	for (iter=adjacentVertsMap.begin(); iter!=adjacentVertsMap.end(); ++iter) {
 		vertexVectorsMap[iter->first] = Mesh::getVertexVectors(iter->first, false);
-		assert(vertexVectorsMap[iter->first].size()==4);
+		if (vertexVectorsMap[iter->first].size()!=4)
+			throw string("Error constructing vertexVectorsMap in Mesh.cpp");
 	}
 
 	previousCoordsToBasisElement = NULL;
@@ -191,14 +193,17 @@ void Mesh::save(string outputMeshFile) {
 	char *options = NULL;
 	int options_len = 0;
 	int ierr;
-	// destroy eField tag since VisIt doesn't understand
+	// destroy vector tags since VisIt doesn't understand
 	this->convertVectorTagToComponentTags("eField");
-	/* save the mesh */
+	this->convertVectorTagToComponentTags("ionVelocity");
+
 	iMesh_save(meshInstance, rootEntitySet, outputMeshFile.c_str(),
 			options, &ierr, outputMeshFile.length(), options_len);
 	CHECK("Save failed");
-	// recreate eField tag and destroy component tags
+
+	// recreate vector tags and destroy component tags
 	this->convertComponentTagsToVectorTag("eField");
+	this->convertComponentTagsToVectorTag("ionVelocity");
 }
 
 iBase_TagHandle Mesh::createTag(string tagName, int size, int type) {
@@ -209,7 +214,7 @@ iBase_TagHandle Mesh::createTag(string tagName, int size, int type) {
 			&tag, &ierr, tagName.length());
 	// TODO: include name of tag in error
 	// TODO: maybe throw in stead of using CHECK
-	CHECK("Failure creating eField tag");
+	CHECK("Failure creating tag");
 
 	return tag;
 }
@@ -254,10 +259,10 @@ void Mesh::convertVectorTagToComponentTags(string vectorTagName) {
 				this->getSuperCellFaces(ents0d[i]);
 		vect3d vectorData(0.,0.,0.);
 		vect3d *vectorData_ptr = &vectorData;
-		int eField_alloc = sizeof(vect3d);
-		int eField_size = sizeof(vect3d);
+		int alloc = sizeof(vect3d);
+		int size = sizeof(vect3d);
 		iMesh_getData(meshInstance, ents0d[i], vectorTag, &vectorData_ptr,
-				&eField_alloc, &eField_size, &ierr);
+				&alloc, &size, &ierr);
 		CHECK("Failure getting vector data");
 		iMesh_setDblData(meshInstance, ents0d[i], componentTagX,
 				(double)vectorData[0], &ierr);
@@ -351,7 +356,8 @@ Mesh::getSurroundingVerticesMap() {
 	map<entHandle,vector<entHandle> >
 	surroundingVerticesMap;
 	// TODO: should handle case where adjacentTetsMap isn't available yet
-	assert(adjacentTetsMap.begin()!=adjacentTetsMap.end());
+	if (adjacentTetsMap.begin()==adjacentTetsMap.end())
+		throw string("See TODO in getSurroundingVerticesMap()");
 	for(map<entHandle,vector<entHandle> >::iterator
 			adjacentTets = adjacentTetsMap.begin();
 			adjacentTets != adjacentTetsMap.end();
@@ -385,7 +391,8 @@ Mesh::getSurroundingVerticesMap() {
 //		cout << element << endl;
 //		cout << surroundingVerticesSet.size() << " " <<
 //				initialSize << endl;
-		assert(surroundingVertices.size()==initialSize-4);
+		if (surroundingVertices.size()!=initialSize-4)
+			throw string("problem in getSurroundingVerticesMap()");
 		surroundingVerticesMap[element] = surroundingVertices;
 	}
 	return surroundingVerticesMap;
@@ -602,8 +609,8 @@ int Mesh::findTet(vect3d oldPosition,
 		tetIndex = ents[0];
 	}
 
-	assert(tetIndex>=0);
-	assert(tetIndex<entitiesVectors[iBase_REGION].size());
+	if (tetIndex<0 || tetIndex>=entitiesVectors[iBase_REGION].size())
+		throw string("tetIndex out of bounds in findTet()");
 	return tetIndex;
 }
 
@@ -615,7 +622,7 @@ entHandle Mesh::findStartingTet(vect3d const &position,
 //	vect3d perturbedPosition =
 //			position + sqrt(DELTA_LENGTH)*(velocity+VEXB)/(velocity+VEXB).norm();
 	// TODO: standardize this
-	vect3d perturbedPosition = position + (velocity+VEXB)*SMALL_TIME;
+	vect3d perturbedPosition = position + (velocity+extern_VEXB)*SMALL_TIME;
 	vector<entHandle> adjacentElements=getAdjacentEntities(vertex, iBase_REGION);
 	int numberOfRegionsWithinTolerance=0;
 	for (int i=0; i<adjacentElements.size(); i++) {
@@ -629,6 +636,12 @@ entHandle Mesh::findStartingTet(vect3d const &position,
 	return startingTet;
 }
 
+bool Mesh::vertexLessThan(entHandle a, entHandle b) {
+	vect3d aPos = this->getCoordinates(a);
+	vect3d bPos = this->getCoordinates(b);
+	return vect3dLessThan(aPos, bPos);
+}
+
 vector<entHandle> Mesh::getEntities(int dimension) {
 	int ierr;
 	entHandle *ents = NULL;
@@ -640,6 +653,9 @@ vector<entHandle> Mesh::getEntities(int dimension) {
 	vector<entHandle> elements(ents_size);
 	for (int i = 0; i < ents_size; i++) {
 		elements[i] = ents[i];
+	}
+	if (dimension==0) {
+		sort(elements.begin(), elements.end(), boost::bind(&Mesh::vertexLessThan, this, _1, _2));
 	}
 	if (ents) free(ents);
 	ents_alloc = 0;
@@ -722,7 +738,8 @@ vector<vect3d> Mesh::getVertexVectors(entHandle entity,
 	} else {
 		vertices = this->getAdjacentEntities(entity, iBase_VERTEX);
 	}
-	assert(vertexVectors.size()==vertices.size());
+	if (vertexVectors.size()!=vertices.size())
+		throw string("problem in getVertexVectors");
 	if (useMap && dimension==3) {
 		vertexVectors = vertexVectorsMap[entity];
 	} else {
@@ -747,7 +764,8 @@ void Mesh::getVertexVectors(int index,
 	int nVerts = dimension + 1;
 	vector<int> &vertices =
 			adjacentEntitiesVectors[dimension][index][iBase_VERTEX];
-	assert(vertexVectors->size()==vertices.size());
+	if (vertexVectors->size()!=vertices.size())
+		throw string("problem in getVertexVector()");
 	for (int i=0; i<vertices.size(); i++) {
 		(*vertexVectors)[i] = verticesPositions[vertices[i]];
 	}
@@ -1029,7 +1047,8 @@ vect3d Mesh::getSurfaceVector(entHandle face,
 		vect3d point) {
 	vector<vect3d> vertexVectors =
 			this->getVertexVectors(face);
-	assert(3 == vertexVectors.size());
+	if (vertexVectors.size()!=3)
+		throw string("problem in getSurfaceVector");
 	vector<vect3d> edgeVectors(vertexVectors.size()-1);
 
 	edgeVectors[0] = vertexVectors[1]-vertexVectors[0];
@@ -1056,9 +1075,11 @@ vect3d Mesh::getSurfaceVector(entHandle face,
 				nPoints++;
 			}
 		}
-		assert(nPoints==1);
+		if (nPoints!=1)
+			throw string("problem in getSurfaceVector()");
 	}
-	assert(point!=vect3d(0.,0.,0.));
+	if (point==vect3d(0.,0.,0.))
+		throw string("problem in getSurfaceVector().");
 	referenceVector = point - vertexVectors[0];
 
 	if (referenceVector.dot(surfaceVector)<0)
@@ -1162,7 +1183,8 @@ double Mesh::getTetVolume(vector<vect3d> vertexVectors) {
 	vector<vect3d> edgeVectors(nEdges);
 
 	int nVertices=4;
-	assert(vertexVectors.size() == nVertices);
+	if (vertexVectors.size()!=nVertices)
+		throw string("problem in getTetVolume");
 
 	edgeVectors[0] = vertexVectors[1]-vertexVectors[0];
 	edgeVectors[1] = vertexVectors[2]-vertexVectors[0];
@@ -1176,7 +1198,8 @@ double Mesh::getTetVolume(vector<vect3d> vertexVectors) {
 vector<double> Mesh::getTetSubVolumes(vect3d point,
 		vector<vect3d> vertexVectors) {
 	int nVertices=4;
-	assert(vertexVectors.size()==nVertices);
+	if (vertexVectors.size()!=nVertices)
+		throw string("problem in getTetSubVolumes");
 	vector<double> subVolumes(nVertices);
 	for (int i=0; i<vertexVectors.size(); i++) {
 		vect3d tmpVertex = vertexVectors[i];
@@ -1218,7 +1241,8 @@ Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(vect3d position,
 Eigen::Vector4d Mesh::evaluateLinearBasisFunctions(vect3d position,
 		vector<vect3d> vVs) {
 	// TODO: should replace 4 here with unified number across functions
-	assert(vVs.size()==4);
+	if (vVs.size()!=4)
+		throw string("problem in evaluateLinearBasisFunctions");
 	Eigen::Vector4d basisFunctions;
 	Eigen::Matrix4d coordsToBasis = this->calculatePositionToBasesMatrix(vVs);
 	Eigen::Vector4d paddedPosition(1.,position[0],position[1],position[2]);
@@ -1265,7 +1289,8 @@ void Mesh::evaluateLinearBasisFunctionDerivatives(const vect3d &position,
 
 Eigen::Matrix4d Mesh::calculatePositionToBasesMatrix(vector<vect3d> vVs) {
 	// TODO: should replace 4 here with unified number across functions
-	assert(vVs.size()==4);
+	if (vVs.size()!=4)
+		throw string("problem in calculatePositionToBasesMatrix");
 	Eigen::Matrix4d basisToCoords;
 	basisToCoords <<
 			1.,			1.,			1.,			1.,
@@ -1278,7 +1303,8 @@ Eigen::Matrix4d Mesh::calculatePositionToBasesMatrix(vector<vect3d> vVs) {
 
 Eigen::VectorXd Mesh::evaluateQuadraticErrorBases(
 		Eigen::Vector4d linearBasisFunctions) {
-	assert(linearBasisFunctions.rows()==4);
+	if (linearBasisFunctions.rows()!=4)
+		throw string("problem in evaluateQuadraticErrorBases");
 	Eigen::VectorXd quadraticBasisFunctions(6);
 	this->evaluateQuadraticErrorBases(linearBasisFunctions,
 			&quadraticBasisFunctions);
@@ -1288,7 +1314,8 @@ Eigen::VectorXd Mesh::evaluateQuadraticErrorBases(
 void Mesh::evaluateQuadraticErrorBases(
 		Eigen::Vector4d linearBasisFunctions,
 		Eigen::VectorXd *quadraticBasisFunctions) {
-	assert(linearBasisFunctions.rows()==4);
+	if (linearBasisFunctions.rows()!=4)
+		throw string("problem in evaluateQuadraticErrorBases");
 	(*quadraticBasisFunctions)[0] =
 			linearBasisFunctions[0]*linearBasisFunctions[1];
 	(*quadraticBasisFunctions)[1] =

@@ -9,6 +9,7 @@
 #define VELOCITYANDACCELERATION_H_
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 //#include <boost/array.hpp>
 //#include "iMesh.h"
 //#include "Eigen/Dense"
@@ -50,7 +51,7 @@ public:
 				// TODO: come up with better handling of this
 				currentElement = initialNode;
 			} else {
-				throw;
+				throw string("numberOfRegionsWithinTolerance>1");
 			}
 		}
 //		int dimension=potentialField.mesh_ptr->getEntityDimension(currentElement);

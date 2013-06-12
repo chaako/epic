@@ -9,6 +9,7 @@
 #define ORBIT_H_
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 
 class ElectricField;
 

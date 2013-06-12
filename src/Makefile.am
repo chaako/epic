@@ -5,7 +5,8 @@
 bin_PROGRAMS=epic mesher solutionTransfer
 CLASS_FILES = custom_mImportVTK.cc Mesh.cpp Orbit.cpp Field.cpp IntegrandContainer.cpp \
               intersect_RayTriangle.cpp distributionFunctionFromBoundary.cpp Solver.cpp \
-              MinimumBasisFunction.cpp
+              MinimumBasisFunction.cpp variables.cpp SpatialDependence.cpp \
+              DistributionFunction.cpp functions.cpp
 #              VelocityAndAcceleration.cpp
 epic_SOURCES = epic.cpp $(CLASS_FILES)
 epic_CFLAGS = $(AM_CFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \
@@ -22,7 +23,7 @@ epic_CXXFLAGS += -I ../superlu/SuperLU_DIST_3.2/SRC/
 else
 epic_CXXFLAGS += -I ../superlu/SuperLU_4.3/SRC/
 endif
-epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lMeshAdapt -lrt \
+epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lMeshAdapt -lrt -lboost_program_options\
 			-L @abs_top_builddir@/lib/ -L @abs_top_builddir@/lib/vtk-5.10/ \
 			-lLSDyna -lMapReduceMPI -lvtkalglib -lvtkCharts -lvtkCommon -lvtkDICOMParser \
 			-lvtkexoIIc -lvtkexpat -lvtkFiltering -lvtkfreetype -lvtkftgl -lvtkGenericFiltering \

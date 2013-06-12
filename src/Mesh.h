@@ -15,6 +15,7 @@
 #endif
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 
 //#include <map>
 //#include <vector>
@@ -44,6 +45,7 @@ public:
 	void destroyTag(string tagName);
 	void convertVectorTagToComponentTags(string vectorTagName);
 	void convertComponentTagsToVectorTag(string vectorTagName);
+	// TODO: write function for rotating mesh
 
 	void classifyBoundariesForMeshRefinement(Field<int> faceTypeField);
 	vect3d getCoordinates(entHandle node, bool useMap=false);
@@ -58,6 +60,7 @@ public:
 			int dimension);
 	vector<int> getAdjacentEntitiesIndices(int entityIndex, int dimension,
 			int adjacentsDimension);
+	bool vertexLessThan(entHandle a, entHandle b);
 	vector<entHandle> getEntities(int dimension);
 	entHandle getRandomVertex();
 	vector<entHandle> getFaces(entHandle element);

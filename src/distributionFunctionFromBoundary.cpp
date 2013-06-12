@@ -2,7 +2,8 @@
 
 void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 		void *integrandContainer_ptr, unsigned fdim, double *fval) {
-	assert(ndim==3);
+	if (ndim!=3)
+		throw string("only handle ndim=3 in distributionFunctionFromBoundary");
 //	assert(fdim==1);
 	Mesh *mesh_ptr = ((IntegrandContainer*)integrandContainer_ptr)->mesh_ptr;
 	entHandle node =
@@ -17,6 +18,8 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 			((IntegrandContainer*)integrandContainer_ptr)->vertexTypeField_ptr;
 	ShortestEdgeField *shortestEdgeField_ptr =
 			((IntegrandContainer*)integrandContainer_ptr)->shortestEdgeField_ptr;
+	DistributionFunction *distributionFunction_ptr =
+			((IntegrandContainer*)integrandContainer_ptr)->distributionFunction_ptr;
 	double charge = ((IntegrandContainer*)integrandContainer_ptr)->charge;
 	FILE *orbitOutFile = ((IntegrandContainer*)integrandContainer_ptr)->orbitOutFile;
 	vect3d velocity;
@@ -52,23 +55,45 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 //	orbit.integrate(*potentialField_ptr, *electricField_ptr,
 //			*faceTypeField_ptr, *vertexTypeField_ptr,
 //			*shortestEdgeField_ptr, orbitOutFile, extern_orbitNumber);
-	orbit.integrate(*potentialField_ptr, *electricField_ptr,
-			*faceTypeField_ptr, *vertexTypeField_ptr,
-			*shortestEdgeField_ptr, NULL, extern_orbitNumber);
+	try {
+		orbit.integrate(*potentialField_ptr, *electricField_ptr,
+				*faceTypeField_ptr, *vertexTypeField_ptr,
+				*shortestEdgeField_ptr, NULL, extern_orbitNumber);
+	} catch (string& message) {
+		cout << "Caught in distributionFunctionFromBoundary():" << message << endl;
+	} catch (int code) {
+		cout << "Caught in distributionFunctionFromBoundary(): " << code << endl;
+	}
 //	// TODO: more transparent handling of external ExB drift?
 //	vect3d finalVelocity = orbit.finalVelocity - VEXB;
 	vect3d finalVelocity = orbit.finalVelocity;
+	vect3d finalPosition = orbit.finalPosition;
 	fval[0] = 0.;
 	// TODO: shouldn't hard-code domain here
 	if ( orbit.finalFaceType==5
 			&& !orbit.negativeEnergy) {
-		fval[0] = 1./pow(2.*M_PI,3./2.);
-		fval[0] *= exp(-(pow(finalVelocity.norm(),2.)-pow(v,2.))/2.);
+//		fval[0] = 1./pow(2.*M_PI,3./2.);
+//		fval[0] *= exp(-pow(finalVelocity.norm(),2.)/2.);
+		// TODO: this breaks if B=0
+		vect3d magneticAxis = extern_B/extern_B.norm();
+		// TODO: check sign of Larmor vector subtraction
+		vect3d guidingCenter = finalPosition +
+				magneticAxis.cross(finalVelocity)/extern_B.norm();
+		double distributionFunction =
+				distributionFunction_ptr->operator()(guidingCenter, finalVelocity);
+		fval[0] = distributionFunction;
+//		// TODO: debugging
+//		cout << fval[0] << " " << guidingCenter.transpose() << " " <<
+//				finalVelocity.transpose() << endl;
+		// TODO: adjust change of variables to local reference distribution?
+		// TODO: exp(v^2/) could be very large, multiplied by very small distribution function...inaccurate?
+		fval[0] *= exp(pow(v,2.)/2.);
 		fval[0] *= M_PI;
 		fval[0] *= (1.+x[0])*sqrt(-log((1.+x[0])/2.));
-		// TODO: if fix outer potential this may not give equal ion and electron dens.
-		if (charge*orbit.finalPotential>0.)
-			fval[0] *= exp(-charge*orbit.finalPotential);
+//		// TODO: if fix outer potential this may not give equal ion and electron dens.
+//		// TODO: this doesn't work when including external E in potential
+//		if (charge*orbit.finalPotential>0.)
+//			fval[0] *= exp(-charge*orbit.finalPotential);
 	} else if (orbit.finalPosition.norm()>1.) {
 //		std::cout << "orbit terminated with final position in domain:" <<
 //				std::endl << orbit.finalPosition.transpose() << " r=" <<
@@ -77,18 +102,29 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 //		std::cout << ".";
 	}
 	// TODO: don't hard-code moment order?
+	// -VEXB since orbit.initialVelocity=-velocity
+	vect3d driftingVelocity = velocity - extern_VEXB;
+	// Since density isn't available yet, divide by it later
 	if (fdim>=4) {
-		for (int i=0; i<4; i++)
-			fval[i+1] = fval[0]*finalVelocity[i];
+		for (int i=0; i<NDIM; i++)
+			fval[i+1] = fval[0]*driftingVelocity[i];
 	}
+	// Since average velocity isn't available yet, subtract off KE from T later
 	if (fdim>=5)
-		fval[4] = fval[0]*0.5*pow(finalVelocity.norm(),2.);
+		fval[4] = fval[0]*pow(driftingVelocity.norm(),2.)/3.;
 	// TODO: better way than integrating orbit again for output?
 	if (orbitOutFile) {
-		orbit.integrate(*potentialField_ptr, *electricField_ptr,
-				*faceTypeField_ptr, *vertexTypeField_ptr,
-//				*shortestEdgeField_ptr, orbitOutFile, *fval);
-				*shortestEdgeField_ptr, orbitOutFile, exp(-pow(finalVelocity.norm(),2.)/2.));
+		Orbit orbitForOutput(mesh_ptr,node,velocity,charge);
+		try {
+			orbitForOutput.integrate(*potentialField_ptr, *electricField_ptr,
+					*faceTypeField_ptr, *vertexTypeField_ptr,
+					*shortestEdgeField_ptr, orbitOutFile, fval[0]);
+//					*shortestEdgeField_ptr, orbitOutFile, exp(-pow(finalVelocity.norm(),2.)/2.));
+		} catch (string& message) {
+			cout << "Caught in distributionFunctionFromBoundary():" << message << endl;
+		} catch (int code) {
+			cout << "Caught in distributionFunctionFromBoundary(): " << code << endl;
+		}
 	}
 	if (((IntegrandContainer*)integrandContainer_ptr)->outFile) {
 		fprintf(((IntegrandContainer*)integrandContainer_ptr)->outFile,
@@ -99,7 +135,11 @@ void distributionFunctionFromBoundary(unsigned ndim, const double *x,
 
 int distributionFunctionFromBoundaryCuba(const int *ndim, const double x[],
   const int *ncomp, double f[], void *integrandContainer_ptr) {
-	assert(*ndim==3);
+	// TODO: Can get weight and iteration number from Vegas as two additional
+	//       optional arguments, which would allow storing dist. func. for
+	//       computation of other moments after density integral is complete.
+	if (*ndim!=3)
+		throw string("only handle ndim=3 in distributionFunctionFromBoundaryCuba");
 //	assert(*ncomp==1);
 	double y[3];
 	for (int i=0; i<*ndim; i++) {

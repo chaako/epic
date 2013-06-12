@@ -19,6 +19,7 @@ const double VOLUME_TOLERANCE=0.;
 const double LENGTH_TOLERANCE=1.e-10;
 const double DELTA_LENGTH=1.e-5;
 //const double DELTA_LENGTH=1.e-5;
+const double NODE_DISTANCE_THRESHOLD=1.e-3;
 const double SMALL_VELOCITY=1.e-1;
 const double SMALL_TIME=1.e-8;
 
@@ -31,11 +32,13 @@ const int N_BASES_CUBIC=22;
 enum {
 	OUTSIDE_DOMAIN,
 	FAILURE_GETTING_FIELD,
+	FAILURE_GETTING_TAG,
 };
 
 #include <map>
 #include <iostream>
 #include <iomanip>
+#include <iterator>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -46,10 +49,12 @@ enum {
 #include <vector>
 #include <boost/array.hpp>
 #include <boost/ref.hpp>
+#include <boost/shared_ptr.hpp>
 #include <time.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp> // For sleep function
 #include <boost/numeric/odeint.hpp> // Not true boost library
+//#include <boost/numeric/quadrature/adaptive.hpp> // Not true boost library
 #include <boost/math/tools/roots.hpp>
 #include <set>
 //#include <type_traits> // Requires -std=c++0x compiler flag
@@ -58,6 +63,9 @@ enum {
 #include <time.h>
 //#include <boost/timer/timer.hpp>
 #include <algorithm>
+#include <boost/program_options.hpp>
+#include <boost/function.hpp>
+#include <boost/bind.hpp>
 
 #include "iMesh.h"
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
@@ -97,12 +105,5 @@ const int INTERPOLATIONORDER=1;
 // Matrix gives better pretty printing than Vector3d in gdb
 typedef Eigen::Matrix<double,NDIM,1> vect3d;
 typedef iBase_EntityHandle entHandle;
-
-const vect3d B(0.,0.,1.);
-//const vect3d E(0.,0.,0.);
-//const vect3d B(0.,0.,10.);
-const vect3d E(-1.,0.,0.);
-// TODO: sort out units of E and B (electrons vs. ions etc.)
-const vect3d VEXB = E.cross(B)/pow(B.norm(),2.);
 
 #endif /* TYPES_H_ */

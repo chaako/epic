@@ -25,7 +25,9 @@ Orbit::Orbit(Mesh *inputMesh_ptr, entHandle inputNode,
 			// TODO: change this to be flag not to pursue orbit (what about reflecting electrons?)
 			currentElement = inputNode;
 		} else {
-			throw;
+			currentElement = inputNode;
+			// TODO: should catch throws by constructor
+//			throw string("numberOfRegionsWithinTolerance>1");
 		}
 	}
 //	// TODO: remove this
@@ -544,7 +546,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	double dt=min(0.02,0.02/initialVelocity.norm()), tMax=100;
 //	vect3d currentPosition = initialPosition;
 	// TODO: should be consistent about starting position
-	vect3d currentPosition = initialPosition + (initialVelocity+VEXB)*SMALL_TIME;
+	vect3d currentPosition = initialPosition + (initialVelocity+extern_VEXB)*SMALL_TIME;
 	vect3d currentVelocity = initialVelocity;
 	// TODO: shouldn't hard-code quasi-neutral operation
 	double phiSurface = -4;
@@ -603,9 +605,9 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	// TODO: do this more cleanly
 	if (foundTet) {
 	initialPotential = velocityAndAcceleration.currentPotential;
-	double driftPotential=E.dot(initialPosition);
+	double driftPotential=extern_E.dot(initialPosition);
 	initialPotential += driftPotential;
-	initialEnergy = 0.5*pow((initialVelocity+VEXB).norm(),2.)
+	initialEnergy = 0.5*pow((initialVelocity+extern_VEXB).norm(),2.)
 //	initialEnergy = 0.5*pow(initialVelocity.norm(),2.)
 		+ charge*initialPotential;
 	double currentPotential=initialPotential;
@@ -624,7 +626,7 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 	// TODO: set max number of steps more cleverly (since also need to limit by accel)
 	for (int iT=0; iT<numberOfSteps  && !negativeEnergy; iT++) {
 		dt = shortestEdgeField[velocityAndAcceleration.currentRegionIndex]
-				/(fabs(currentVelocity[2])+VEXB.norm()+SMALL_VELOCITY)/
+				/(fabs(currentVelocity[2])+extern_VEXB.norm()+SMALL_VELOCITY)/
 //				/(fabs(currentVelocity[2])+DELTA_LENGTH)/
 				numberOfStepsPerRegion;
 //				/currentVelocity.norm()/5.;
@@ -710,7 +712,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 
 	    dt = additionalDtToExitRegion;
 		t+=dt;
-		assert(!isnan(currentPosition.norm()));
+		if (isnan(currentPosition.norm()))
+				throw string("currentPosition is NaN in Orbit.cpp");
 		vect3d previousPosition = currentPosition;
 		vect3d previousVelocity = currentVelocity;
 		entHandle previousElement = velocityAndAcceleration.currentElement;
@@ -753,10 +756,8 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				currentPosition = positionAndVelocity[0];
 				currentVelocity = positionAndVelocity[1];
 				currentElement = velocityAndAcceleration.currentElement;
-				// TODO: this isn't elegant, but under this scheme should always be in new tet
-				assert(currentElement!=previousElement);
-//				if (currentElement==previousElement)
-//					cout << "Did not step to new element...something is wrong.";
+				if (currentElement==previousElement)
+					throw string("Did not step to new element...something is wrong.");
 				// TODO: change this to use regionIndex
 				foundTet = mesh_ptr->checkIfInTet(currentPosition, currentElement);
 				if (!foundTet) {
@@ -770,10 +771,10 @@ void Orbit::integrate(PotentialField& potentialField, ElectricField& electricFie
 				// TODO: this doesn't account for final step, but as long as boundary
 				//       is at potential zero it shouldn't matter for orbits with non-zero weight
 				//       (actually, am using finalPotential later)
-				driftPotential = E.dot(currentPosition);
+				driftPotential = extern_E.dot(currentPosition);
 				currentPotential = velocityAndAcceleration.currentPotential;
 				currentPotential += driftPotential;
-				currentEnergy = 0.5*pow((currentVelocity+VEXB).norm(),2.)
+				currentEnergy = 0.5*pow((currentVelocity+extern_VEXB).norm(),2.)
 //				currentEnergy = 0.5*pow(currentVelocity.norm(),2.)
 //					+ charge*velocityAndAcceleration.currentPotential;
 					+ charge*(currentPotential);

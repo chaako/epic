@@ -13,6 +13,7 @@
 #endif
 
 #include "typesAndDefinitions.h"
+#include "variables.h"
 //#include <stdio.h>
 ////#include <type_traits> // Requires -std=c++0x compiler flag
 //#include <boost/type_traits.hpp>
@@ -97,12 +98,13 @@ public:
 class ElectricField : public Field<vect3d> {
 public:
 	ElectricField(Mesh *inputMesh_ptr, string inputName);
-	ElectricField(Mesh *inputMesh_ptr, string inputName, CodeField vertexType);
+	ElectricField(Mesh *inputMesh_ptr, string inputName,
+			CodeField vertexType, double debyeLength, bool doLuDecomposition);
 	virtual ~ElectricField() {}
 
 	void calcField(PotentialField potentialField);
 	void calcField(PotentialField *potentialField_ptr, CodeField vertexType,
-			DensityField ionDensity);
+			DensityField ionDensity, double debyeLength);
 	void calcField_Gatsonis(PotentialField potentialField);
 
 	Solver solver;
@@ -120,24 +122,32 @@ public:
 class DensityField : public Field<double> {
 	// Charge density
 public:
-	DensityField(Mesh *inputMesh_ptr, string inputName);
+	DensityField(Mesh *inputMesh_ptr, string inputName,
+			Field<vect3d> *inputAverageVelocity_ptr=NULL,
+			Field<double> *inputTemperature_ptr=NULL);
 	virtual ~DensityField() {}
 
 	void calcField();
-	void calcField(CodeField vertexType,
-			PotentialField potential, double charge);
+	void calcField(CodeField& vertexType,
+			PotentialField& potential, DensityField& referenceDensity,
+			SpatialDependence& referenceTemperature, double charge);
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField& electricField,
-			PotentialField potentialField,
+			PotentialField& potentialField, DensityField& referenceDensity,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile=NULL);
-	void poissonCubeTest();
+	// TODO: make reference density its own class?
+	void calcField(CodeField& vertexType,
+			DistributionFunction& distributionFunction, double charge);
+	void poissonCubeTest(double debyeLength);
 	double calculateDensity(int node, ElectricField& electricField,
-			PotentialField potentialField,
+			PotentialField& potentialField, DensityField& referenceDensity,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
-			double potentialPerturbation, double *error);
+			double potentialPerturbation, double *error,
+			vect3d *averageVelocity, vect3d *averageVelocityError,
+			double *temperature, double *temperatureError);
 #ifdef HAVE_MPI
 	void requestDensityFromSlaves(ElectricField& electricField,
 			PotentialField potentialField,
@@ -146,12 +156,17 @@ public:
 			double potentialPerturbation, FILE *outFile);
 	MPI::Status receiveDensity(FILE *outFile);
 	void processDensityRequests(ElectricField& electricField,
-			PotentialField potentialField,
+			PotentialField& potentialField, DensityField& referenceDensity,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation);
 #endif
 
+	void setDistributionFunction(DistributionFunction& distributionFunction);
+
+	Field<vect3d> *averageVelocity_ptr;
+	Field<double> *temperature_ptr;
+	DistributionFunction *distributionFunction_ptr;
 };
 
 class PotentialField : public Field<double> {
@@ -160,11 +175,14 @@ public:
 	PotentialField(PotentialField potential, string inputName);
 	virtual ~PotentialField() {}
 
-	void calcField(CodeField vertexType);
+	void calcField(CodeField vertexType, double debyeLength,
+			double boundaryPotential, double surfacePotential,
+			double sheathPotential);
 	void calcField(DensityField ionDensity, DensityField electronDensity,
 			CodeField vertexType, FILE *outFile);
 	void calcField(DensityField ionDensity,
-			CodeField vertexType, FILE *outFile);
+			CodeField vertexType, FILE *outFile, double boundaryPotential,
+			double sheathPotential, bool fixSheathPotential);
 	void calcField(DensityField ionDensity,
 			DensityField ionDensityPP, DensityField ionDensityNP,
 			DensityField electronDensity,
@@ -174,6 +192,11 @@ public:
 			double negativePotentialPerturbation,
 			FILE *outFile);
 
+	void setReferenceElectronDensity(DensityField& referenceElectronDensity);
+	void setReferenceElectronTemperature(SpatialDependence& referenceElectronTemperature);
+
+	DensityField *referenceElectronDensity_ptr;
+	SpatialDependence *referenceElectronTemperature_ptr;
 };
 
 class ShortestEdgeField : public Field<double> {
@@ -354,7 +377,8 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 				mesh_ptr->evaluateCubicErrorBases(linearBasisFunctions);
 	}
 	field *= 0.;
-	assert(currentFields.size()==linearBasisFunctions.rows());
+	if (currentFields.size()!=linearBasisFunctions.rows())
+		throw string("problem in getField");
 	for (int i=0;i<linearBasisFunctions.rows();i++) {
 		field += linearBasisFunctions[i]*currentFields[i];
 	}
@@ -364,7 +388,8 @@ T Field<T>::getField(vect3d position, entHandle *entity,
 //		cout << errorBases.rows() << " " << errorCoefficients.rows() <<
 //				" " << errorBases.cols() << " " << errorCoefficients.cols() <<
 //				endl;
-		assert(errorBases.rows()==errorCoefficients.rows());
+		if (errorBases.rows()!=errorCoefficients.rows())
+			throw string("problem in getField()");
 //		cout << errorCoefficients.transpose() << endl;
 //		cout << errorBases.transpose() << endl << endl;
 //		cout << field << endl;
@@ -386,7 +411,8 @@ void Field<T>::evalField(T *fieldValue,
 	// TODO: should evalField just be getField?
 	// TODO: too much code-duplication with evalFieldAndDeriv
 	// Can only do 1st order interpolation of non-doubles
-	assert(interpolationOrder==1);
+	if (interpolationOrder!=1)
+		throw string("can only do first order interpolation of non-doubles");
 	if (position==currentPosition &&
 			interpolationOrder==currentInterpolationOrder) {
 		*fieldValue = currentFieldValue;
@@ -450,7 +476,8 @@ void Field<T>::evalField(T *fieldValue,
 		*fieldValue = T();
 		// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
 		*fieldValue *= 0.;
-		assert(currentFields.size()==linearBasisFunctions.rows());
+		if (currentFields.size()!=linearBasisFunctions.rows())
+			throw string("problem in evalField");
 		for (int i=0;i<linearBasisFunctions.rows();i++) {
 			*fieldValue += linearBasisFunctions[i]*currentFields[i];
 		}
@@ -538,20 +565,23 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 		*fieldValue = T();
 		// TODO: Problem here if *fieldValue=NaN since NaN*0=NaN
 		*fieldValue *= 0.;
-		assert(currentFields.size()==linearBasisFunctions.rows());
+		if (currentFields.size()!=linearBasisFunctions.rows())
+			throw string("problem in evalFieldAndDeriv");
 		for (int i=0;i<linearBasisFunctions.rows();i++) {
 			*fieldValue += linearBasisFunctions[i]*currentFields[i];
 		}
 		if (interpolationOrder>1) {
 			this->getErrorCoefficients(currentRegionIndex,
 					interpolationOrder, &errorCoefficients);
-			assert(errorBases.rows()==errorCoefficients.rows());
+			if (errorBases.rows()!=errorCoefficients.rows())
+				throw string("problem in evelFieldAndDeriv()");
 			*fieldValue += errorCoefficients.dot(errorBases);
 		}
 		*entityIndex = currentRegionIndex;
 
 		// TODO: remove this check and cast (just for debugging)
-		assert(!isnan((double)*fieldValue));
+		if (isnan((double)*fieldValue))
+			throw string("NaN in evalFieldAndDeriv");
 
 		for (int j=0; j<NDIM; j++) {
 			vect3d perturbedPosition = position +
@@ -681,11 +711,11 @@ Eigen::VectorXd Field<T>::getErrorCoefficients(
 					errorBases = mesh_ptr->evaluateCubicErrorBases(
 							linearBasisFunctions);
 				} else {
-					// TODO: specify exception
-					throw;
+					throw string("problem in getErrorCoefficients");
 				}
 				// TODO: could probably use block operations here
-				assert(errorBases.rows()==evaluatedErrorBases.cols());
+				if (errorBases.rows()!=evaluatedErrorBases.cols())
+					throw string("problem in getErrorCoefficients");
 				for (int j=0;j<errorBases.rows();j++) {
 					evaluatedErrorBases(i,j) = errorBases[j];
 				}
@@ -693,8 +723,10 @@ Eigen::VectorXd Field<T>::getErrorCoefficients(
 				T interpolatedField;
 				interpolatedField *= 0.;
 				// TODO: could get fields even if element!=currentElement
-				assert(element==currentElement);
-				assert(currentFields.size()==linearBasisFunctions.rows());
+				if (element!=currentElement)
+					throw string("problem in getErrorCoefficients");
+				if (currentFields.size()!=linearBasisFunctions.rows())
+					throw string("problem in getErrorCoefficients");
 				// TODO: could make this loop a function
 				for (int j=0;j<linearBasisFunctions.rows();j++) {
 					interpolatedField +=
@@ -759,7 +791,8 @@ void Field<T>::getErrorCoefficients(
 			// TODO: specify exception
 			throw;
 		}
-		assert(errorCoefficients->rows()==errorBasesSize);
+		if (errorCoefficients->rows()!=errorBasesSize)
+			throw string("problem in getErrorCoefficients");
 		// TODO: only dealing with doubles for now
 		if (boost::is_same<T,double>::value) {
 			vector<int> &surroundingVertices =
@@ -786,7 +819,8 @@ void Field<T>::getErrorCoefficients(
 					throw;
 				}
 				// TODO: could probably use block operations here
-				assert(errorBases.rows()==evaluatedErrorBases.cols());
+				if (errorBases.rows()!=evaluatedErrorBases.cols())
+					throw string("problem in getErrorCoefficients");
 				for (int j=0;j<errorBases.rows();j++) {
 					evaluatedErrorBases(i,j) = errorBases[j];
 				}
@@ -794,8 +828,10 @@ void Field<T>::getErrorCoefficients(
 				T interpolatedField;
 				interpolatedField *= 0.;
 				// TODO: could get fields even if element!=currentElement
-				assert(elementIndex==currentRegionIndex);
-				assert(currentFields.size()==linearBasisFunctions.rows());
+				if (elementIndex!=currentRegionIndex)
+					throw string("problem in getErrorCoefficients");
+				if (currentFields.size()!=linearBasisFunctions.rows())
+					throw string("problem in getErrorCoefficients");
 				// TODO: could make this loop a function
 				for (int j=0;j<linearBasisFunctions.rows();j++) {
 					interpolatedField +=
