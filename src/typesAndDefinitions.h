@@ -14,8 +14,8 @@
 
 using namespace std;
 
-//const double VOLUME_TOLERANCE=1.e-8;
-const double VOLUME_TOLERANCE=0.;
+const double VOLUME_TOLERANCE=1.e-8;
+//const double VOLUME_TOLERANCE=0.;
 const double LENGTH_TOLERANCE=1.e-10;
 const double DELTA_LENGTH=1.e-5;
 //const double DELTA_LENGTH=1.e-5;

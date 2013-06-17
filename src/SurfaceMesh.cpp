@@ -95,16 +95,16 @@ void SurfaceMesh::scaleVolumeMesh(vect3d origin, vect3d scaleFactors) {
 	}
 }
 
-void SurfaceMesh::createVolumeMesh() {
+void SurfaceMesh::createVolumeMesh(double fineness, double grading) {
 	// Generate volume mesh (based on Engrid's createvolumemesh.cpp)
 	using namespace nglib;
 	Ng_Init();
 	Ng_Meshing_Parameters mp;
-	mp.fineness = 0.0;
+	mp.fineness = fineness;
 	Ng_Mesh *ngMesh = Ng_NewMesh();
 	mp.maxh = 1000.;
 	mp.minh = 0.;
-	mp.grading = 1;
+	mp.grading = grading;
 	vector<vtkIdType> ng2eg(vtkMesh->GetNumberOfPoints()+1);
 	vector<vtkIdType> eg2ng(vtkMesh->GetNumberOfPoints());
 	{
