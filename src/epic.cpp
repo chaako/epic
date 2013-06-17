@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
 	vector<vect3d> evaluationPositions;
 	extern_evalPositions_ptr = &evaluationPositions;
 	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest, fixSheathPotential;
+	bool usePotentialFromInput;
 	int secondsToSleepForDebugAttach, numberOfIterations;
 	double debyeLength, boundaryPotential, surfacePotential, sheathPotential;
 	double densityGradient, parallelDriftGradient;
@@ -68,6 +69,8 @@ int main(int argc, char *argv[]) {
 							"potential at sheath entrance (for debyeLength=0.)")
 					("fixSheathPotential", po::value<bool>(&fixSheathPotential)->default_value(false),
 							"fix potential at sheath entrance (true/false; for debyeLength=0.)")
+					("usePotentialFromInput", po::value<bool>(&usePotentialFromInput)->default_value(false),
+							"use potential from input file (true/false)")
 					("densityGradient", po::value<double>(&densityGradient)->default_value(0.),
 							"density gradient")
 					("parallelTemperatureGradient", po::value<double>(&parallelTemperatureGradient)->default_value(0.),
@@ -254,7 +257,9 @@ int main(int argc, char *argv[]) {
 			*parallelTemperatureProfile_ptr.get(), 1.);
 
 	// TODO: add more robust detection and handling of existing fields
-	if (!mesh.vtkInputMesh && !doPoissonTest) {
+//	if (!mesh.vtkInputMesh && !doPoissonTest) {
+	// TODO: move logic for existing fields to main loop to avoid code duplication
+	if (usePotentialFromInput) {
 		if (mpiId == 0)
 			cout << endl << ".sms file loaded, so assuming existing fields" << endl;
 //		if (mpiId == 0)

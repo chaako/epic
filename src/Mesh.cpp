@@ -212,10 +212,8 @@ iBase_TagHandle Mesh::createTag(string tagName, int size, int type) {
 
 	iMesh_createTag(meshInstance, tagName.c_str(), size, type,
 			&tag, &ierr, tagName.length());
-	// TODO: include name of tag in error
-	// TODO: maybe throw in stead of using CHECK
-	CHECK("Failure creating tag");
-
+	if (ierr != iBase_SUCCESS)
+		throw string("Failure creating tag named " + tagName);
 	return tag;
 }
 
