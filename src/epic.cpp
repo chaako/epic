@@ -258,10 +258,9 @@ int main(int argc, char *argv[]) {
 
 	// TODO: add more robust detection and handling of existing fields
 //	if (!mesh.vtkInputMesh && !doPoissonTest) {
-	// TODO: move logic for existing fields to main loop to avoid code duplication
 	if (usePotentialFromInput) {
 		if (mpiId == 0)
-			cout << endl << ".sms file loaded, so assuming existing fields" << endl;
+			cout << endl << "Using potential from input file." << endl;
 //		if (mpiId == 0)
 //			cout << endl << "Calculating electric field..." << endl;
 //		eField.calcField(potential);
@@ -270,19 +269,6 @@ int main(int argc, char *argv[]) {
 //		electronDensity.calcField(eField, potential, faceType, vertexType,
 //				shortestEdge, -1., noPotentialPerturbation,
 //				density_electronsFile);
-		if (mpiId == 0)
-			cout << endl << "Calculating ion charge-density..." << endl;
-		ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
-				shortestEdge, 1., noPotentialPerturbation,
-				densityFile);
-		if (stopAfterEvalPos) {
-			// TODO: shouldn't return before closing files etc...
-			cout << "Not in main iteration loop...improve handling of existing fields." << endl;
-#ifdef HAVE_MPI
-			MPI::Finalize();
-#endif
-			return 0;
-		}
 	} else {
 		if (mpiId == 0)
 			cout << endl << "Setting potential..." << endl;
@@ -297,8 +283,29 @@ int main(int argc, char *argv[]) {
 		if (mpiId == 0)
 			cout << endl << "Calculating electric field..." << endl;
 		eField.calcField(&potential, vertexType, ionDensity, debyeLength);
-	}
+		if (mpiId == 0){
+			int i = 0;
+			stringstream iterMeshFileName;
+			int periodLocation = outputFile.rfind(".");
+			iterMeshFileName << outputFile.substr(0,periodLocation)
+					<< setfill('0') << setw(2) << i << outputFile.substr(periodLocation);
+//			// TODO: debugging
+//			cout << iterMeshFileName.str() << endl;
+			mesh.save(iterMeshFileName.str());
+			// mesh.save() destroys vector tags, so update
+			// TODO: do this automatically?
+			eField.updateTagHandle();
+			ionVelocity.updateTagHandle();
+		}
 
+		if (doPoissonTest) {
+#ifdef HAVE_MPI
+			MPI::Finalize();
+#endif
+			return(0);
+		}
+
+	}
 
 //	// Integrate a circular test orbit (need to deactivate trapped orbit rejection)
 //	{
@@ -320,59 +327,9 @@ int main(int argc, char *argv[]) {
 //		return 0;
 //	}
 
-	if (mpiId == 0){
-		int i = 0;
-		stringstream iterMeshFileName;
-		int periodLocation = outputFile.rfind(".");
-		iterMeshFileName << outputFile.substr(0,periodLocation)
-				<< setfill('0') << setw(2) << i << outputFile.substr(periodLocation);
-//		// TODO: debugging
-//		cout << iterMeshFileName.str() << endl;
-		mesh.save(iterMeshFileName.str());
-		// mesh.save() destroys vector tags, so update
-		// TODO: do this automatically?
-		eField.updateTagHandle();
-		ionVelocity.updateTagHandle();
-	}
-
-	// Exit for Poisson test
-	if (doPoissonTest) {
-#ifdef HAVE_MPI
-		MPI::Finalize();
-#endif
-		return(0);
-	}
-
-	for (int i=1; i<numberOfIterations; i++) {
+	for (int i=0; i<numberOfIterations; i++) {
 		if (mpiId == 0)
 			cout << endl  << endl << "ITERATION " << i << endl;
-//		if (mpiId == 0)
-//			cout << endl << "Saving current potential..." << endl;
-//		stringstream potentialCopyName;
-//		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
-//		PotentialField potentialCopy(potential,potentialCopyName.str());
-		if (debyeLength==0.) {
-			if (mpiId == 0)
-				cout << endl << "Calculating updated potential..." << endl;
-			potential.calcField(ionDensity, vertexType, potentialFile, boundaryPotential,
-					sheathPotential, fixSheathPotential);
-//			potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
-//			potential.calcField(ionDensity,
-//					ionDensityPositivePerturbation, ionDensityNegativePerturbation,
-//					electronDensity,
-//					electronDensityPositivePerturbation, electronDensityNegativePerturbation,
-//					vertexType, positivePotentialPerturbation,
-//					negativePotentialPerturbation, potentialFile);
-			if (mpiId == 0)
-				cout << endl << "Calculating electric field from potential..." << endl;
-//			// TODO: parallelize FEM eField-from-potential solve
-//			eField.calcField(potential);
-			eField.calcField_Gatsonis(potential);
-		} else {
-			if (mpiId == 0)
-				cout << endl << "Calculating updated potential and electric field..." << endl;
-			eField.calcField(&potential, vertexType, ionDensity, debyeLength);
-		}
 //		if (mpiId == 0)
 //			cout << endl << "Calculating electron density..." << endl;
 //		electronDensity.calcField(eField, potential, faceType, vertexType,
@@ -395,6 +352,14 @@ int main(int argc, char *argv[]) {
 		ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
 				shortestEdge, 1., noPotentialPerturbation,
 				densityFile);
+		if (stopAfterEvalPos) {
+			// TODO: shouldn't return before closing files etc...
+			cout << "Not in main iteration loop...improve handling of existing fields." << endl;
+#ifdef HAVE_MPI
+			MPI::Finalize();
+#endif
+			return 0;
+		}
 //		if (mpiId == 0)
 //			cout << endl << "Calculating PP ion charge-density..." << endl;
 //		ionDensityPositivePerturbation.calcField(eField, potential,
@@ -422,6 +387,33 @@ int main(int argc, char *argv[]) {
 			// TODO: do this automatically?
 			eField.updateTagHandle();
 			ionVelocity.updateTagHandle();
+		}
+//		if (mpiId == 0)
+//			cout << endl << "Saving current potential..." << endl;
+//		stringstream potentialCopyName;
+//		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
+//		PotentialField potentialCopy(potential,potentialCopyName.str());
+		if (debyeLength==0.) {
+			if (mpiId == 0)
+				cout << endl << "Calculating updated potential..." << endl;
+			potential.calcField(ionDensity, vertexType, potentialFile, boundaryPotential,
+					sheathPotential, fixSheathPotential);
+//			potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
+//			potential.calcField(ionDensity,
+//					ionDensityPositivePerturbation, ionDensityNegativePerturbation,
+//					electronDensity,
+//					electronDensityPositivePerturbation, electronDensityNegativePerturbation,
+//					vertexType, positivePotentialPerturbation,
+//					negativePotentialPerturbation, potentialFile);
+			if (mpiId == 0)
+				cout << endl << "Calculating electric field from potential..." << endl;
+//			// TODO: parallelize FEM eField-from-potential solve
+//			eField.calcField(potential);
+			eField.calcField_Gatsonis(potential);
+		} else {
+			if (mpiId == 0)
+				cout << endl << "Calculating updated potential and electric field..." << endl;
+			eField.calcField(&potential, vertexType, ionDensity, debyeLength);
 		}
 	}
 
