@@ -12,7 +12,7 @@ int setBSizeField(pMesh mesh, pSField field, void *)
 	pVertex vt;
 	double h[3], dirs[3][3], xyz[3], norm;
 	VIter vit=M_vertexIter(mesh);
-	double scaleFactor=1.0;
+	double scaleFactor=0.5;
 	while( vt=VIter_next(vit) ) {
 		V_coord(vt,xyz);
 		h[0] = 1.*scaleFactor;
@@ -48,8 +48,11 @@ int setBSizeField(pMesh mesh, pSField field, void *)
 		vect3d perpY=rHat.cross(vect3d::UnitY());
 		vect3d perpZ=rHat.cross(vect3d::UnitZ());
 //		h[0] *= pow(coords.norm(),2.)/10.;
+		double transitionRadius=1.5;
+		double wakeScaleFactor=0.5;
 		double radialScaleLength =
-				min(exp((coords.norm()-1.5)/0.2)/4.,coords.norm()/4.);
+				min(exp((coords.norm()-transitionRadius)/0.2)/4./scaleFactor,
+						coords.norm()/transitionRadius*wakeScaleFactor);
 //		double radialScaleLength=0.1;
 
 		vect3d perp1, perp2;
@@ -66,21 +69,36 @@ int setBSizeField(pMesh mesh, pSField field, void *)
 
 //		double t=1./pow(coords.norm(),2.);
 		double t;
-		if (coords.norm()>2.) {
+		if (coords.norm()>transitionRadius) {
 			t=0.;
 		} else {
 			t=1.;
 		}
-		vect3d scaleLengths(0.5,0.5,5.);
+		vect3d scaleLengths(1.,1.,20.);
+		double drift = 0.1;
+		vect3d wakeDirection(0.,drift,1.);
+		if (coords[2]<0)
+			wakeDirection[2] *= -1.;
+		wakeDirection /= wakeDirection.norm();
+		vect3d wakeCenter = coords.dot(wakeDirection)*wakeDirection;
+		double distanceFromCenterOfWake = (coords-wakeCenter).norm();
+		if (distanceFromCenterOfWake<transitionRadius)
+			scaleLengths *= wakeScaleFactor;
+		vect3d tiltedY = wakeDirection.cross(vect3d::UnitX());
+//		if (coords[2]<0)
+//			tiltedY *= -1.;
 		scaleLengths[0] = t*radialScaleLength + (1.-t)*scaleLengths[0];
 		scaleLengths[1] = t + (1.-t)*scaleLengths[1];
 		scaleLengths[2] = t + (1.-t)*scaleLengths[2];
 		scaleLengths *= scaleFactor;
 
 		// TODO: be more clever about which vectors to combine
+//		vect3d d0 = t*rHat + (1.-t)*vect3d::UnitX();
+//		vect3d d1 = t*perp1 + (1.-t)*vect3d::UnitY();
+//		vect3d d2 = t*perp2 + (1.-t)*vect3d::UnitZ();
 		vect3d d0 = t*rHat + (1.-t)*vect3d::UnitX();
-		vect3d d1 = t*perp1 + (1.-t)*vect3d::UnitY();
-		vect3d d2 = t*perp2 + (1.-t)*vect3d::UnitZ();
+		vect3d d1 = t*perp1 + (1.-t)*tiltedY;
+		vect3d d2 = t*perp2 + (1.-t)*wakeDirection;
 		d0 /= d0.norm();
 		d1 /= d1.norm();
 		d2 /= d2.norm();
@@ -183,7 +201,7 @@ int main(int argc, char *argv[]) {
 //		vect3d translation(-2.,0.,0.);
 		// TODO: don't hard code cell_codes
 		surfaceMesh.transformSurface(5, origin, vect3d::UnitY(),
-				noRotation, vect3d(0.5,1.,4.), vect3d(0.,2.,0.));
+				noRotation, vect3d(0.4,0.6,5.), vect3d(0.,2.,0.));
 		surfaceMesh.transformSurface(4, origin, vect3d::UnitY(),
 				noRotation, scaleFactors, noTranslation);
 		surfaceMesh.transformSurface(5, origin, vect3d::UnitY(),
@@ -194,7 +212,7 @@ int main(int argc, char *argv[]) {
 //				0., scaleFactors, vect3d(0.,0.,0.));
 //		surfaceMesh.transformSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(),
 //				rotationAngle, scaleFactors, translation);
-		surfaceMesh.createVolumeMesh(1.,0.1);
+		surfaceMesh.createVolumeMesh(1.,0.25);
 		surfaceMesh.scaleVolumeMesh(origin, inverseScaleFactors);
 		int periodLocation = inputMeshFile.rfind(".vtu");
 		volumeMeshFile << inputMeshFile.substr(0,periodLocation)
