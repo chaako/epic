@@ -11,6 +11,7 @@
 #include "SpatialDependence.h"
 #include "DistributionFunction.h"
 #include "Mesh.h"
+#include "SurfaceMesh.h"
 #include "IntegrandContainer.h"
 #include "Solver.h"
 #include "Field.h"

@@ -7,6 +7,11 @@
 
 #include "SurfaceMesh.h"
 
+SurfaceMesh::SurfaceMesh() {
+	vtkMesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
+	volumeMesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
+}
+
 SurfaceMesh::SurfaceMesh(string inputFile) {
 	vtkMesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
 	volumeMesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
@@ -255,4 +260,35 @@ void SurfaceMesh::createVolumeMesh() {
 				" (red edges on the outside of the domain)";
 		throw; // Netgen failed
 	}
+}
+
+vector<vect3d> SurfaceMesh::getPoints(int surfaceCode) {
+	vector<vect3d> points;
+	string cell_code_name = "cell_code";
+	vtkIntArray* cell_codes = vtkIntArray::SafeDownCast(
+			vtkMesh->GetCellData()->GetArray(cell_code_name.c_str()));
+	int numberOfVtkPoints = vtkMesh->GetNumberOfPoints();
+	vector<bool> processedPoint(numberOfVtkPoints);
+	for (int i=0; i<processedPoint.size(); i++)
+		processedPoint[i] = false;
+	for (vtkIdType id_cell = 0; id_cell < vtkMesh->GetNumberOfCells(); ++id_cell) {
+		if (vtkMesh->GetCellType(id_cell) == VTK_TRIANGLE) {
+			// TODO: not very clean to use surfaceCode<0 to mean any code
+			if (cell_codes->GetValue(id_cell)==surfaceCode || surfaceCode<0) {
+				// TODO: figure out if supposed to free pts
+				vtkIdType N_pts, *pts;
+				vtkMesh->GetCellPoints(id_cell, N_pts, pts);
+				for (int i = 0; i < N_pts; ++i) {
+					if (processedPoint[pts[i]] == false) {
+						double coords[3];
+						vtkMesh->GetPoint(pts[i],coords);
+						vect3d coordinates(coords[0],coords[1],coords[2]);
+						points.push_back(coordinates);
+						processedPoint[pts[i]] = true;
+					}
+				}
+			}
+		}
+	}
+	return points;
 }

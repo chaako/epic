@@ -6,7 +6,7 @@ bin_PROGRAMS=epic mesher solutionTransfer
 CLASS_FILES = custom_mImportVTK.cc Mesh.cpp Orbit.cpp Field.cpp IntegrandContainer.cpp \
               intersect_RayTriangle.cpp distributionFunctionFromBoundary.cpp Solver.cpp \
               MinimumBasisFunction.cpp variables.cpp SpatialDependence.cpp \
-              DistributionFunction.cpp functions.cpp
+              DistributionFunction.cpp functions.cpp SurfaceMesh.cpp
 #              VelocityAndAcceleration.cpp
 epic_SOURCES = epic.cpp $(CLASS_FILES)
 epic_CFLAGS = $(AM_CFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \
@@ -47,7 +47,7 @@ epic_LDADD   += ../superlu/SuperLU_4.3/lib/libsuperlu_4.3.a ../superlu/SuperLU_4
 endif
 
 #mesher
-mesher_SOURCES = mesher.cpp $(CLASS_FILES) playground.cpp SurfaceMesh.cpp
+mesher_SOURCES = mesher.cpp $(CLASS_FILES) playground.cpp
 mesher_CFLAGS = $(epic_CFLAGS) -DMESHER
 mesher_CXXFLAGS = $(epic_CXXFLAGS) -DMESHER
 mesher_LDFLAGS = $(epic_LDFLAGS)

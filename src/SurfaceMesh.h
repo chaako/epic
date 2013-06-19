@@ -11,10 +11,10 @@
 #include "typesAndDefinitions.h"
 #include "variables.h"
 
-#include "FMDB.h"
-#include "MeshAdapt.h"
-#include "AdaptUtil.h"
-#include "PWLinearSField.h"
+//#include "FMDB.h"
+//#include "MeshAdapt.h"
+//#include "AdaptUtil.h"
+//#include "PWLinearSField.h"
 
 namespace nglib {
 #include "nglib.h"
@@ -23,6 +23,7 @@ namespace nglib {
 
 class SurfaceMesh {
 public:
+	SurfaceMesh();
 	SurfaceMesh(string inputFile);
 	virtual ~SurfaceMesh();
 
@@ -35,6 +36,7 @@ public:
 			vect3d scaleFactors, vect3d translation);
 	void scaleVolumeMesh(vect3d origin, vect3d scaleFactors);
 	void createVolumeMesh();
+	vector<vect3d> getPoints(int surfaceCode=-1);
 
 	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh;
 	vtkSmartPointer<vtkUnstructuredGrid> volumeMesh;

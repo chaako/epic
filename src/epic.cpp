@@ -35,6 +35,10 @@ int main(int argc, char *argv[]) {
 #endif
 
 	string inputMeshFile, outputFile;
+	string inputSurfaceMeshFile, outputSurfaceMeshFile;
+	string noSurfaceMeshFile("noSurfaceMeshFile");
+	SurfaceMesh surfaceMesh;
+	int evalSurfaceCode;
 	vector<vect3d> evaluationPositions;
 	extern_evalPositions_ptr = &evaluationPositions;
 	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest, fixSheathPotential;
@@ -91,6 +95,12 @@ int main(int argc, char *argv[]) {
 							"seconds to sleep to allow debugger to attach")
 					("doPoissonTest", po::value<bool>(&doPoissonTest)->default_value(false),
 							"whether to run in Poisson-test mode (true/false)")
+					("inputSurfaceMeshFile", po::value<string>(&inputSurfaceMeshFile)->default_value(string(noSurfaceMeshFile)),
+							"input surface mesh file")
+					("outputSurfaceMeshFile", po::value<string>(&outputSurfaceMeshFile)->default_value(string(noSurfaceMeshFile)),
+							"output surface mesh file")
+					("evalSurfaceCode", po::value<int>(&evalSurfaceCode)->default_value(4),
+							"cell_code of surface to get evalPositions from if inputSurfaceMeshFile set")
 			;
 
 			po::variables_map vm;
@@ -98,25 +108,39 @@ int main(int argc, char *argv[]) {
 			po::notify(vm);
 
 			if (vm.count("help")) {
-				cout << desc << "\n";
+				if (mpiId==0)
+					cout << desc << "\n";
 				exit(1);
 			}
 
 			if (vm.count("inputFile")) {
-				cout << "Input file: " << inputMeshFile << endl;
+				if (mpiId==0)
+					cout << "Input file: " << inputMeshFile << endl;
 			} else {
-				cout << "Error: --inputFile was not set" << endl;
+				if (mpiId==0)
+					cout << "Error: --inputFile was not set" << endl;
 				exit(1);
 			}
 			if (vm.count("outputFile")) {
-				cout << "Output file: " << outputFile << endl;
+				if (mpiId==0)
+					cout << "Output file: " << outputFile << endl;
 			} else {
-				cout << "Error: --outputFile was not set" << endl;
+				if (mpiId==0)
+					cout << "Error: --outputFile was not set" << endl;
 				exit(1);
 			}
 
+			if (inputSurfaceMeshFile != noSurfaceMeshFile) {
+				surfaceMesh.load(inputSurfaceMeshFile);
+				// TODO: what if surface of volume mesh has been refined compared to orig.?
+				evaluationPositions = surfaceMesh.getPoints(evalSurfaceCode);
+				if (mpiId==0)
+					cout << "Number of evaluation positions from surface mesh: " <<
+							evaluationPositions.size() << endl;
+			}
+
 			int numberOfEvalPositions=min(min(evalPosX.size(),evalPosY.size()),evalPosZ.size());
-			if (numberOfEvalPositions>0) {
+			if (numberOfEvalPositions>0 && mpiId==0) {
 				cout << "Number of evaluation positions requested: " <<
 						numberOfEvalPositions << endl;
 				for (int i=0; i<numberOfEvalPositions; i++)
