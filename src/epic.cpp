@@ -39,6 +39,8 @@ int main(int argc, char *argv[]) {
 	string noSurfaceMeshFile("noSurfaceMeshFile");
 	SurfaceMesh surfaceMesh;
 	int evalSurfaceCode;
+	map<vect3d,vtkIdType,bool(*)(vect3d,vect3d)> vtkIdOfSurfacePoint(vect3dLessThan);
+	extern_vtkIdOfSurfacePoint_ptr = &vtkIdOfSurfacePoint;
 	vector<vect3d> evaluationPositions;
 	extern_evalPositions_ptr = &evaluationPositions;
 	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest, fixSheathPotential;
@@ -101,6 +103,8 @@ int main(int argc, char *argv[]) {
 							"output surface mesh file")
 					("evalSurfaceCode", po::value<int>(&evalSurfaceCode)->default_value(4),
 							"cell_code of surface to get evalPositions from if inputSurfaceMeshFile set")
+					("saveOrbits", po::value<bool>(&extern_saveOrbits)->default_value(false),
+							"whether to output orbits from evaluated nodes (true/false)")
 			;
 
 			po::variables_map vm;
@@ -133,10 +137,11 @@ int main(int argc, char *argv[]) {
 			if (inputSurfaceMeshFile != noSurfaceMeshFile) {
 				surfaceMesh.load(inputSurfaceMeshFile);
 				// TODO: what if surface of volume mesh has been refined compared to orig.?
-				evaluationPositions = surfaceMesh.getPoints(evalSurfaceCode);
+				evaluationPositions = surfaceMesh.getPoints(&vtkIdOfSurfacePoint, evalSurfaceCode);
+				extern_numberOfSurfaceEvalPoints = evaluationPositions.size();
 				if (mpiId==0)
 					cout << "Number of evaluation positions from surface mesh: " <<
-							evaluationPositions.size() << endl;
+							extern_numberOfSurfaceEvalPoints << endl;
 			}
 
 			int numberOfEvalPositions=min(min(evalPosX.size(),evalPosY.size()),evalPosZ.size());

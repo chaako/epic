@@ -262,7 +262,9 @@ void SurfaceMesh::createVolumeMesh() {
 	}
 }
 
-vector<vect3d> SurfaceMesh::getPoints(int surfaceCode) {
+vector<vect3d> SurfaceMesh::getPoints(
+		map<vect3d,vtkIdType,bool(*)(vect3d,vect3d)> *vtkIdOfPoint,
+		int surfaceCode) {
 	vector<vect3d> points;
 	string cell_code_name = "cell_code";
 	vtkIntArray* cell_codes = vtkIntArray::SafeDownCast(
@@ -284,6 +286,7 @@ vector<vect3d> SurfaceMesh::getPoints(int surfaceCode) {
 						vtkMesh->GetPoint(pts[i],coords);
 						vect3d coordinates(coords[0],coords[1],coords[2]);
 						points.push_back(coordinates);
+						vtkIdOfPoint->operator[](coordinates) = pts[i];
 						processedPoint[pts[i]] = true;
 					}
 				}

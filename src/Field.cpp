@@ -781,6 +781,8 @@ double DensityField::calculateDensity(int node, ElectricField& electricField,
 					<< nodePosition.norm() << "_vert" << node << ".p3d";
 			integrandContainer.outFile = fopen(fileNameStream.str().c_str(), "w");
 			fprintf(integrandContainer.outFile, "x y z f\n");
+		}
+		if (extern_saveOrbits) {
 			stringstream fileNameStreamOrbit;
 			fileNameStreamOrbit << "orbits/orbits_q" << charge << "_r"
 					<< nodePosition.norm() << "_vert" << node << ".p3d";

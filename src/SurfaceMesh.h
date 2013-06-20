@@ -10,6 +10,7 @@
 
 #include "typesAndDefinitions.h"
 #include "variables.h"
+#include "functions.h"
 
 //#include "FMDB.h"
 //#include "MeshAdapt.h"
@@ -36,7 +37,9 @@ public:
 			vect3d scaleFactors, vect3d translation);
 	void scaleVolumeMesh(vect3d origin, vect3d scaleFactors);
 	void createVolumeMesh();
-	vector<vect3d> getPoints(int surfaceCode=-1);
+	vector<vect3d> getPoints(
+			map<vect3d,vtkIdType,bool(*)(vect3d,vect3d)> *vtkIdOfPoint,
+			int surfaceCode=-1);
 
 	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh;
 	vtkSmartPointer<vtkUnstructuredGrid> volumeMesh;
