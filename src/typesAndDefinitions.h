@@ -96,7 +96,9 @@ enum {
 #include <vtkXMLUnstructuredGridWriter.h>
 #include <vtkUnstructuredGridWriter.h>
 #include <vtkCellData.h>
+#include <vtkPointData.h>
 #include <vtkIntArray.h>
+#include <vtkDoubleArray.h>
 
 class CodeField;
 
@@ -104,6 +106,7 @@ const int NDIM=3;
 const int INTERPOLATIONORDER=1;
 // Matrix gives better pretty printing than Vector3d in gdb
 typedef Eigen::Matrix<double,NDIM,1> vect3d;
+typedef map<vect3d,int,bool(*)(vect3d,vect3d)> vect3dMap;
 typedef iBase_EntityHandle entHandle;
 
 #endif /* TYPES_H_ */

@@ -7,12 +7,12 @@
 
 #include "SurfaceMesh.h"
 
-SurfaceMesh::SurfaceMesh() {
+SurfaceMesh::SurfaceMesh() : idOfVertex(vect3dLessThan) {
 	vtkMesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
 	volumeMesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
 }
 
-SurfaceMesh::SurfaceMesh(string inputFile) {
+SurfaceMesh::SurfaceMesh(string inputFile) : idOfVertex(vect3dLessThan) {
 	vtkMesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
 	volumeMesh = vtkSmartPointer<vtkUnstructuredGrid>::New();
 	this->load(inputFile);
@@ -31,6 +31,7 @@ void SurfaceMesh::load(string inputFile) {
 	reader->Update();
 //	vtkMesh->Print(cout);
 	vtkMesh->DeepCopy(reader->GetOutput());
+	vertexPositions = this->getPoints(&idOfVertex);
 }
 
 void SurfaceMesh::save(string outputFile) {
@@ -262,9 +263,7 @@ void SurfaceMesh::createVolumeMesh() {
 	}
 }
 
-vector<vect3d> SurfaceMesh::getPoints(
-		map<vect3d,vtkIdType,bool(*)(vect3d,vect3d)> *vtkIdOfPoint,
-		int surfaceCode) {
+vector<vect3d> SurfaceMesh::getPoints(vect3dMap *vtkIdOfPoint, int surfaceCode) {
 	vector<vect3d> points;
 	string cell_code_name = "cell_code";
 	vtkIntArray* cell_codes = vtkIntArray::SafeDownCast(

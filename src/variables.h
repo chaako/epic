@@ -18,7 +18,7 @@ extern int extern_orbitNumber;
 
 // TODO: don't use external pointer to vector
 extern vector<vect3d> *extern_evalPositions_ptr;
-extern map<vect3d,vtkIdType,bool(*)(vect3d,vect3d)> *extern_vtkIdOfSurfacePoint_ptr;
+extern vect3dMap *extern_vtkIdOfSurfacePoint_ptr;
 
 extern int extern_numberOfSurfaceEvalPoints;
 extern bool extern_saveOrbits;

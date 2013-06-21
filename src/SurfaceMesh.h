@@ -38,11 +38,14 @@ public:
 	void scaleVolumeMesh(vect3d origin, vect3d scaleFactors);
 	void createVolumeMesh();
 	vector<vect3d> getPoints(
-			map<vect3d,vtkIdType,bool(*)(vect3d,vect3d)> *vtkIdOfPoint,
+			vect3dMap *vtkIdOfPoint,
 			int surfaceCode=-1);
 
 	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh;
 	vtkSmartPointer<vtkUnstructuredGrid> volumeMesh;
+
+	vector<vect3d> vertexPositions;
+	vect3dMap idOfVertex;
 };
 
 #endif /* SURFACEMESH_H_ */

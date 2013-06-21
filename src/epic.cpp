@@ -36,10 +36,10 @@ int main(int argc, char *argv[]) {
 
 	string inputMeshFile, outputFile;
 	string inputSurfaceMeshFile, outputSurfaceMeshFile;
-	string noSurfaceMeshFile("noSurfaceMeshFile");
+	string noSurfaceMeshFile("noSurfaceMeshFile.vtu");
 	SurfaceMesh surfaceMesh;
 	int evalSurfaceCode;
-	map<vect3d,vtkIdType,bool(*)(vect3d,vect3d)> vtkIdOfSurfacePoint(vect3dLessThan);
+	vect3dMap vtkIdOfSurfacePoint(vect3dLessThan);
 	extern_vtkIdOfSurfacePoint_ptr = &vtkIdOfSurfacePoint;
 	vector<vect3d> evaluationPositions;
 	extern_evalPositions_ptr = &evaluationPositions;
@@ -214,6 +214,8 @@ int main(int argc, char *argv[]) {
 //	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
 	ShortestEdgeField shortestEdge(&mesh,string("shortestEdge"));
 
+	SurfaceField<double,vtkDoubleArray,3,vect3d> ionSurfaceVelocity(&surfaceMesh, "ionSurfaceVelocity");
+
 	double noPotentialPerturbation = 0.;
 //	double positivePotentialPerturbation = 0.05;
 //	double negativePotentialPerturbation = -0.05;
@@ -381,14 +383,6 @@ int main(int argc, char *argv[]) {
 		ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
 				shortestEdge, 1., noPotentialPerturbation,
 				densityFile);
-		if (stopAfterEvalPos) {
-			// TODO: shouldn't return before closing files etc...
-			cout << "Not in main iteration loop...improve handling of existing fields." << endl;
-#ifdef HAVE_MPI
-			MPI::Finalize();
-#endif
-			return 0;
-		}
 //		if (mpiId == 0)
 //			cout << endl << "Calculating PP ion charge-density..." << endl;
 //		ionDensityPositivePerturbation.calcField(eField, potential,
@@ -404,6 +398,8 @@ int main(int argc, char *argv[]) {
 //		if (mpiId == 0)
 //			cout << endl << "Calculating charge density..." << endl;
 //		density.calcField(ionDensity, electronDensity);
+		if (extern_numberOfSurfaceEvalPoints>0)
+			ionSurfaceVelocity.copyFromField(ionVelocity);
 		if (mpiId == 0)
 			cout << endl << endl << endl;
 		if (mpiId == 0){
@@ -416,6 +412,17 @@ int main(int argc, char *argv[]) {
 			// TODO: do this automatically?
 			eField.updateTagHandle();
 			ionVelocity.updateTagHandle();
+
+			if (extern_numberOfSurfaceEvalPoints>0) {
+				stringstream iterSurfaceMeshFileName;
+				periodLocation = outputSurfaceMeshFile.rfind(".");
+				iterSurfaceMeshFileName << outputSurfaceMeshFile.substr(0,periodLocation)
+						<< setfill('0') << setw(2) << i << outputSurfaceMeshFile.substr(periodLocation);
+				surfaceMesh.save(iterSurfaceMeshFileName.str());
+			}
+		}
+		if (stopAfterEvalPos) {
+			break;
 		}
 //		if (mpiId == 0)
 //			cout << endl << "Saving current potential..." << endl;

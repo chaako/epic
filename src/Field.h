@@ -24,11 +24,16 @@
 //
 //#include "iMesh.h"
 //#include "Eigen/Dense"
+#include "SpatialDependence.h"
+#include "DistributionFunction.h"
 #include "Mesh.h"
+#include "Solver.h"
 
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
 
 class DensityField;
+class PotentialField;
+class ShortestEdgeField;
 
 template <class T>
 class Field {

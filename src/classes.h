@@ -15,6 +15,7 @@
 #include "IntegrandContainer.h"
 #include "Solver.h"
 #include "Field.h"
+#include "SurfaceField.h"
 #include "Stepper.h"
 #include "VelocityAndAcceleration.h"
 #include "MinimumBasisFunction.h"

@@ -7,7 +7,7 @@ int extern_orbitNumber = 0;
 
 // TODO: don't use external pointer to vector
 vector<vect3d> *extern_evalPositions_ptr=NULL;
-map<vect3d,vtkIdType,bool(*)(vect3d,vect3d)> *extern_vtkIdOfSurfacePoint_ptr=NULL;
+vect3dMap *extern_vtkIdOfSurfacePoint_ptr=NULL;
 
 int extern_numberOfSurfaceEvalPoints = 0;
 bool extern_saveOrbits = false;
