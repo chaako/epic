@@ -23,7 +23,7 @@
 #include "SurfaceMesh.h"
 #include "Field.h"
 
-template <class T, class vtkT, int N, class copyT=T>
+template <class T, class vtkT, int N=1, class copyT=T>
 class SurfaceField {
 public:
 	SurfaceField(SurfaceMesh *mesh_ptr, string name,
@@ -97,7 +97,7 @@ void SurfaceField<T,vtkT,N,copyT>::copyFromField(Field<copyT>& volumeField) {
 		T *values_ptr;
 		// TODO: this doesn't appear to be needed
 		if (boost::is_same<copyT,vect3d>::value) {
-			values_ptr = (T*)values.data();
+			values_ptr = (T*)((vect3d*)&values)->data();
 		} else {
 			values_ptr = (T*)&values;
 		}

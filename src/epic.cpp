@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest, fixSheathPotential;
 	bool usePotentialFromInput;
 	int secondsToSleepForDebugAttach, numberOfIterations;
-	double debyeLength, boundaryPotential, surfacePotential, sheathPotential;
+	double debyeLength, boundaryPotential, objectPotential, sheathPotential;
 	double densityGradient, parallelDriftGradient;
 	double parallelTemperatureGradient, perpendicularTemperatureGradient;
 	// TODO: make names more transparent?
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 							"electron Debye length")
 					("boundaryPotential", po::value<double>(&boundaryPotential)->default_value(0.),
 							"potential at outer boundary")
-					("surfacePotential", po::value<double>(&surfacePotential)->default_value(-4.),
+					("objectPotential", po::value<double>(&objectPotential)->default_value(-4.),
 							"potential at object surface")
 					("sheathPotential", po::value<double>(&sheathPotential)->default_value(-0.5),
 							"potential at sheath entrance (for debyeLength=0.)")
@@ -214,7 +214,12 @@ int main(int argc, char *argv[]) {
 //	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
 	ShortestEdgeField shortestEdge(&mesh,string("shortestEdge"));
 
+	SurfaceField<double,vtkDoubleArray> surfacePotential(&surfaceMesh, "surfacePotential");
+	SurfaceField<double,vtkDoubleArray,3,vect3d> surfaceEField(&surfaceMesh, "surfaceEField");
+	SurfaceField<double,vtkDoubleArray> ionSurfaceDensity(&surfaceMesh, "ionSurfaceDensity");
 	SurfaceField<double,vtkDoubleArray,3,vect3d> ionSurfaceVelocity(&surfaceMesh, "ionSurfaceVelocity");
+	SurfaceField<double,vtkDoubleArray> ionSurfaceTemperature(&surfaceMesh, "ionSurfaceTemperature");
+	SurfaceField<double,vtkDoubleArray> surfaceReferenceDensity(&surfaceMesh, "surfaceReferenceDensity");
 
 	double noPotentialPerturbation = 0.;
 //	double positivePotentialPerturbation = 0.05;
@@ -304,7 +309,7 @@ int main(int argc, char *argv[]) {
 		if (mpiId == 0)
 			cout << endl << "Setting potential..." << endl;
 		potential.calcField(vertexType, debyeLength, boundaryPotential,
-				surfacePotential, sheathPotential);
+				objectPotential, sheathPotential);
 	}
 
 	if (doPoissonTest) {
@@ -398,8 +403,14 @@ int main(int argc, char *argv[]) {
 //		if (mpiId == 0)
 //			cout << endl << "Calculating charge density..." << endl;
 //		density.calcField(ionDensity, electronDensity);
-		if (extern_numberOfSurfaceEvalPoints>0)
+		if (extern_numberOfSurfaceEvalPoints>0) {
+			surfacePotential.copyFromField(potential);
+			surfaceEField.copyFromField(eField);
+			ionSurfaceDensity.copyFromField(ionDensity);
 			ionSurfaceVelocity.copyFromField(ionVelocity);
+			ionSurfaceTemperature.copyFromField(ionTemperature);
+			surfaceReferenceDensity.copyFromField(referenceElectronDensity);
+		}
 		if (mpiId == 0)
 			cout << endl << endl << endl;
 		if (mpiId == 0){
