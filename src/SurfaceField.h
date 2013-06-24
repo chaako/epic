@@ -88,8 +88,6 @@ void SurfaceField<T,vtkT,N,copyT>::zero() {
 
 template <class T, class vtkT, int N, class copyT>
 void SurfaceField<T,vtkT,N,copyT>::copyFromField(Field<copyT>& volumeField) {
-	if (N!=3 || !boost::is_same<double,T>::value)
-		throw string("trying to copy vect3d field to incompatible surfaceField");
 	for (int i=0; i<volumeField.entities.size(); i++) {
 		vect3d coordinates =
 				volumeField.mesh_ptr->getCoordinates(volumeField.entities[i]);
@@ -97,6 +95,8 @@ void SurfaceField<T,vtkT,N,copyT>::copyFromField(Field<copyT>& volumeField) {
 		T *values_ptr;
 		// TODO: this doesn't appear to be needed
 		if (boost::is_same<copyT,vect3d>::value) {
+			if (N!=3 || !boost::is_same<double,T>::value)
+				throw string("trying to copy vect3d field to incompatible surfaceField");
 			values_ptr = (T*)((vect3d*)&values)->data();
 		} else {
 			values_ptr = (T*)&values;
