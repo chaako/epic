@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 	vector<vect3d> evaluationPositions;
 	extern_evalPositions_ptr = &evaluationPositions;
 	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest, fixSheathPotential;
-	bool usePotentialFromInput;
+	bool usePotentialFromInput, useDensityFromInput;
 	int secondsToSleepForDebugAttach, numberOfIterations;
 	double debyeLength, boundaryPotential, objectPotential, sheathPotential;
 	double densityGradient, parallelDriftGradient;
@@ -77,6 +77,8 @@ int main(int argc, char *argv[]) {
 							"fix potential at sheath entrance (true/false; for debyeLength=0.)")
 					("usePotentialFromInput", po::value<bool>(&usePotentialFromInput)->default_value(false),
 							"use potential from input file (true/false)")
+					("useDensityFromInput", po::value<bool>(&useDensityFromInput)->default_value(false),
+							"use density from input file (true/false)")
 					("densityGradient", po::value<double>(&densityGradient)->default_value(0.),
 							"density gradient")
 					("parallelTemperatureGradient", po::value<double>(&parallelTemperatureGradient)->default_value(0.),
@@ -134,6 +136,7 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 
+			// TODO: should be able to output surface mesh during normal run (i.e. not with evalPositions)
 			if (inputSurfaceMeshFile != noSurfaceMeshFile) {
 				surfaceMesh.load(inputSurfaceMeshFile);
 				// TODO: what if surface of volume mesh has been refined compared to orig.?
@@ -383,11 +386,16 @@ int main(int argc, char *argv[]) {
 //				potential, faceType, vertexType,
 //				shortestEdge, -1., negativePotentialPerturbation,
 //				density_electronsFile);
-		if (mpiId == 0)
-			cout << endl << "Calculating ion density..." << endl;
-		ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
-				shortestEdge, 1., noPotentialPerturbation,
-				densityFile);
+		if (useDensityFromInput && i==0) {
+			if (mpiId == 0)
+				cout << endl << "Using ion density from input file." << endl;
+		} else {
+			if (mpiId == 0)
+				cout << endl << "Calculating ion density..." << endl;
+			ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
+					shortestEdge, 1., noPotentialPerturbation,
+					densityFile);
+		}
 //		if (mpiId == 0)
 //			cout << endl << "Calculating PP ion charge-density..." << endl;
 //		ionDensityPositivePerturbation.calcField(eField, potential,
