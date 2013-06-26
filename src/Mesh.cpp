@@ -287,6 +287,10 @@ void Mesh::convertComponentTagsToVectorTag(string vectorTagName) {
 	iBase_TagHandle componentTagZ=this->getTag(vectorTagName+"Z");
 
 	// TODO: clean this up, separating out into functions hiding iMesh details
+	iMesh_getEntities(meshInstance, rootEntitySet,
+			iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
+			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
+	CHECK("Couldn't get vertex entities");
 	for (int i = 0; i < ents0d_size; i++) {
 		double componentX, componentY, componentZ;
 		iMesh_getDblData(meshInstance, ents0d[i], componentTagX,
