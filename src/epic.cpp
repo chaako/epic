@@ -443,7 +443,7 @@ int main(int argc, char *argv[]) {
 		if (debyeLength==0.) {
 			if (mpiId == 0)
 				cout << endl << "Calculating updated potential..." << endl;
-			potential.calcField(ionDensity, vertexType, potentialFile, boundaryPotential,
+			potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
 					sheathPotential, fixSheathPotential);
 //			potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
 //			potential.calcField(ionDensity,

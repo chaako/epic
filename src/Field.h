@@ -185,8 +185,8 @@ public:
 			double sheathPotential);
 	void calcField(DensityField ionDensity, DensityField electronDensity,
 			CodeField vertexType, FILE *outFile);
-	void calcField(DensityField ionDensity,
-			CodeField vertexType, FILE *outFile, double boundaryPotential,
+	void calcField(DensityField& ionDensity, Field<vect3d>& ionVelocity,
+			CodeField& vertexType, FILE *outFile, double boundaryPotential,
 			double sheathPotential, bool fixSheathPotential);
 	void calcField(DensityField ionDensity,
 			DensityField ionDensityPP, DensityField ionDensityNP,

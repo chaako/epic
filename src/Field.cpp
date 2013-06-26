@@ -452,8 +452,8 @@ void PotentialField::calcField(DensityField ionDensity,
 		fprintf(outFile, "\n\n\n\n");
 }
 
-void PotentialField::calcField(DensityField ionDensity,
-		CodeField vertexType, FILE *outFile, double boundaryPotential,
+void PotentialField::calcField(DensityField& ionDensity, Field<vect3d>& ionVelocity,
+		CodeField& vertexType, FILE *outFile, double boundaryPotential,
 		double sheathPotential, bool fixSheathPotential) {
 	if (ionDensity.mesh_ptr!=mesh_ptr)
 		throw string("mesh pointers not the same in potentialField::calcField");
@@ -472,7 +472,13 @@ void PotentialField::calcField(DensityField ionDensity,
 			double boltzmannPotential = boundaryPotential +
 					referenceElectronTemperature*
 					log(ionDensity.getField(entities[i])/referenceDensity);
-			potential = (currentPotential+boltzmannPotential)/2.;
+			// Beam-like distribution doesn't
+			// TODO: don't hard-code parallel velocity cutoff
+			if (fabs(ionVelocity.getField(entities[i]).dot(extern_B))<=extern_B.norm()) {
+				potential = (currentPotential+boltzmannPotential)/2.;
+			} else {
+				potential = currentPotential;
+			}
 		}
 		if (fixSheathPotential) {
 			// TODO: think about possible influence of background E field
