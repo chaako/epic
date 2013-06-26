@@ -231,8 +231,6 @@ int main(int argc, char *argv[]) {
 	if (mpiId == 0)
 		cout << endl << "Calculating shortest edge of each region..." << endl;
 	shortestEdge.calcField();
-	if (mpiId == 0)
-		cout << endl << "Setting density..." << endl;
 //	// TODO: implement Boltzman density calculation;
 //	electronDensity.calcField(potential, -1.);
 //	density.calcField(ionDensity, electronDensity);
@@ -292,8 +290,12 @@ int main(int argc, char *argv[]) {
 	// TODO: Allow parallel electron temperature to differ from ions?
 	potential.setReferenceElectronTemperature(*parallelTemperatureProfile_ptr.get());
 	ionDensity.setDistributionFunction(distributionFunction);
-	ionDensity.calcField(vertexType, potential, referenceElectronDensity,
-			*parallelTemperatureProfile_ptr.get(), 1.);
+	if (!useDensityFromInput) {
+		if (mpiId == 0)
+			cout << endl << "Setting density..." << endl;
+		ionDensity.calcField(vertexType, potential, referenceElectronDensity,
+				*parallelTemperatureProfile_ptr.get(), 1.);
+	}
 
 	// TODO: add more robust detection and handling of existing fields
 //	if (!mesh.vtkInputMesh && !doPoissonTest) {
