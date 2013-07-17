@@ -476,7 +476,7 @@ void PotentialField::calcField(DensityField& ionDensity, Field<vect3d>& ionVeloc
 			// TODO: don't hard-code parallel velocity cutoff
 			// TODO: replace this hack
 			if (fabs(ionVelocity.getField(entities[i]).dot(extern_B))<=0.5*extern_B.norm() ||
-					potential<currentPotential) {
+					boltzmannPotential<currentPotential) {
 				potential = (currentPotential+boltzmannPotential)/2.;
 			} else {
 				potential = currentPotential;
