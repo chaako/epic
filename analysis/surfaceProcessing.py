@@ -95,11 +95,11 @@ for i in range(0,vtk_mesh.GetNumberOfPoints()):
     c = coordinates[i]
     if (c[0]*c[0]+c[1]*c[1]+c[2]*c[2]<1.5):
         #innerCoordinates.append(coordinates[i])
-        zeta = atan2(c[0],-c[1])
+        zeta = atan2(c[0],c[2])
         zetas.append(zeta)
-        xi = asin(c[2])
+        xi = asin(c[1])
         xis.append(xi)
-        alpha = abs(xi)
+        alpha = abs(asin(c[2]))
         alphas.append(alpha)
         theta = -pi/2.-atan2(-c[1],abs(c[2]))
         thetas.append(theta)
@@ -110,7 +110,6 @@ for i in range(0,vtk_mesh.GetNumberOfPoints()):
         reference_fluxes_grad.append(exp(min(10.,max(-10.,exponent)))*sin(alpha))
         reference_fluxes_grad_scaled.append(exp(min(10.,max(-10.,exponent)))*sin(alpha)*reference_densities[0][i])
     else:
-        fluxes.append(0.)
         xis.append(0.)
         zetas.append(0.)
         alphas.append(0.)
@@ -149,7 +148,7 @@ for i in range(0,vtk_mesh.GetNumberOfCells()):
             skip_triangle = False
             for j in range(0,3):
                 for jj in range(j,3):
-                    if (abs(phi[ids[j]]-phi[ids[jj]])>4.):
+                    if (abs(zetas[ids[j]]-zetas[ids[jj]])>4.):
                         skip_triangle=True
             if (not skip_triangle):
                 triangles.append(ids)
@@ -204,10 +203,10 @@ plt.clf()
 #fig.clf()
 #ax = fig.add_subplot(111, projection = 'mollweide')
 #ax = plt.subplot(111, projection = 'mollweide')
-fig, axes = plt.subplots(nrows=4, ncols=2, figsize=(24,18), subplot_kw=dict(projection='mollweide'))
+fig, axes = plt.subplots(nrows=4, ncols=2, figsize=(24,18))#, subplot_kw=dict(projection='mollweide'))
 ims = []
 for ax,z in zip(axes.flat,zs):
-    im = ax.tripcolor(triang, z, vmin=0., vmax=0.6, shading='gouraud', cmap=plt.cm.rainbow)
+    im = ax.tripcolor(triang, z, vmin=0., vmax=0.6, shading='faceted', cmap=plt.cm.rainbow)
     ims.append(im)
     cont = ax.tricontour(triang, z, vmin=0., vmax=0.6, colors='k')
     #plt.colorbar(im, ax=ax, orientation='horizontal')
