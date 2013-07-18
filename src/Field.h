@@ -43,6 +43,8 @@ public:
 	// TODO: Does an empty destructor cause a memory leak?
 	virtual ~Field() {}
 
+	void copyValues(Field<T>& fieldToCopy);
+
 	T& operator[](entHandle& entity);
 	T& operator[](int& entityIndex);
 
@@ -122,6 +124,16 @@ public:
 	virtual ~CodeField() {}
 
 	void calcField(Field<int> faceTypeField);
+};
+
+class DerivativeField : public Field<double> {
+public:
+	DerivativeField(Mesh *inputMesh_ptr, string inputName,
+			int elementType);
+	virtual ~DerivativeField() {}
+
+	void calcField(Field<double>& numeratorValue, Field<double>& numeratorReference,
+			Field<double>& denominatorValue, Field<double>& denominatorReference);
 };
 
 class DensityField : public Field<double> {
@@ -277,6 +289,13 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 //		errorCoefficientsVectors.push_back(
 //				this->getErrorCoefficients(i, INTERPOLATIONORDER));
 //	}
+}
+
+template <class T>
+void Field<T>::copyValues(Field<T>& fieldToCopy) {
+	for (int i=0; i<entities.size(); i++) {
+		this->setField(entities[i],fieldToCopy.getField(entities[i]));
+	}
 }
 
 template <class T>

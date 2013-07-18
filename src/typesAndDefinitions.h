@@ -22,6 +22,7 @@ const double DELTA_LENGTH=1.e-5;
 const double NODE_DISTANCE_THRESHOLD=1.e-3;
 const double SMALL_VELOCITY=1.e-1;
 const double SMALL_TIME=1.e-8;
+const double SMALL_POTENTIAL=1.e-2;
 
 const int WORKTAG=999999998;
 const int DIETAG=999999999;

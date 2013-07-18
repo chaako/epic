@@ -1004,6 +1004,22 @@ void CodeField::calcField(Field<int> faceTypeField) {
 	}
 }
 
+DerivativeField::DerivativeField(Mesh *inputMesh_ptr, string inputName, int elementType)
+		: Field<double>(inputMesh_ptr, inputName, elementType) {
+}
+
+void DerivativeField::calcField(Field<double>& numeratorValue, Field<double>& numeratorReference,
+		Field<double>& denominatorValue, Field<double>& denominatorReference) {
+	for (int i=0; i<entities.size(); i++) {
+		double numerator = numeratorValue[i]-numeratorReference[i];
+		double denominator = denominatorValue[i]-denominatorReference[i];
+		if (fabs(denominator)<SMALL_POTENTIAL)
+			denominator = copysign(SMALL_POTENTIAL,denominator);
+		double derivative = numerator/denominator;
+		this->setField(entities[i],derivative);
+	}
+}
+
 ShortestEdgeField::ShortestEdgeField(Mesh *inputMesh_ptr, string inputName)
 	: Field<double>(inputMesh_ptr, inputName, iBase_REGION) {
 }

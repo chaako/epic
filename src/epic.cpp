@@ -203,11 +203,13 @@ int main(int argc, char *argv[]) {
 	vertexType.calcField(faceType);
 	// TODO: create error fields with pointer in corresponding fields
 	PotentialField potential(&mesh,string("potential"));
+	PotentialField previousPotential(&mesh,string("previousPotential"));
 	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
 	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
 	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
 	// TODO: updating other moments through density not very clean/transparent
 	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature);
+	DensityField previousIonDensity(&mesh,string("previousIonDensity"),&ionVelocity,&ionTemperature);
 	DensityField referenceElectronDensity(&mesh,string("referenceElectronDensity"));
 //	DensityField electronDensity(&mesh,string("electronDensity"));
 //	DensityField density(&mesh,string("density"));
@@ -215,6 +217,7 @@ int main(int argc, char *argv[]) {
 //	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"));
 //	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
 //	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
+	DerivativeField ionDensityDerivative(&mesh,string("ionDensityDerivative"),iBase_VERTEX);
 	ShortestEdgeField shortestEdge(&mesh,string("shortestEdge"));
 
 	SurfaceField<double,vtkDoubleArray> surfacePotential(&surfaceMesh, "surfacePotential");
@@ -316,6 +319,7 @@ int main(int argc, char *argv[]) {
 		potential.calcField(vertexType, debyeLength, boundaryPotential,
 				objectPotential, sheathPotential);
 	}
+	previousPotential.copyValues(potential);
 
 	if (doPoissonTest) {
 		if (mpiId == 0)
@@ -388,6 +392,7 @@ int main(int argc, char *argv[]) {
 //				potential, faceType, vertexType,
 //				shortestEdge, -1., negativePotentialPerturbation,
 //				density_electronsFile);
+		previousIonDensity.copyValues(ionDensity);
 		if (useDensityFromInput && i==0) {
 			if (mpiId == 0)
 				cout << endl << "Using ion density from input file." << endl;
@@ -450,6 +455,7 @@ int main(int argc, char *argv[]) {
 //		stringstream potentialCopyName;
 //		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
 //		PotentialField potentialCopy(potential,potentialCopyName.str());
+		previousPotential.copyValues(potential);
 		if (debyeLength==0.) {
 			if (mpiId == 0)
 				cout << endl << "Calculating updated potential..." << endl;
@@ -472,6 +478,7 @@ int main(int argc, char *argv[]) {
 				cout << endl << "Calculating updated potential and electric field..." << endl;
 			eField.calcField(&potential, vertexType, ionDensity, debyeLength);
 		}
+		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 	}
 
 	if (mpiId == 0)
