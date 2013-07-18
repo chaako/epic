@@ -318,8 +318,8 @@ int main(int argc, char *argv[]) {
 			cout << endl << "Setting potential..." << endl;
 		potential.calcField(vertexType, debyeLength, boundaryPotential,
 				objectPotential, sheathPotential);
+		previousPotential.copyValues(potential);
 	}
-	previousPotential.copyValues(potential);
 
 	if (doPoissonTest) {
 		if (mpiId == 0)
@@ -459,8 +459,13 @@ int main(int argc, char *argv[]) {
 		if (debyeLength==0.) {
 			if (mpiId == 0)
 				cout << endl << "Calculating updated potential..." << endl;
-			potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
-					sheathPotential, fixSheathPotential);
+			if (i==0 && !usePotentialFromInput) {
+				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
+						sheathPotential, fixSheathPotential);
+			} else {
+				potential.calcField(ionDensity, ionDensityDerivative, vertexType, potentialFile, boundaryPotential,
+						sheathPotential, fixSheathPotential);
+			}
 //			potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
 //			potential.calcField(ionDensity,
 //					ionDensityPositivePerturbation, ionDensityNegativePerturbation,

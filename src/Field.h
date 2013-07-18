@@ -200,6 +200,9 @@ public:
 	void calcField(DensityField& ionDensity, Field<vect3d>& ionVelocity,
 			CodeField& vertexType, FILE *outFile, double boundaryPotential,
 			double sheathPotential, bool fixSheathPotential);
+	void calcField(DensityField& ionDensity, DerivativeField& ionDensityDerivative,
+			CodeField& vertexType, FILE *outFile, double boundaryPotential,
+			double sheathPotential, bool fixSheathPotential);
 	void calcField(DensityField ionDensity,
 			DensityField ionDensityPP, DensityField ionDensityNP,
 			DensityField electronDensity,

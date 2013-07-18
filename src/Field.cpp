@@ -498,6 +498,51 @@ void PotentialField::calcField(DensityField& ionDensity, Field<vect3d>& ionVeloc
 		fprintf(outFile, "\n\n\n\n");
 }
 
+void PotentialField::calcField(DensityField& ionDensity, DerivativeField& ionDensityDerivative,
+		CodeField& vertexType, FILE *outFile, double boundaryPotential,
+		double sheathPotential, bool fixSheathPotential) {
+	if (ionDensity.mesh_ptr!=mesh_ptr)
+		throw string("mesh pointers not the same in potentialField::calcField");
+	for (int i=0; i<entities.size(); i++) {
+		vect3d nodePosition = mesh_ptr->getCoordinates(entities[i]);
+
+		double potential;
+		// TODO: don't hard-code boundary type
+		if (vertexType.getField(entities[i])==5) {
+			potential = boundaryPotential;
+		} else {
+			double referenceDensity = referenceElectronDensity_ptr->getField(entities[i]);
+			double referenceElectronTemperature =
+					referenceElectronTemperature_ptr->operator()(nodePosition);
+			double currentPotential = this->getField(entities[i]);
+			double chargeDensityDerivative = ionDensityDerivative.getField(entities[i])
+					-referenceDensity*exp(currentPotential/referenceElectronTemperature);
+			double fractionToApply = 0.5;
+			double denominator = chargeDensityDerivative;
+			// TODO: bad parameter name
+			if (fabs(denominator)<SMALL_POTENTIAL)
+				denominator = copysign(SMALL_POTENTIAL,chargeDensityDerivative);
+			double potentialCorrection = -(ionDensity.getField(entities[i]) -
+					referenceDensity*exp(currentPotential/referenceElectronTemperature))/
+					denominator;
+			potential = currentPotential + fractionToApply*potentialCorrection;
+		}
+		if (fixSheathPotential) {
+			// TODO: think about possible influence of background E field
+			// TODO: don't hard-code boundary type
+			if (vertexType.getField(entities[i])==4) {
+				potential = sheathPotential;
+			}
+		}
+		this->setField(entities[i], potential);
+
+		if (outFile)
+			fprintf(outFile, "%g %g\n", nodePosition.norm(), potential);
+	}
+	if (outFile)
+		fprintf(outFile, "\n\n\n\n");
+}
+
 void PotentialField::calcField(DensityField ionDensity,
 		DensityField ionDensityPP, DensityField ionDensityNP,
 		DensityField electronDensity,
