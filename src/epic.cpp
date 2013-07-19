@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
 //	DensityField electronDensity(&mesh,string("electronDensity"));
 //	DensityField density(&mesh,string("density"));
 //	DensityField ionDensityPositivePerturbation(&mesh,string("PPionDensity"));
-//	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"));
+	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"),&ionVelocity,&ionTemperature);
 //	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
 //	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
 	DensityDerivativeField ionDensityDerivative(&mesh,string("ionDensDeriv"),iBase_VERTEX);
@@ -229,7 +229,7 @@ int main(int argc, char *argv[]) {
 
 	double noPotentialPerturbation = 0.;
 //	double positivePotentialPerturbation = 0.05;
-//	double negativePotentialPerturbation = -0.05;
+	double negativePotentialPerturbation = -0.05;
 
 	if (mpiId == 0)
 		cout << endl << "Calculating shortest edge of each region..." << endl;
@@ -293,6 +293,7 @@ int main(int argc, char *argv[]) {
 	// TODO: Allow parallel electron temperature to differ from ions?
 	potential.setReferenceElectronTemperature(*parallelTemperatureProfile_ptr.get());
 	ionDensity.setDistributionFunction(distributionFunction);
+	ionDensityNegativePerturbation.setDistributionFunction(distributionFunction);
 	if (!useDensityFromInput) {
 		if (mpiId == 0)
 			cout << endl << "Setting density..." << endl;
@@ -402,18 +403,19 @@ int main(int argc, char *argv[]) {
 			ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
 					shortestEdge, 1., noPotentialPerturbation,
 					densityFile);
+			if (mpiId == 0)
+				cout << endl << "Calculating NP ion charge-density..." << endl;
+			ionDensityNegativePerturbation.calcField(eField, potential,
+					referenceElectronDensity, faceType, vertexType,
+					shortestEdge, 1., negativePotentialPerturbation,
+					densityFile);
+			previousIonDensity.copyValues(ionDensityNegativePerturbation);
 		}
 //		if (mpiId == 0)
 //			cout << endl << "Calculating PP ion charge-density..." << endl;
 //		ionDensityPositivePerturbation.calcField(eField, potential,
 //				faceType, vertexType,
 //				shortestEdge, 1., positivePotentialPerturbation,
-//				densityFile);
-//		if (mpiId == 0)
-//			cout << endl << "Calculating NP ion charge-density..." << endl;
-//		ionDensityNegativePerturbation.calcField(eField, potential,
-//				faceType, vertexType,
-//				shortestEdge, 1., negativePotentialPerturbation,
 //				densityFile);
 //		if (mpiId == 0)
 //			cout << endl << "Calculating charge density..." << endl;
@@ -483,6 +485,8 @@ int main(int argc, char *argv[]) {
 				cout << endl << "Calculating updated potential and electric field..." << endl;
 			eField.calcField(&potential, vertexType, ionDensity, debyeLength);
 		}
+		previousPotential.copyValues(potential);
+		previousPotential += negativePotentialPerturbation;
 		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 	}
 

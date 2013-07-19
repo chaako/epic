@@ -47,6 +47,8 @@ public:
 
 	T& operator[](entHandle& entity);
 	T& operator[](int& entityIndex);
+	// TODO: operator+= should probably return Field<T>&
+	void operator+=(T& valueToAdd);
 
 	T getField(vect3d position, entHandle *entity=NULL,
 			int interpolationOrder=INTERPOLATIONORDER);
@@ -325,6 +327,13 @@ template <class T>
 T& Field<T>::operator[](int& entityIndex) {
 //	cout << "field[" << entityIndex << "] called" << endl;
 	return this->values[entityIndex];
+}
+
+template <class T>
+void Field<T>::operator+=(T& valueToAdd) {
+	for (int i=0; i<entities.size(); i++) {
+		this->setField(entities[i],this->getField(entities[i])+valueToAdd);
+	}
 }
 
 template <class T>
