@@ -520,8 +520,8 @@ void PotentialField::calcField(DensityField& ionDensity, DerivativeField& ionDen
 			double fractionToApply = 0.5;
 			double denominator = chargeDensityDerivative;
 			// TODO: bad parameter name
-			if (fabs(denominator)<SMALL_POTENTIAL)
-				denominator = copysign(SMALL_POTENTIAL,chargeDensityDerivative);
+			if (fabs(denominator)<SMALL_DENSITY_CHANGE)
+				denominator = copysign(SMALL_DENSITY_CHANGE,chargeDensityDerivative);
 			double potentialCorrection = -(ionDensity.getField(entities[i]) -
 					referenceDensity*exp(currentPotential/referenceElectronTemperature))/
 					denominator;
@@ -1058,9 +1058,30 @@ void DerivativeField::calcField(Field<double>& numeratorValue, Field<double>& nu
 	for (int i=0; i<entities.size(); i++) {
 		double numerator = numeratorValue[i]-numeratorReference[i];
 		double denominator = denominatorValue[i]-denominatorReference[i];
-		if (fabs(denominator)<SMALL_POTENTIAL)
-			denominator = copysign(SMALL_POTENTIAL,denominator);
+		if (fabs(denominator)<SMALL_DENOMINATOR)
+			denominator = copysign(SMALL_DENOMINATOR,denominator);
 		double derivative = numerator/denominator;
+		this->setField(entities[i],derivative);
+	}
+}
+
+DensityDerivativeField::DensityDerivativeField(Mesh *inputMesh_ptr, string inputName, int elementType)
+		: DerivativeField(inputMesh_ptr, inputName, elementType) {
+}
+
+void DensityDerivativeField::calcField(Field<double>& numeratorValue, Field<double>& numeratorReference,
+		Field<double>& denominatorValue, Field<double>& denominatorReference) {
+	for (int i=0; i<entities.size(); i++) {
+		double numerator = numeratorValue[i]-numeratorReference[i];
+		double denominator = denominatorValue[i]-denominatorReference[i];
+		// TODO: might be taking derivative wrt to something other than potential?
+		double derivative;
+		if ((fabs(numerator)<SMALL_DENSITY_CHANGE) || (fabs(denominator)<SMALL_POTENTIAL_CHANGE)) {
+			// TODO: this forces small steps (and oscillations if sign wrong) near convergence?
+			derivative = -1.;
+		} else {
+			derivative = numerator/denominator;
+		}
 		this->setField(entities[i],derivative);
 	}
 }

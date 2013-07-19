@@ -136,6 +136,16 @@ public:
 			Field<double>& denominatorValue, Field<double>& denominatorReference);
 };
 
+class DensityDerivativeField : public DerivativeField {
+public:
+	DensityDerivativeField(Mesh *inputMesh_ptr, string inputName,
+			int elementType);
+	virtual ~DensityDerivativeField() {}
+
+	void calcField(Field<double>& numeratorValue, Field<double>& numeratorReference,
+			Field<double>& denominatorValue, Field<double>& denominatorReference);
+};
+
 class DensityField : public Field<double> {
 	// Charge density
 public:

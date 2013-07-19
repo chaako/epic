@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
 //	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"));
 //	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
 //	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
-	DerivativeField ionDensityDerivative(&mesh,string("ionDensityDerivative"),iBase_VERTEX);
+	DensityDerivativeField ionDensityDerivative(&mesh,string("ionDensDeriv"),iBase_VERTEX);
 	ShortestEdgeField shortestEdge(&mesh,string("shortestEdge"));
 
 	SurfaceField<double,vtkDoubleArray> surfacePotential(&surfaceMesh, "surfacePotential");
