@@ -458,16 +458,18 @@ int main(int argc, char *argv[]) {
 //		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
 //		PotentialField potentialCopy(potential,potentialCopyName.str());
 		previousPotential.copyValues(potential);
+		previousPotential += negativePotentialPerturbation;
+		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 		if (debyeLength==0.) {
 			if (mpiId == 0)
 				cout << endl << "Calculating updated potential..." << endl;
-			if (i==0 && !usePotentialFromInput) {
-				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
-						sheathPotential, fixSheathPotential);
-			} else {
+//			if (i==0 && !usePotentialFromInput) {
+//				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
+//						sheathPotential, fixSheathPotential);
+//			} else {
 				potential.calcField(ionDensity, ionDensityDerivative, vertexType, potentialFile, boundaryPotential,
 						sheathPotential, fixSheathPotential);
-			}
+//			}
 //			potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
 //			potential.calcField(ionDensity,
 //					ionDensityPositivePerturbation, ionDensityNegativePerturbation,
@@ -485,9 +487,7 @@ int main(int argc, char *argv[]) {
 				cout << endl << "Calculating updated potential and electric field..." << endl;
 			eField.calcField(&potential, vertexType, ionDensity, debyeLength);
 		}
-		previousPotential.copyValues(potential);
-		previousPotential += negativePotentialPerturbation;
-		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
+//		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 	}
 
 	if (mpiId == 0)
