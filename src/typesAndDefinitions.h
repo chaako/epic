@@ -25,6 +25,8 @@ const double SMALL_TIME=1.e-8;
 const double SMALL_DENOMINATOR=1.e-5;
 const double SMALL_POTENTIAL_CHANGE=1.e-2;
 const double SMALL_DENSITY_CHANGE=1.e-2;
+const double SMALL_DENSITY_DERIVATIVE=1.e-1;
+const double LARGE_POTENTIAL_CHANGE=5.e-1;
 
 const int WORKTAG=999999998;
 const int DIETAG=999999999;

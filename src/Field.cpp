@@ -520,11 +520,13 @@ void PotentialField::calcField(DensityField& ionDensity, DerivativeField& ionDen
 			double fractionToApply = 0.5;
 			double denominator = chargeDensityDerivative;
 			// TODO: bad parameter name
-			if (fabs(denominator)<SMALL_DENSITY_CHANGE)
-				denominator = copysign(SMALL_DENSITY_CHANGE,chargeDensityDerivative);
+			if (fabs(denominator)<SMALL_DENSITY_DERIVATIVE)
+				denominator = copysign(SMALL_DENSITY_DERIVATIVE,chargeDensityDerivative);
 			double potentialCorrection = -(ionDensity.getField(entities[i]) -
 					referenceDensity*exp(currentPotential/referenceElectronTemperature))/
 					denominator;
+			if (fabs(potentialCorrection)>LARGE_POTENTIAL_CHANGE)
+				potentialCorrection = copysign(LARGE_POTENTIAL_CHANGE,potentialCorrection);
 			potential = currentPotential + fractionToApply*potentialCorrection;
 		}
 		if (fixSheathPotential) {
