@@ -145,6 +145,7 @@ public:
 	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh_ptr;
 	vtkSmartPointer<vtkCellTreeLocator> vtkCellTree_ptr;
 	vector<entHandle> vtkToIMesh;
+	map<entHandle,vtkIdType> iMeshToVtk;
 
 	iMesh_Instance meshInstance;
 	// TODO: rename vtkInputMesh something like inputMeshIsVtk

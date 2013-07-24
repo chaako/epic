@@ -63,6 +63,7 @@ public:
 			const vect3d &position, int *entityIndex=-1,
 			int interpolationOrder=INTERPOLATIONORDER);
 	void setField(entHandle node, T field);
+	void setVtkField(entHandle node, T field);
 	Eigen::VectorXd getErrorCoefficients(entHandle element,
 			int interpolationOrder);
 	Eigen::VectorXd getErrorCoefficients(int elementIndex,
@@ -75,6 +76,13 @@ public:
 	void print();
 
 	Mesh *mesh_ptr;
+//	// TODO: can this be done better?
+//	typedef boost::conditional<boost::is_same<T,int>::value,
+//								vtkIntArray,vtkDoubleArray>::type vtkFieldType;
+//	vtkSmartPointer<vtkFieldType> vtkField_ptr;
+	vtkSmartPointer<vtkDataArray> vtkField_ptr;
+	bool storeVtkField;
+	int numberOfComponents;
 	string name;
 	iBase_TagHandle tag;
 	vector<entHandle> &entities;
@@ -254,17 +262,23 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 	if (boost::is_same<T,double>::value) {
 		size = 1;
 		type = iBase_DOUBLE;
+		vtkField_ptr = vtkSmartPointer<vtkDoubleArray>::New();
 //	} else if (is_same<T,int>::value) {
 	} else if (boost::is_same<T,int>::value) {
 		size = 1;
 		type = iBase_INTEGER;
+		vtkField_ptr = vtkSmartPointer<vtkIntArray>::New();
 	} else if (boost::is_same<T,vect3d>::value) {
 		size = 3;
 		type = iBase_DOUBLE;
+		vtkField_ptr = vtkSmartPointer<vtkDoubleArray>::New();
 	} else {
 		size = (int)sizeof(T);
 		type = iBase_BYTES;
+//		// TODO: figure out why this doesn't work
+//		vtkField_ptr = vtkSmartPointer<vtkDataArray>::New();
 	}
+	numberOfComponents = size;
 	tag = mesh_ptr->createTagHandle(name, size, type);
 	// TODO: consider more transparent handling of exiting tag here
 	tag = mesh_ptr->getTagHandle(name);
@@ -283,6 +297,25 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 //	cout << "The field '" << name << "' was created with " <<
 //			numberOfInitializedFields << " values set from mesh DB, and " <<
 //			numberOfUninitializedFields << " uninitialized values" << endl;
+
+	// TODO: don't assume entityDimension==0
+//	throw string("nonzero entity dimension in SurfaceField not implemented yet");
+	if (entityDimension==0) {
+		storeVtkField = true;
+		if (entities.size() != mesh_ptr->vtkMesh_ptr->GetNumberOfPoints())
+			throw string("vtkMesh and mesh don't have the same number of elements");
+		// TODO: add try/catch?
+		vtkField_ptr->SetName(name.c_str());
+		vtkField_ptr->SetNumberOfComponents(numberOfComponents);
+		vtkField_ptr->SetNumberOfTuples(entities.size());
+		// TODO: verify that this doens't make a copy, i.e. can use field_ptr to modify
+		mesh_ptr->vtkMesh_ptr->GetPointData()->AddArray(vtkField_ptr);
+		for (int i=0; i<entities.size(); i++) {
+			this->setVtkField(entities[i],values[i]);
+		}
+	} else {
+		storeVtkField = false;
+	}
 
 	// TODO: nVertices should be standardized across functions
 	int nVertices = 4;
@@ -714,6 +747,7 @@ T Field<T>::getAverageField(entHandle element) {
 
 template <class T>
 void Field<T>::setField(entHandle node, T field) {
+	this->setVtkField(node,field);
 	this->operator[](node) = field;
 	int ierr;
 	int field_size;
@@ -736,6 +770,28 @@ void Field<T>::setField(entHandle node, T field) {
 			field_size, &ierr);
 	if (ierr != iBase_SUCCESS)
 		throw string("Failure setting field.");
+}
+
+template <class T>
+void Field<T>::setVtkField(entHandle node, T field) {
+	T *field_ptr;
+	double vect3dBuffer[3];
+	if (boost::is_same<T,vect3d>::value) {
+		for (int i=0; i<NDIM; i++)
+			vect3dBuffer[i] = ((vect3d)field)[i];
+		field_ptr = (T*)&vect3dBuffer[0];
+	} else {
+		field_ptr = &field;
+	}
+	if (storeVtkField) {
+		vtkIdType vtkNode = mesh_ptr->iMeshToVtk[node];
+		// TODO: other cases than int or double?
+		if (boost::is_same<T,int>::value) {
+			vtkIntArray::SafeDownCast(vtkField_ptr)->SetTupleValue(vtkNode, (int*)field_ptr);
+		} else {
+			vtkDoubleArray::SafeDownCast(vtkField_ptr)->SetTupleValue(vtkNode, (double*)field_ptr);
+		}
+	}
 }
 
 template <class T>

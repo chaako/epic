@@ -1417,7 +1417,7 @@ vtkSmartPointer<vtkUnstructuredGrid> Mesh::createVtkMesh() {
 	vector<entHandle> vertices =
 			this->getEntities(iBase_VERTEX);
 	points->SetNumberOfPoints(vertices.size());
-	map<entHandle,int> indexOfVertex;
+	map<entHandle,vtkIdType>& indexOfVertex = iMeshToVtk;
 	for(int i=0; i<vertices.size(); i++) {
 		vect3d vV = this->getCoordinates(vertices[i]);
 		points->InsertPoint(i, vV[0], vV[1], vV[2]);
