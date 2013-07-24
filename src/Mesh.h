@@ -140,6 +140,7 @@ public:
 	double minimumBasisFunction(const vect3d &position, int &regionIndex);
 
 	vtkSmartPointer<vtkUnstructuredGrid> createVtkMesh();
+	void saveVtkMesh(string outputFile);
 
 	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh_ptr;
 	vtkSmartPointer<vtkCellTreeLocator> vtkCellTree_ptr;

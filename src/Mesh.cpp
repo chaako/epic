@@ -191,6 +191,9 @@ void Mesh::printElementNumbers() {
 }
 
 void Mesh::save(string outputMeshFile) {
+	int periodLocation = outputMeshFile.rfind(".");
+	this->saveVtkMesh(outputMeshFile.substr(0,periodLocation)+".vtu");
+
 	char *options = NULL;
 	int options_len = 0;
 	int ierr;
@@ -1441,4 +1444,13 @@ vtkSmartPointer<vtkUnstructuredGrid> Mesh::createVtkMesh() {
 	mesh->Update();
 
 	return mesh;
+}
+
+void Mesh::saveVtkMesh(string outputFile) {
+	vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
+			vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
+	stringstream outputFilename;
+	writer->SetFileName(outputFile.c_str());
+	writer->SetInput(vtkMesh_ptr);
+	writer->Write();
 }
