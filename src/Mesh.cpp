@@ -33,6 +33,7 @@ Mesh::Mesh(string inputMeshFile) {
 		try {
 			this->convertComponentTagsToVectorTag("eField");
 			this->convertComponentTagsToVectorTag("ionVelocity");
+			this->convertComponentTagsToVectorTag("NPionVelocity");
 		} catch (string& error) {
 			cout << error << endl;
 		}
@@ -196,6 +197,7 @@ void Mesh::save(string outputMeshFile) {
 	// destroy vector tags since VisIt doesn't understand
 	this->convertVectorTagToComponentTags("eField");
 	this->convertVectorTagToComponentTags("ionVelocity");
+	this->convertVectorTagToComponentTags("NPionVelocity");
 
 	iMesh_save(meshInstance, rootEntitySet, outputMeshFile.c_str(),
 			options, &ierr, outputMeshFile.length(), options_len);
@@ -204,6 +206,7 @@ void Mesh::save(string outputMeshFile) {
 	// recreate vector tags and destroy component tags
 	this->convertComponentTagsToVectorTag("eField");
 	this->convertComponentTagsToVectorTag("ionVelocity");
+	this->convertComponentTagsToVectorTag("NPionVelocity");
 }
 
 iBase_TagHandle Mesh::createTag(string tagName, int size, int type) {

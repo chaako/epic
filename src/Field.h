@@ -72,6 +72,8 @@ public:
 			Eigen::VectorXd *errorCoefficients);
 	void updateTagHandle();
 
+	void print();
+
 	Mesh *mesh_ptr;
 	string name;
 	iBase_TagHandle tag;
@@ -256,6 +258,9 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 	} else if (boost::is_same<T,int>::value) {
 		size = 1;
 		type = iBase_INTEGER;
+	} else if (boost::is_same<T,vect3d>::value) {
+		size = 3;
+		type = iBase_DOUBLE;
 	} else {
 		size = (int)sizeof(T);
 		type = iBase_BYTES;
@@ -664,30 +669,29 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 
 template <class T>
 T Field<T>::getField(entHandle node) {
-	T field;
-	T *field_ptr=&field;
-	int field_alloc = sizeof(T);
-	int field_size = sizeof(T);
-	int ierr;
-	iMesh_getData(mesh_ptr->meshInstance, node, tag, &field_ptr,
-			&field_alloc, &field_size, &ierr);
-//	CHECK("Failure getting field");
-	if (ierr != iBase_SUCCESS)
-		throw int(FAILURE_GETTING_FIELD);
-	return field;
+	try {
+		return this->getFieldFromMeshDB(node);
+	} catch (int FAILURE_GETTING_FIELD) {
+		throw string("Failure getting field.");
+	}
 //	return this->operator[](node);
 }
 
 template <class T>
 T Field<T>::getFieldFromMeshDB(entHandle entityHandle) {
 	T field;
-	T *field_ptr=&field;
-	int field_alloc = sizeof(T);
-	int field_size = sizeof(T);
+	void *field_ptr=&field;
+	int field_alloc;
+	int field_size;
+	if (boost::is_same<T,vect3d>::value) {
+		field_alloc = 3*sizeof(double);
+	} else {
+		field_alloc = sizeof(T);
+	}
+	field_size = field_alloc;
 	int ierr;
 	iMesh_getData(mesh_ptr->meshInstance, entityHandle, tag, &field_ptr,
 			&field_alloc, &field_size, &ierr);
-//	CHECK("Failure getting field");
 	if (ierr != iBase_SUCCESS)
 		throw int(FAILURE_GETTING_FIELD);
 	return field;
@@ -712,9 +716,26 @@ template <class T>
 void Field<T>::setField(entHandle node, T field) {
 	this->operator[](node) = field;
 	int ierr;
-	int field_size = sizeof(T);
-	iMesh_setData(mesh_ptr->meshInstance, node, tag, &field,
+	int field_size;
+	void *field_ptr;
+	double vect3dBuffer[3];
+	if (boost::is_same<T,vect3d>::value) {
+		for (int i=0; i<NDIM; i++)
+			vect3dBuffer[i] = ((vect3d)field)[i];
+		field_ptr = vect3dBuffer;
+//		// TODO: figure out why using .data() breaks in optimization
+//		//       (adding print .transpose() prevents optimization and works)
+//		vect3d vector(field);
+//		field_ptr = vector.data();
+		field_size = 3*sizeof(double);
+	} else {
+		field_ptr = &field;
+		field_size = sizeof(T);
+	}
+	iMesh_setData(mesh_ptr->meshInstance, node, tag, field_ptr,
 			field_size, &ierr);
+	if (ierr != iBase_SUCCESS)
+		throw string("Failure setting field.");
 }
 
 template <class T>
@@ -905,6 +926,12 @@ void Field<T>::getErrorCoefficients(
 template <class T>
 void Field<T>::updateTagHandle() {
 	tag = mesh_ptr->getTagHandle(name);
+}
+
+template <class T>
+void Field<T>::print() {
+	for (int i=0; i<entities.size(); i++)
+		cout << this->getField(entities[i]) << "..." << endl;
 }
 
 #endif /* FIELD_H_ */

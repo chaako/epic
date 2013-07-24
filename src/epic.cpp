@@ -207,6 +207,8 @@ int main(int argc, char *argv[]) {
 	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
 	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
 	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
+	Field<vect3d> ionVelocityNegativePerturbation(&mesh,string("NPionVelocity"),iBase_VERTEX);
+	Field<double> ionTemperatureNegativePerturbation(&mesh,string("NPionTemperature"),iBase_VERTEX);
 	// TODO: updating other moments through density not very clean/transparent
 	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature);
 	DensityField previousIonDensity(&mesh,string("previousIonDensity"),&ionVelocity,&ionTemperature);
@@ -214,7 +216,8 @@ int main(int argc, char *argv[]) {
 //	DensityField electronDensity(&mesh,string("electronDensity"));
 //	DensityField density(&mesh,string("density"));
 //	DensityField ionDensityPositivePerturbation(&mesh,string("PPionDensity"));
-	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"),&ionVelocity,&ionTemperature);
+	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"),
+			&ionVelocityNegativePerturbation,&ionTemperatureNegativePerturbation);
 //	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
 //	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
 	DensityDerivativeField ionDensityDerivative(&mesh,string("ionDensDeriv"),iBase_VERTEX);
@@ -342,6 +345,7 @@ int main(int argc, char *argv[]) {
 			// TODO: do this automatically?
 			eField.updateTagHandle();
 			ionVelocity.updateTagHandle();
+			ionVelocityNegativePerturbation.updateTagHandle();
 		}
 
 		if (doPoissonTest) {
@@ -440,6 +444,7 @@ int main(int argc, char *argv[]) {
 			// TODO: do this automatically?
 			eField.updateTagHandle();
 			ionVelocity.updateTagHandle();
+			ionVelocityNegativePerturbation.updateTagHandle();
 
 			if (extern_numberOfSurfaceEvalPoints>0) {
 				stringstream iterSurfaceMeshFileName;
