@@ -39,7 +39,7 @@ template <class T>
 class Field {
 public:
 	Field(Mesh *inputMesh_ptr, string inputName,
-			int entityDimension);
+			int entityDimension, int numberOfComponents=1);
 	// TODO: Does an empty destructor cause a memory leak?
 	virtual ~Field() {}
 
@@ -63,7 +63,8 @@ public:
 			const vect3d &position, int *entityIndex=-1,
 			int interpolationOrder=INTERPOLATIONORDER);
 	void setField(entHandle node, T field);
-	void setVtkField(entHandle node, T field);
+	void setField(entHandle node, T *field_ptr);
+	void setVtkField(entHandle node, T *field_ptr);
 	Eigen::VectorXd getErrorCoefficients(entHandle element,
 			int interpolationOrder);
 	Eigen::VectorXd getErrorCoefficients(int elementIndex,
@@ -252,33 +253,33 @@ public:
 // gcc doesn't implement the export keyword, so define template functions here
 template <class T>
 Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
-		int entityDimension) : entities(
-				inputMesh_ptr->entitiesVectors[entityDimension]) {
+		int entityDimension, int numberOfComponents) : entities(
+				inputMesh_ptr->entitiesVectors[entityDimension]),
+				numberOfComponents(numberOfComponents) {
 	mesh_ptr = inputMesh_ptr;
 	name = inputName;
 	int ierr;
 	int size, type;
 //	if (is_same<T,double>::value) {
 	if (boost::is_same<T,double>::value) {
-		size = 1;
+		size = numberOfComponents;
 		type = iBase_DOUBLE;
 		vtkField_ptr = vtkSmartPointer<vtkDoubleArray>::New();
 //	} else if (is_same<T,int>::value) {
 	} else if (boost::is_same<T,int>::value) {
-		size = 1;
+		size = numberOfComponents;
 		type = iBase_INTEGER;
 		vtkField_ptr = vtkSmartPointer<vtkIntArray>::New();
 	} else if (boost::is_same<T,vect3d>::value) {
-		size = 3;
+		size = NDIM*numberOfComponents;
 		type = iBase_DOUBLE;
 		vtkField_ptr = vtkSmartPointer<vtkDoubleArray>::New();
 	} else {
-		size = (int)sizeof(T);
+		size = numberOfComponents*(int)sizeof(T);
 		type = iBase_BYTES;
 //		// TODO: figure out why this doesn't work
 //		vtkField_ptr = vtkSmartPointer<vtkDataArray>::New();
 	}
-	numberOfComponents = size;
 	tag = mesh_ptr->createTagHandle(name, size, type);
 	// TODO: consider more transparent handling of exiting tag here
 	tag = mesh_ptr->getTagHandle(name);
@@ -306,12 +307,12 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 			throw string("vtkMesh and mesh don't have the same number of elements");
 		// TODO: add try/catch?
 		vtkField_ptr->SetName(name.c_str());
-		vtkField_ptr->SetNumberOfComponents(numberOfComponents);
+		vtkField_ptr->SetNumberOfComponents(size);
 		vtkField_ptr->SetNumberOfTuples(entities.size());
 		// TODO: verify that this doens't make a copy, i.e. can use field_ptr to modify
 		mesh_ptr->vtkMesh_ptr->GetPointData()->AddArray(vtkField_ptr);
 		for (int i=0; i<entities.size(); i++) {
-			this->setVtkField(entities[i],values[i]);
+			this->setVtkField(entities[i],&(values[i]));
 		}
 	} else {
 		storeVtkField = false;
@@ -747,49 +748,59 @@ T Field<T>::getAverageField(entHandle element) {
 
 template <class T>
 void Field<T>::setField(entHandle node, T field) {
-	this->setVtkField(node,field);
-	this->operator[](node) = field;
+	this->setField(node,&field);
+}
+
+template <class T>
+void Field<T>::setField(entHandle node, T *field_ptr) {
+	this->setVtkField(node,field_ptr);
+	// TODO: cache more than first component?
+	this->operator[](node) = *field_ptr;
 	int ierr;
+	void *components_ptr;
 	int field_size;
-	void *field_ptr;
-	double vect3dBuffer[3];
+	// TODO: handle vectors of vect3d?
+	double vect3dBuffer[NDIM];
 	if (boost::is_same<T,vect3d>::value) {
 		for (int i=0; i<NDIM; i++)
-			vect3dBuffer[i] = ((vect3d)field)[i];
-		field_ptr = vect3dBuffer;
+			vect3dBuffer[i] = ((vect3d*)field_ptr)->operator[](i);
+		components_ptr = vect3dBuffer;
 //		// TODO: figure out why using .data() breaks in optimization
 //		//       (adding print .transpose() prevents optimization and works)
 //		vect3d vector(field);
 //		field_ptr = vector.data();
-		field_size = 3*sizeof(double);
+		field_size = NDIM*sizeof(double);
 	} else {
-		field_ptr = &field;
+		components_ptr = field_ptr;
+		// TODO: for now intentionally only store first component
+		//       since more break visit-reading
 		field_size = sizeof(T);
 	}
-	iMesh_setData(mesh_ptr->meshInstance, node, tag, field_ptr,
+	iMesh_setData(mesh_ptr->meshInstance, node, tag, components_ptr,
 			field_size, &ierr);
 	if (ierr != iBase_SUCCESS)
 		throw string("Failure setting field.");
 }
 
 template <class T>
-void Field<T>::setVtkField(entHandle node, T field) {
-	T *field_ptr;
-	double vect3dBuffer[3];
+void Field<T>::setVtkField(entHandle node, T *field_ptr) {
+	void *components_ptr;
+	// TODO: handle vectors of vect3d?
+	double vect3dBuffer[NDIM];
 	if (boost::is_same<T,vect3d>::value) {
 		for (int i=0; i<NDIM; i++)
-			vect3dBuffer[i] = ((vect3d)field)[i];
-		field_ptr = (T*)&vect3dBuffer[0];
+			vect3dBuffer[i] = ((vect3d*)field_ptr)->operator[](i);
+		components_ptr = (T*)&vect3dBuffer[0];
 	} else {
-		field_ptr = &field;
+		components_ptr = field_ptr;
 	}
 	if (storeVtkField) {
 		vtkIdType vtkNode = mesh_ptr->iMeshToVtk[node];
 		// TODO: other cases than int or double?
 		if (boost::is_same<T,int>::value) {
-			vtkIntArray::SafeDownCast(vtkField_ptr)->SetTupleValue(vtkNode, (int*)field_ptr);
+			vtkIntArray::SafeDownCast(vtkField_ptr)->SetTupleValue(vtkNode, (int*)components_ptr);
 		} else {
-			vtkDoubleArray::SafeDownCast(vtkField_ptr)->SetTupleValue(vtkNode, (double*)field_ptr);
+			vtkDoubleArray::SafeDownCast(vtkField_ptr)->SetTupleValue(vtkNode, (double*)components_ptr);
 		}
 	}
 }
