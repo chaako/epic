@@ -730,23 +730,31 @@ void DensityField::calcField(ElectricField& electricField,
 	extern_findTet=0;
 	clock_t startClock = clock(); // timing
 	for (int node=0; node<entities.size(); node++) {
-		double error;
-		vect3d averageVelocity, averageVelocityError;
-		double temperature, temperatureError;
-	    double density;
+		double *densities = new double[numberOfComponents];
+		double *densityErrors = new double[numberOfComponents];
+		vect3d *averageVelocities = new vect3d[numberOfComponents];
+		vect3d *averageVelocityErrors = new vect3d[numberOfComponents];
+		double *temperatures = new double[numberOfComponents];
+		double *temperatureErrors = new double[numberOfComponents];
 	    this->calculateDensity(node, electricField,
 				potentialField, referenceDensity,
 				faceType, vertexType, shortestEdge,
-				charge, potentialPerturbation, &density, &error,
-				&averageVelocity, &averageVelocityError,
-				&temperature, &temperatureError);
-		this->setField(entities[node], density);
-		averageVelocity_ptr->setField(entities[node], averageVelocity);
-		temperature_ptr->setField(entities[node], temperature);
+				charge, potentialPerturbation, densities, densityErrors,
+				averageVelocities, averageVelocityErrors,
+				temperatures, temperatureErrors);
+		this->setField(entities[node], densities);
+		averageVelocity_ptr->setField(entities[node], averageVelocities);
+		temperature_ptr->setField(entities[node], temperatures);
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		cout << nodePosition.norm() << " " << density << " " << error << endl;
 		if (outFile)
-			fprintf(outFile, "%g %g %g\n", nodePosition.norm(), density, error);
+			fprintf(outFile, "%g %g %g\n", nodePosition.norm(), densities[0], densityErrors[0]);
+		delete[] densities;
+		delete[] densityErrors;
+		delete[] averageVelocities;
+		delete[] averageVelocityErrors;
+		delete[] temperatures;
+		delete[] temperatureErrors;
 	}
 	clock_t endClock = clock(); // timing
 	cout << "calcField total (s)= "
