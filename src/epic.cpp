@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
 	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest, fixSheathPotential;
 	bool usePotentialFromInput, useDensityFromInput;
 	int secondsToSleepForDebugAttach, numberOfIterations;
+	int numberOfPotentialValues;
 	double debyeLength, boundaryPotential, objectPotential, sheathPotential;
 	double densityGradient, parallelDriftGradient;
 	double parallelTemperatureGradient, perpendicularTemperatureGradient;
@@ -77,6 +78,8 @@ int main(int argc, char *argv[]) {
 							"fix potential at sheath entrance (true/false; for debyeLength=0.)")
 					("usePotentialFromInput", po::value<bool>(&usePotentialFromInput)->default_value(false),
 							"use potential from input file (true/false)")
+					("numberOfPotentialValues", po::value<int>(&numberOfPotentialValues)->default_value(1),
+							"number of potential values to evaluate density at")
 					("useDensityFromInput", po::value<bool>(&useDensityFromInput)->default_value(false),
 							"use density from input file (true/false)")
 					("densityGradient", po::value<double>(&densityGradient)->default_value(0.),
@@ -202,22 +205,26 @@ int main(int argc, char *argv[]) {
 		cout << endl << "Setting vertex codes..." << endl;
 	vertexType.calcField(faceType);
 	// TODO: create error fields with pointer in corresponding fields
-	PotentialField potential(&mesh,string("potential"));
-	PotentialField previousPotential(&mesh,string("previousPotential"));
+	PotentialField potential(&mesh,string("potential"),numberOfPotentialValues);
+	PotentialField previousPotential(&mesh,string("previousPotential"),numberOfPotentialValues);
 	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
-	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
-	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
-	Field<vect3d> ionVelocityNegativePerturbation(&mesh,string("NPionVelocity"),iBase_VERTEX);
-	Field<double> ionTemperatureNegativePerturbation(&mesh,string("NPionTemperature"),iBase_VERTEX);
+	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX,numberOfPotentialValues);
+	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX,numberOfPotentialValues);
+	Field<vect3d> ionVelocityNegativePerturbation(&mesh,string("NPionVelocity"),iBase_VERTEX,
+			numberOfPotentialValues);
+	Field<double> ionTemperatureNegativePerturbation(&mesh,string("NPionTemperature"),iBase_VERTEX,
+			numberOfPotentialValues);
 	// TODO: updating other moments through density not very clean/transparent
-	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature);
-	DensityField previousIonDensity(&mesh,string("previousIonDensity"),&ionVelocity,&ionTemperature);
+	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature,numberOfPotentialValues);
+	DensityField previousIonDensity(&mesh,string("previousIonDensity"),&ionVelocity,&ionTemperature,
+			numberOfPotentialValues);
 	DensityField referenceElectronDensity(&mesh,string("referenceElectronDensity"));
 //	DensityField electronDensity(&mesh,string("electronDensity"));
 //	DensityField density(&mesh,string("density"));
 //	DensityField ionDensityPositivePerturbation(&mesh,string("PPionDensity"));
 	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"),
-			&ionVelocityNegativePerturbation,&ionTemperatureNegativePerturbation);
+			&ionVelocityNegativePerturbation,&ionTemperatureNegativePerturbation,
+			numberOfPotentialValues);
 //	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
 //	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
 	DensityDerivativeField ionDensityDerivative(&mesh,string("ionDensDeriv"),iBase_VERTEX);
@@ -343,9 +350,9 @@ int main(int argc, char *argv[]) {
 			mesh.save(iterMeshFileName.str());
 			// mesh.save() destroys vector tags, so update
 			// TODO: do this automatically?
-			eField.updateTagHandle();
-			ionVelocity.updateTagHandle();
-			ionVelocityNegativePerturbation.updateTagHandle();
+//			eField.updateTagHandle();
+//			ionVelocity.updateTagHandle();
+//			ionVelocityNegativePerturbation.updateTagHandle();
 		}
 
 		if (doPoissonTest) {
@@ -402,6 +409,7 @@ int main(int argc, char *argv[]) {
 			if (mpiId == 0)
 				cout << endl << "Using ion density from input file." << endl;
 		} else {
+			potential.computePerturbedPotentials();
 			if (mpiId == 0)
 				cout << endl << "Calculating ion density..." << endl;
 			ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
@@ -442,9 +450,9 @@ int main(int argc, char *argv[]) {
 			mesh.save(iterMeshFileName.str());
 			// mesh.save() destroys vector tags, so update
 			// TODO: do this automatically?
-			eField.updateTagHandle();
-			ionVelocity.updateTagHandle();
-			ionVelocityNegativePerturbation.updateTagHandle();
+//			eField.updateTagHandle();
+//			ionVelocity.updateTagHandle();
+//			ionVelocityNegativePerturbation.updateTagHandle();
 
 			if (extern_numberOfSurfaceEvalPoints>0) {
 				stringstream iterSurfaceMeshFileName;

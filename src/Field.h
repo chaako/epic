@@ -53,6 +53,7 @@ public:
 	T getField(vect3d position, entHandle *entity=NULL,
 			int interpolationOrder=INTERPOLATIONORDER);
 	T getField(entHandle node);
+	void getField(entHandle entityHandle, T *field_ptr);
 	T getFieldFromMeshDB(entHandle entityHandle);
 	void getFieldFromMeshDB(entHandle entityHandle, T *field_ptr,
 			int requestedNumberOfComponents=1);
@@ -177,8 +178,8 @@ public:
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField& electricField,
 			PotentialField& potentialField, DensityField& referenceDensity,
-			Field<int> faceType, CodeField vertexType,
-			ShortestEdgeField shortestEdge, double charge,
+			Field<int>& faceType, CodeField& vertexType,
+			ShortestEdgeField& shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile=NULL);
 	// TODO: make reference density its own class?
 	void calcField(CodeField& vertexType,
@@ -186,8 +187,8 @@ public:
 	void poissonCubeTest(double debyeLength);
 	void calculateDensity(int node, ElectricField& electricField,
 			PotentialField& potentialField, DensityField& referenceDensity,
-			Field<int> faceType, CodeField vertexType,
-			ShortestEdgeField shortestEdge, double charge,
+			Field<int>& faceType, CodeField& vertexType,
+			ShortestEdgeField& shortestEdge, double charge,
 			double potentialPerturbation, double *density, double *error,
 			vect3d *averageVelocity, vect3d *averageVelocityError,
 			double *temperature, double *temperatureError);
@@ -238,7 +239,7 @@ public:
 			double negativePotentialPerturbation,
 			FILE *outFile);
 
-	void computePerturbedPotentials();
+	void computePerturbedPotentials(double minPotential=-1., double maxPotential=0.);
 
 	void setReferenceElectronDensity(DensityField& referenceElectronDensity);
 	void setReferenceElectronTemperature(SpatialDependence& referenceElectronTemperature);
@@ -714,6 +715,11 @@ T Field<T>::getField(entHandle node) {
 		throw string("Failure getting field.");
 	}
 //	return this->operator[](node);
+}
+
+template <class T>
+void Field<T>::getField(entHandle entityHandle, T *field_ptr) {
+	this->getFieldFromMeshDB(entityHandle, field_ptr, numberOfComponents);
 }
 
 template <class T>

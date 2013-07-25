@@ -29,14 +29,14 @@ Mesh::Mesh(string inputMeshFile) {
 		iMesh_load(mesh, root, inputMeshFile.c_str(), options, &ierr,
 				strlen(inputMeshFile.c_str()), options_len);
 		vtkInputMesh = false;
-		// recreate vector field tags and destroy component tags
-		try {
-			this->convertComponentTagsToVectorTag("eField");
-			this->convertComponentTagsToVectorTag("ionVelocity");
-			this->convertComponentTagsToVectorTag("NPionVelocity");
-		} catch (string& error) {
-			cout << error << endl;
-		}
+//		// recreate vector field tags and destroy component tags
+//		try {
+//			this->convertComponentTagsToVectorTag("eField");
+//			this->convertComponentTagsToVectorTag("ionVelocity");
+//			this->convertComponentTagsToVectorTag("NPionVelocity");
+//		} catch (string& error) {
+//			cout << error << endl;
+//		}
 	} else {
 		// FMDB's importVTK can't handle our tags, so use custom version
 		ierr = custom_importVTK((mMesh *)mesh, inputMeshFile.c_str());
@@ -197,19 +197,19 @@ void Mesh::save(string outputMeshFile) {
 	char *options = NULL;
 	int options_len = 0;
 	int ierr;
-	// destroy vector tags since VisIt doesn't understand
-	this->convertVectorTagToComponentTags("eField");
-	this->convertVectorTagToComponentTags("ionVelocity");
-	this->convertVectorTagToComponentTags("NPionVelocity");
+//	// destroy vector tags since VisIt doesn't understand
+//	this->convertVectorTagToComponentTags("eField");
+//	this->convertVectorTagToComponentTags("ionVelocity");
+//	this->convertVectorTagToComponentTags("NPionVelocity");
 
 	iMesh_save(meshInstance, rootEntitySet, outputMeshFile.c_str(),
 			options, &ierr, outputMeshFile.length(), options_len);
 	CHECK("Save failed");
 
-	// recreate vector tags and destroy component tags
-	this->convertComponentTagsToVectorTag("eField");
-	this->convertComponentTagsToVectorTag("ionVelocity");
-	this->convertComponentTagsToVectorTag("NPionVelocity");
+//	// recreate vector tags and destroy component tags
+//	this->convertComponentTagsToVectorTag("eField");
+//	this->convertComponentTagsToVectorTag("ionVelocity");
+//	this->convertComponentTagsToVectorTag("NPionVelocity");
 }
 
 iBase_TagHandle Mesh::createTag(string tagName, int size, int type) {
@@ -263,6 +263,7 @@ void Mesh::convertVectorTagToComponentTags(string vectorTagName) {
 				this->getSuperCellFaces(ents0d[i]);
 		vect3d vectorData(0.,0.,0.);
 		vect3d *vectorData_ptr = &vectorData;
+		// TODO: this can't handle multiple vectors
 		int alloc = sizeof(vect3d);
 		int size = sizeof(vect3d);
 		iMesh_getData(meshInstance, ents0d[i], vectorTag, &vectorData_ptr,

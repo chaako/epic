@@ -621,9 +621,21 @@ void PotentialField::calcField(DensityField ionDensity,
 		fprintf(outFile, "\n\n\n\n");
 }
 
-void PotentialField::computePerturbedPotentials() {
-	for (int i=0; i<entities.size(); i++) {
-		double referencePotential = this->getField(entities[i]);
+void PotentialField::computePerturbedPotentials(double minPotential, double maxPotential) {
+	if (numberOfComponents>2) {
+		double *potentials_ptr = new double[numberOfComponents];
+		for (int i=0; i<entities.size(); i++) {
+			double referencePotential = this->getField(entities[i]);
+			double lowerLimit = min(minPotential,referencePotential);
+			double upperLimit = max(maxPotential,referencePotential);
+			double step = (upperLimit-lowerLimit)/(numberOfComponents-2);
+			potentials_ptr[0] = referencePotential;
+			for (int j=1; j<numberOfComponents; j++) {
+				potentials_ptr[j] = lowerLimit+(j-1)*step;
+			}
+			this->setField(entities[i],potentials_ptr);
+		}
+		delete[] potentials_ptr;
 	}
 }
 
@@ -678,8 +690,8 @@ void DensityField::calcField(DensityField ionDensity,
 
 void DensityField::calcField(ElectricField& electricField,
 		PotentialField& potentialField, DensityField& referenceDensity,
-		Field<int> faceType, CodeField vertexType,
-		ShortestEdgeField shortestEdge, double charge,
+		Field<int>& faceType, CodeField& vertexType,
+		ShortestEdgeField& shortestEdge, double charge,
 		double potentialPerturbation, FILE *outFile) {
 	int mpiId = 0;
 #ifdef HAVE_MPI
@@ -795,8 +807,8 @@ void DensityField::poissonCubeTest(double debyeLength) {
 
 void DensityField::calculateDensity(int node, ElectricField& electricField,
 		PotentialField& potentialField, DensityField& referenceDensity,
-		Field<int> faceType, CodeField vertexType,
-		ShortestEdgeField shortestEdgeField, double charge,
+		Field<int>& faceType, CodeField& vertexType,
+		ShortestEdgeField& shortestEdgeField, double charge,
 		double potentialPerturbation, double *density, double *error,
 		vect3d *averageVelocity, vect3d *averageVelocityError,
 		double *temperature, double *temperatureError) {
@@ -885,34 +897,43 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 //					numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
 //					NULL, &actualNumberOfOrbits, &failureType,
 //					&density, error, &probabilityThatTrueError);
-			double moments[5];
-			double errors[5];
-			double probabilities[5];
-			Vegas(NDIM, 1+NDIM+1, &distributionFunctionFromBoundaryCuba,
-					(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
-					numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
-					NULL, &actualNumberOfOrbits, &failureType,
-					moments, errors, probabilities);
-			// TODO: just set NCOMP higher?
-			if (failureType<0)
-				cout << "failureType: " << failureType <<
-				" (Probably need to change NCOMP in cuba/Makefile.am)" << endl;
-			*density = moments[0];
-			*error = errors[0];
-			// TODO: assuming NDIM==3
-			if (NDIM!=3)
-				throw string("can only handle NDIM==3");
-			for (int i=0; i<NDIM; i++) {
-				averageVelocity->operator[](i) = moments[i+1]/ *density;
-				// TODO: include density error
-				averageVelocityError->operator[](i) = errors[i+1]/ *density;
+			if (potentialField.numberOfComponents!=numberOfComponents)
+				throw string("number of components differ in density and potential");
+			double *potentials_ptr = new double[numberOfComponents];
+			potentialField.getField(entities[node],potentials_ptr);
+			for (int k=0; k<numberOfComponents; k++) {
+				potentialField[node] = potentials_ptr[k];
+				double moments[5];
+				double errors[5];
+				double probabilities[5];
+				Vegas(NDIM, 1+NDIM+1, &distributionFunctionFromBoundaryCuba,
+						(void*)&integrandContainer, 1.e-5, 1.e-5, 0, 0,
+						numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
+						NULL, &actualNumberOfOrbits, &failureType,
+						moments, errors, probabilities);
+				// TODO: just set NCOMP higher?
+				if (failureType<0)
+					cout << "failureType: " << failureType <<
+					" (Probably need to change NCOMP in cuba/Makefile.am)" << endl;
+				density[k] = moments[0];
+				error[k] = errors[0];
+				// TODO: assuming NDIM==3
+				if (NDIM!=3)
+					throw string("can only handle NDIM==3");
+				for (int i=0; i<NDIM; i++) {
+					averageVelocity[k][i] = moments[i+1]/ *density;
+					// TODO: include density error
+					averageVelocityError[k][i] = errors[i+1]/ *density;
+				}
+				// Subtract ordered kinetic energy from second moment to get temperature
+				temperature[k] = moments[4]/ *density - pow(averageVelocity[k].norm(),2.)/3.;
+				// TODO: calculate temperature error more carefully
+				temperatureError[k] = sqrt(pow(errors[4]/ *density,2.) + pow(errors[0],2.) +
+						pow(0.5*averageVelocityError[k].norm(),2.));
+				probabilityThatTrueError = probabilities[0];
 			}
-			// Subtract ordered kinetic energy from second moment to get temperature
-			*temperature = moments[4]/ *density - pow(averageVelocity->norm(),2.)/3.;
-			// TODO: calculate temperature error more carefully
-			*temperatureError = sqrt(pow(errors[4]/ *density,2.) + pow(errors[0],2.) +
-					pow(0.5*averageVelocityError->norm(),2.));
-			probabilityThatTrueError = probabilities[0];
+			potentialField[node] = potentials_ptr[0];
+			delete[] potentials_ptr;
 		}
 		// TODO: make potential perturbation more robust, transparent, and flexible
 		potentialField[node] -= potentialPerturbation;
