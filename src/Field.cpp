@@ -378,8 +378,11 @@ void ElectricField::calcField_Gatsonis(PotentialField potentialField) {
 }
 
 
-PotentialField::PotentialField(Mesh *inputMesh_ptr, string inputName)
-	: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {
+PotentialField::PotentialField(Mesh *inputMesh_ptr, string inputName,
+		int numberOfComponents)
+	: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX, numberOfComponents) {
+	referenceElectronDensity_ptr = NULL;
+	referenceElectronTemperature_ptr = NULL;
 }
 
 PotentialField::PotentialField(PotentialField potential, string inputName)
@@ -387,6 +390,8 @@ PotentialField::PotentialField(PotentialField potential, string inputName)
 	for (int i=0; i<entities.size(); i++) {
 		this->setField(entities[i], potential.getField(entities[i]));
 	}
+	referenceElectronDensity_ptr = NULL;
+	referenceElectronTemperature_ptr = NULL;
 }
 
 
@@ -616,6 +621,12 @@ void PotentialField::calcField(DensityField ionDensity,
 		fprintf(outFile, "\n\n\n\n");
 }
 
+void PotentialField::computePerturbedPotentials() {
+	for (int i=0; i<entities.size(); i++) {
+		double referencePotential = this->getField(entities[i]);
+	}
+}
+
 void PotentialField::setReferenceElectronDensity(DensityField& referenceElectronDensity){
 	this->referenceElectronDensity_ptr = &referenceElectronDensity;
 }
@@ -626,10 +637,12 @@ void PotentialField::setReferenceElectronTemperature(SpatialDependence& referenc
 
 
 DensityField::DensityField(Mesh *inputMesh_ptr, string inputName,
-		Field<vect3d> *inputAverageVelocity_ptr, Field<double> *inputTemperature_ptr)
-		: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX) {
+		Field<vect3d> *inputAverageVelocity_ptr, Field<double> *inputTemperature_ptr,
+		int numberOfComponents)
+		: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX, numberOfComponents) {
 	averageVelocity_ptr = inputAverageVelocity_ptr;
 	temperature_ptr = inputTemperature_ptr;
+	distributionFunction_ptr = NULL;
 }
 
 void DensityField::calcField() {}

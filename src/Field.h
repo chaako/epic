@@ -54,6 +54,8 @@ public:
 			int interpolationOrder=INTERPOLATIONORDER);
 	T getField(entHandle node);
 	T getFieldFromMeshDB(entHandle entityHandle);
+	void getFieldFromMeshDB(entHandle entityHandle, T *field_ptr,
+			int requestedNumberOfComponents=1);
 	T getAverageField(entHandle element);
 	void evalField(T *fieldValue,
 			const vect3d &position, int *entityIndex=-1,
@@ -164,7 +166,8 @@ class DensityField : public Field<double> {
 public:
 	DensityField(Mesh *inputMesh_ptr, string inputName,
 			Field<vect3d> *inputAverageVelocity_ptr=NULL,
-			Field<double> *inputTemperature_ptr=NULL);
+			Field<double> *inputTemperature_ptr=NULL,
+			int numberOfComponents=1);
 	virtual ~DensityField() {}
 
 	void calcField();
@@ -211,7 +214,7 @@ public:
 
 class PotentialField : public Field<double> {
 public:
-	PotentialField(Mesh *inputMesh_ptr, string inputName);
+	PotentialField(Mesh *inputMesh_ptr, string inputName, int numberOfComponents=1);
 	PotentialField(PotentialField potential, string inputName);
 	virtual ~PotentialField() {}
 
@@ -234,6 +237,8 @@ public:
 			double positivePotentialPerturbation,
 			double negativePotentialPerturbation,
 			FILE *outFile);
+
+	void computePerturbedPotentials();
 
 	void setReferenceElectronDensity(DensityField& referenceElectronDensity);
 	void setReferenceElectronTemperature(SpatialDependence& referenceElectronTemperature);
@@ -714,21 +719,33 @@ T Field<T>::getField(entHandle node) {
 template <class T>
 T Field<T>::getFieldFromMeshDB(entHandle entityHandle) {
 	T field;
-	void *field_ptr=&field;
+	this->getFieldFromMeshDB(entityHandle, &field, 1);
+	return field;
+}
+
+template <class T>
+void Field<T>::getFieldFromMeshDB(entHandle entityHandle, T *fieldOutput_ptr,
+		int requestedNumberOfComponents) {
+	T *field_ptr = new T[numberOfComponents];
 	int field_alloc;
 	int field_size;
 	if (boost::is_same<T,vect3d>::value) {
-		field_alloc = 3*sizeof(double);
+		field_alloc = numberOfComponents*3*sizeof(double);
 	} else {
-		field_alloc = sizeof(T);
+		field_alloc = numberOfComponents*sizeof(T);
 	}
 	field_size = field_alloc;
 	int ierr;
 	iMesh_getData(mesh_ptr->meshInstance, entityHandle, tag, &field_ptr,
 			&field_alloc, &field_size, &ierr);
-	if (ierr != iBase_SUCCESS)
+	if (ierr != iBase_SUCCESS) {
+		delete[] field_ptr;
 		throw int(FAILURE_GETTING_FIELD);
-	return field;
+	}
+	for (int i=0; i<min(requestedNumberOfComponents,numberOfComponents); i++) {
+		fieldOutput_ptr[i] = field_ptr[i];
+	}
+	delete[] field_ptr;
 }
 
 template <class T>
@@ -748,7 +765,14 @@ T Field<T>::getAverageField(entHandle element) {
 
 template <class T>
 void Field<T>::setField(entHandle node, T field) {
-	this->setField(node,&field);
+	if (numberOfComponents==1) {
+		this->setField(node,&field);
+	} else {
+		T *field_ptr = new T[numberOfComponents];
+		field_ptr[0] = field;
+		this->setField(node,field_ptr);
+		delete[] field_ptr;
+	}
 }
 
 template <class T>
