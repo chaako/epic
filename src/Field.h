@@ -181,11 +181,11 @@ public:
 	void calcField(CodeField& vertexType,
 			DistributionFunction& distributionFunction, double charge);
 	void poissonCubeTest(double debyeLength);
-	double calculateDensity(int node, ElectricField& electricField,
+	void calculateDensity(int node, ElectricField& electricField,
 			PotentialField& potentialField, DensityField& referenceDensity,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
-			double potentialPerturbation, double *error,
+			double potentialPerturbation, double *density, double *error,
 			vect3d *averageVelocity, vect3d *averageVelocityError,
 			double *temperature, double *temperatureError);
 #ifdef HAVE_MPI
