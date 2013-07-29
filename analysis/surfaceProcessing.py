@@ -16,10 +16,19 @@ import IPython.core.display as IPdisp
 
 # <codecell>
 
-file_names = ["/home/chaako/epicParallel/src/ellipsoidSurfaceVelocityGrad4000_6_00.vtu",
-              "/home/chaako/epicParallel/src/ellipsoidSurfaceVelocityGradNoGrad4000_6_00.vtu",
-              "/home/chaako/epicParallel/src/ellipsoidSurfaceVelocityNoGradGrad4000_6_00.vtu",
-              "/home/chaako/epicParallel/src/ellipsoidSurfaceVelocityNoGrad4000_6_00.vtu"]
+file_names = [
+              "/Users/chaako/transferEPS/elSphG1.0EvalG1.0N4000_13_00.vtu",
+              "/Users/chaako/transferEPS/elSphG0.0EvalG0.0N4000_13_00.vtu",
+              "/Users/chaako/transferEPS/elSphG-1.0EvalG-1.0N4000_13_00.vtu",
+              "/Users/chaako/transferEPS/elSphG1.0EvalG1.0N4000_13_00.vtu",
+              "/Users/chaako/transferEPS/elSphG1.0EvalG0.0N4000_13_00.vtu",
+              "/Users/chaako/transferEPS/elSphG-1.0EvalG-1.0N4000_13_00.vtu",
+              "/Users/chaako/transferEPS/elSphG-1.0EvalG0.0N4000_13_00.vtu",
+              "/Users/chaako/transferEPS/elSphG0.0EvalG1.0N4000_13_00.vtu",
+              "/Users/chaako/transferEPS/elSphG0.0EvalG0.0N4000_13_00.vtu",
+              "/Users/chaako/transferEPS/elSphG0.0EvalG-1.0N4000_13_00.vtu",
+              "/Users/chaako/transferEPS/elSphG0.0EvalG0.0N4000_13_00.vtu"
+              ]
 vtk_readers = []
 for file_name in file_names:
     reader = vtkXMLUnstructuredGridReader()
@@ -27,6 +36,11 @@ for file_name in file_names:
     reader.Update()
     vtk_readers.append(reader.GetOutput())
 vtk_mesh = vtk_readers[0]
+
+# <codecell>
+
+for reader in vtk_readers:
+    print reader.GetNumberOfPoints()
 
 # <codecell>
 
@@ -64,7 +78,12 @@ def getTupleArrayFromVtk(vtk_reader, array_name):
     vtk_array = vtk_reader.GetPointData().GetArray(array_name)
     array = []
     for i in range(0,vtk_reader.GetNumberOfPoints()):
-        array.append(vtk_array.GetTuple(i))
+        #array.append(vtk_array.GetTuple(i))
+        # TODO: generalize this for N dimensions
+        v1 = vtk_array.GetComponent(i,0)
+        v2 = vtk_array.GetComponent(i,1)
+        v3 = vtk_array.GetComponent(i,2)
+        array.append((v1,v2,v3))
     return array
 
 # <codecell>
@@ -80,7 +99,7 @@ for vtk_reader in vtk_readers:
 # <codecell>
 
 v_E = 0.1
-v_n = -0.1
+v_n = 0.1
 
 #innerCoordinates = [];
 zetas = []
@@ -95,9 +114,9 @@ for i in range(0,vtk_mesh.GetNumberOfPoints()):
     c = coordinates[i]
     if (c[0]*c[0]+c[1]*c[1]+c[2]*c[2]<1.5):
         #innerCoordinates.append(coordinates[i])
-        zeta = atan2(c[0],c[2])
+        zeta = -atan2(c[0],c[2])
         zetas.append(zeta)
-        xi = asin(c[1])
+        xi = -asin(c[1])
         xis.append(xi)
         alpha = abs(asin(c[2]))
         alphas.append(alpha)
@@ -142,7 +161,7 @@ triangles = []
 for i in range(0,vtk_mesh.GetNumberOfCells()):
     if (vtk_mesh.GetCellType(i) == VTK_TRIANGLE):
         if (cell_codes.GetValue(i) == 4):
-            vtk_ids = vtk.vtkIdList()
+            vtk_ids = vtkIdList()
             vtk_mesh.GetCellPoints(i,vtk_ids)
             ids = (vtk_ids.GetId(0),vtk_ids.GetId(1),vtk_ids.GetId(2))
             skip_triangle = False
@@ -203,12 +222,12 @@ plt.clf()
 #fig.clf()
 #ax = fig.add_subplot(111, projection = 'mollweide')
 #ax = plt.subplot(111, projection = 'mollweide')
-fig, axes = plt.subplots(nrows=4, ncols=2, figsize=(24,18))#, subplot_kw=dict(projection='mollweide'))
+fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6,9))#, subplot_kw=dict(projection='mollweide'))
 ims = []
 for ax,z in zip(axes.flat,zs):
-    im = ax.tripcolor(triang, z, vmin=0., vmax=0.6, shading='faceted', cmap=plt.cm.rainbow)
+    im = ax.tripcolor(triang, z, vmin=0., vmax=0.8, shading='flat', cmap=plt.cm.rainbow)
     ims.append(im)
-    cont = ax.tricontour(triang, z, vmin=0., vmax=0.6, colors='k')
+    cont = ax.tricontour(triang, z, vmin=0., vmax=0.8, colors='k')
     #plt.colorbar(im, ax=ax, orientation='horizontal')
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
@@ -234,17 +253,17 @@ fig.colorbar(ims[0], cax=cbar_ax)
 
 #plt.savefig("data.svg")
 #IPdisp.SVG(filename="data.svg")
-plt.savefig("data.png")
-IPdisp.Image(filename="data.png")
+plt.savefig("fluxesFlat.png")
+IPdisp.Image(filename="fluxesFlat.png")
 
 # <codecell>
 
 plt.clf()
 
-fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(24,18), subplot_kw=dict(projection='mollweide'))
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12,6))#, subplot_kw=dict(projection='mollweide'))
 ims = []
 for ax,z in zip(axes.flat,angles):
-    im = ax.tripcolor(triang, z, shading='gouraud', cmap=plt.cm.rainbow)
+    im = ax.tripcolor(triang, z, shading='faceted', cmap=plt.cm.rainbow)
     ims.append(im)
     cont = ax.tricontour(triang, z, colors='k')
     #plt.colorbar(im, ax=ax, orientation='horizontal')
