@@ -799,12 +799,10 @@ void Field<T>::setField(entHandle node, T *field_ptr) {
 //		//       (adding print .transpose() prevents optimization and works)
 //		vect3d vector(field);
 //		field_ptr = vector.data();
-		field_size = NDIM*sizeof(double);
+		field_size = NDIM*numberOfComponents*sizeof(double);
 	} else {
 		components_ptr = field_ptr;
-		// TODO: for now intentionally only store first component
-		//       since more break visit-reading
-		field_size = sizeof(T);
+		field_size = numberOfComponents*sizeof(T);
 	}
 	iMesh_setData(mesh_ptr->meshInstance, node, tag, components_ptr,
 			field_size, &ierr);
