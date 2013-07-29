@@ -205,26 +205,27 @@ int main(int argc, char *argv[]) {
 		cout << endl << "Setting vertex codes..." << endl;
 	vertexType.calcField(faceType);
 	// TODO: create error fields with pointer in corresponding fields
-	PotentialField potential(&mesh,string("potential"),numberOfPotentialValues);
-	PotentialField previousPotential(&mesh,string("previousPotential"),numberOfPotentialValues);
+	PotentialField potential(&mesh,string("potential"));
+	PotentialField previousPotential(&mesh,string("previousPotential"));
+	PotentialField potentialScan(&mesh,string("potentialScan"),numberOfPotentialValues);
 	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
-	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX,numberOfPotentialValues);
-	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX,numberOfPotentialValues);
-	Field<vect3d> ionVelocityNegativePerturbation(&mesh,string("NPionVelocity"),iBase_VERTEX,
-			numberOfPotentialValues);
-	Field<double> ionTemperatureNegativePerturbation(&mesh,string("NPionTemperature"),iBase_VERTEX,
-			numberOfPotentialValues);
+	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
+	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
+	Field<vect3d> ionVelocityScan(&mesh,string("ionVelocityScan"),iBase_VERTEX,numberOfPotentialValues);
+	Field<double> ionTemperatureScan(&mesh,string("ionTemperatureScan"),iBase_VERTEX,numberOfPotentialValues);
+	Field<vect3d> ionVelocityNegativePerturbation(&mesh,string("NPionVelocity"),iBase_VERTEX);
+	Field<double> ionTemperatureNegativePerturbation(&mesh,string("NPionTemperature"),iBase_VERTEX);
 	// TODO: updating other moments through density not very clean/transparent
-	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature,numberOfPotentialValues);
-	DensityField previousIonDensity(&mesh,string("previousIonDensity"),&ionVelocity,&ionTemperature,
+	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature);
+	DensityField previousIonDensity(&mesh,string("previousIonDensity"),&ionVelocity,&ionTemperature);
+	DensityField ionDensityScan(&mesh,string("ionDensityScan"),&ionVelocityScan,&ionTemperatureScan,
 			numberOfPotentialValues);
 	DensityField referenceElectronDensity(&mesh,string("referenceElectronDensity"));
 //	DensityField electronDensity(&mesh,string("electronDensity"));
 //	DensityField density(&mesh,string("density"));
 //	DensityField ionDensityPositivePerturbation(&mesh,string("PPionDensity"));
 	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"),
-			&ionVelocityNegativePerturbation,&ionTemperatureNegativePerturbation,
-			numberOfPotentialValues);
+			&ionVelocityNegativePerturbation,&ionTemperatureNegativePerturbation);
 //	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
 //	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
 	DensityDerivativeField ionDensityDerivative(&mesh,string("ionDensDeriv"),iBase_VERTEX);
@@ -300,9 +301,11 @@ int main(int argc, char *argv[]) {
 			*parallelDriftProfile_ptr.get(), perpendicularDrift);
 	referenceElectronDensity.calcField(vertexType, distributionFunction, 1.);
 	potential.setReferenceElectronDensity(referenceElectronDensity);
+	// TODO: add detection of forgotten distribution function...or add to constructor?
 	// TODO: Allow parallel electron temperature to differ from ions?
 	potential.setReferenceElectronTemperature(*parallelTemperatureProfile_ptr.get());
 	ionDensity.setDistributionFunction(distributionFunction);
+	ionDensityScan.setDistributionFunction(distributionFunction);
 	ionDensityNegativePerturbation.setDistributionFunction(distributionFunction);
 	if (!useDensityFromInput) {
 		if (mpiId == 0)
@@ -409,7 +412,19 @@ int main(int argc, char *argv[]) {
 			if (mpiId == 0)
 				cout << endl << "Using ion density from input file." << endl;
 		} else {
-			potential.computePerturbedPotentials();
+			if (numberOfPotentialValues>2) {
+				if (mpiId == 0)
+					cout << endl << "Setting potential scan values..." << endl;
+				// TODO: this only works because copyValues hasn't been generalized to multi-comp.
+				potentialScan.copyValues(potential);
+				potentialScan.computePerturbedPotentials();
+				if (mpiId == 0)
+					cout << endl << "Calculating ion density scan..." << endl;
+				// TODO: use different density file
+				ionDensityScan.calcField(eField, potentialScan, referenceElectronDensity, faceType, vertexType,
+						shortestEdge, 1., noPotentialPerturbation,
+						densityFile);
+			}
 			if (mpiId == 0)
 				cout << endl << "Calculating ion density..." << endl;
 			ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
