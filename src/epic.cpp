@@ -206,29 +206,29 @@ int main(int argc, char *argv[]) {
 	vertexType.calcField(faceType);
 	// TODO: create error fields with pointer in corresponding fields
 	PotentialField potential(&mesh,string("potential"));
-	PotentialField previousPotential(&mesh,string("previousPotential"));
+//	PotentialField previousPotential(&mesh,string("previousPotential"));
 	PotentialField potentialScan(&mesh,string("potentialScan"),numberOfPotentialValues);
 	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
 	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
 	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
 	Field<vect3d> ionVelocityScan(&mesh,string("ionVelocityScan"),iBase_VERTEX,numberOfPotentialValues);
 	Field<double> ionTemperatureScan(&mesh,string("ionTemperatureScan"),iBase_VERTEX,numberOfPotentialValues);
-	Field<vect3d> ionVelocityNegativePerturbation(&mesh,string("NPionVelocity"),iBase_VERTEX);
-	Field<double> ionTemperatureNegativePerturbation(&mesh,string("NPionTemperature"),iBase_VERTEX);
+//	Field<vect3d> ionVelocityNegativePerturbation(&mesh,string("NPionVelocity"),iBase_VERTEX);
+//	Field<double> ionTemperatureNegativePerturbation(&mesh,string("NPionTemperature"),iBase_VERTEX);
 	// TODO: updating other moments through density not very clean/transparent
 	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature);
-	DensityField previousIonDensity(&mesh,string("previousIonDensity"),&ionVelocity,&ionTemperature);
+//	DensityField previousIonDensity(&mesh,string("previousIonDensity"),&ionVelocity,&ionTemperature);
 	DensityField ionDensityScan(&mesh,string("ionDensityScan"),&ionVelocityScan,&ionTemperatureScan,
 			numberOfPotentialValues);
 	DensityField referenceElectronDensity(&mesh,string("referenceElectronDensity"));
 //	DensityField electronDensity(&mesh,string("electronDensity"));
 //	DensityField density(&mesh,string("density"));
 //	DensityField ionDensityPositivePerturbation(&mesh,string("PPionDensity"));
-	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"),
-			&ionVelocityNegativePerturbation,&ionTemperatureNegativePerturbation);
+//	DensityField ionDensityNegativePerturbation(&mesh,string("NPionDensity"),
+//			&ionVelocityNegativePerturbation,&ionTemperatureNegativePerturbation);
 //	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
 //	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
-	DensityDerivativeField ionDensityDerivative(&mesh,string("ionDensDeriv"),iBase_VERTEX);
+//	DensityDerivativeField ionDensityDerivative(&mesh,string("ionDensDeriv"),iBase_VERTEX);
 	ShortestEdgeField shortestEdge(&mesh,string("shortestEdge"));
 
 	SurfaceField<double,vtkDoubleArray> surfacePotential(&surfaceMesh, "surfacePotential");
@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
 
 	double noPotentialPerturbation = 0.;
 //	double positivePotentialPerturbation = 0.05;
-	double negativePotentialPerturbation = -0.05;
+//	double negativePotentialPerturbation = -0.05;
 
 	if (mpiId == 0)
 		cout << endl << "Calculating shortest edge of each region..." << endl;
@@ -306,7 +306,7 @@ int main(int argc, char *argv[]) {
 	potential.setReferenceElectronTemperature(*parallelTemperatureProfile_ptr.get());
 	ionDensity.setDistributionFunction(distributionFunction);
 	ionDensityScan.setDistributionFunction(distributionFunction);
-	ionDensityNegativePerturbation.setDistributionFunction(distributionFunction);
+//	ionDensityNegativePerturbation.setDistributionFunction(distributionFunction);
 	if (!useDensityFromInput) {
 		if (mpiId == 0)
 			cout << endl << "Setting density..." << endl;
@@ -332,7 +332,7 @@ int main(int argc, char *argv[]) {
 			cout << endl << "Setting potential..." << endl;
 		potential.calcField(vertexType, debyeLength, boundaryPotential,
 				objectPotential, sheathPotential);
-		previousPotential.copyValues(potential);
+//		previousPotential.copyValues(potential);
 	}
 
 	if (doPoissonTest) {
@@ -407,7 +407,7 @@ int main(int argc, char *argv[]) {
 //				potential, faceType, vertexType,
 //				shortestEdge, -1., negativePotentialPerturbation,
 //				density_electronsFile);
-		previousIonDensity.copyValues(ionDensity);
+//		previousIonDensity.copyValues(ionDensity);
 		if (useDensityFromInput && i==0) {
 			if (mpiId == 0)
 				cout << endl << "Using ion density from input file." << endl;
@@ -430,13 +430,13 @@ int main(int argc, char *argv[]) {
 			ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
 					shortestEdge, 1., noPotentialPerturbation,
 					densityFile);
-			if (mpiId == 0)
-				cout << endl << "Calculating NP ion charge-density..." << endl;
-			ionDensityNegativePerturbation.calcField(eField, potential,
-					referenceElectronDensity, faceType, vertexType,
-					shortestEdge, 1., negativePotentialPerturbation,
-					densityFile);
-			previousIonDensity.copyValues(ionDensityNegativePerturbation);
+//			if (mpiId == 0)
+//				cout << endl << "Calculating NP ion charge-density..." << endl;
+//			ionDensityNegativePerturbation.calcField(eField, potential,
+//					referenceElectronDensity, faceType, vertexType,
+//					shortestEdge, 1., negativePotentialPerturbation,
+//					densityFile);
+//			previousIonDensity.copyValues(ionDensityNegativePerturbation);
 		}
 //		if (mpiId == 0)
 //			cout << endl << "Calculating PP ion charge-density..." << endl;
@@ -485,18 +485,18 @@ int main(int argc, char *argv[]) {
 //		stringstream potentialCopyName;
 //		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
 //		PotentialField potentialCopy(potential,potentialCopyName.str());
-		previousPotential.copyValues(potential);
-		previousPotential += negativePotentialPerturbation;
-		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
+//		previousPotential.copyValues(potential);
+//		previousPotential += negativePotentialPerturbation;
+//		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 		if (debyeLength==0.) {
 			if (mpiId == 0)
 				cout << endl << "Calculating updated potential..." << endl;
 //			if (i==0 && !usePotentialFromInput) {
-//				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
-//						sheathPotential, fixSheathPotential);
-//			} else {
-				potential.calcField(ionDensity, ionDensityDerivative, vertexType, potentialFile, boundaryPotential,
+				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
 						sheathPotential, fixSheathPotential);
+//			} else {
+//				potential.calcField(ionDensity, ionDensityDerivative, vertexType, potentialFile, boundaryPotential,
+//						sheathPotential, fixSheathPotential);
 //			}
 //			potential.calcField(ionDensity, electronDensity, vertexType, potentialFile);
 //			potential.calcField(ionDensity,
