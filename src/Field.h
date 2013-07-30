@@ -177,7 +177,7 @@ public:
 			SpatialDependence& referenceTemperature, double charge);
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField& electricField,
-			PotentialField& potentialField, DensityField& referenceDensity,
+			PotentialField *potentialField_ptr, DensityField& referenceDensity,
 			Field<int>& faceType, CodeField& vertexType,
 			ShortestEdgeField& shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile=NULL);
@@ -194,13 +194,13 @@ public:
 			double *temperature, double *temperatureError);
 #ifdef HAVE_MPI
 	void requestDensityFromSlaves(ElectricField& electricField,
-			PotentialField potentialField,
+			PotentialField *potentialField_ptr, vector<int>& sortedNodes,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile);
 	MPI::Status receiveDensity(FILE *outFile);
 	void processDensityRequests(ElectricField& electricField,
-			PotentialField& potentialField, DensityField& referenceDensity,
+			PotentialField *potentialField_ptr, DensityField& referenceDensity,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation);

@@ -421,13 +421,13 @@ int main(int argc, char *argv[]) {
 				if (mpiId == 0)
 					cout << endl << "Calculating ion density scan..." << endl;
 				// TODO: use different density file
-				ionDensityScan.calcField(eField, potentialScan, referenceElectronDensity, faceType, vertexType,
+				ionDensityScan.calcField(eField, &potentialScan, referenceElectronDensity, faceType, vertexType,
 						shortestEdge, 1., noPotentialPerturbation,
 						densityFile);
 			}
 			if (mpiId == 0)
 				cout << endl << "Calculating ion density..." << endl;
-			ionDensity.calcField(eField, potential, referenceElectronDensity, faceType, vertexType,
+			ionDensity.calcField(eField, &potential, referenceElectronDensity, faceType, vertexType,
 					shortestEdge, 1., noPotentialPerturbation,
 					densityFile);
 //			if (mpiId == 0)

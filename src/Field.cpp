@@ -689,10 +689,25 @@ void DensityField::calcField(DensityField ionDensity,
 }
 
 void DensityField::calcField(ElectricField& electricField,
-		PotentialField& potentialField, DensityField& referenceDensity,
+		PotentialField *potentialField_ptr, DensityField& referenceDensity,
 		Field<int>& faceType, CodeField& vertexType,
 		ShortestEdgeField& shortestEdge, double charge,
 		double potentialPerturbation, FILE *outFile) {
+	vector<pair<int,double> > unconvergednessPairs;
+	for (int i=0; i<entities.size(); i++) {
+		double boltzmannDensity = referenceDensity.getField(entities[i])*
+				exp(potentialField_ptr->getField(entities[i]));
+		double densityDifference = this->getField(entities[i])-boltzmannDensity;
+		// TODO: better to use fractional difference?
+		unconvergednessPairs.push_back(make_pair(i,fabs(densityDifference)));
+	}
+	sort(unconvergednessPairs.begin(),unconvergednessPairs.end(),
+			boost::bind(&std::pair<int, double>::second, _1) >
+			boost::bind(&std::pair<int, double>::second, _2));
+	vector<int> sortedNodes;
+	for (int i=0; i<entities.size(); i++) {
+		sortedNodes.push_back(unconvergednessPairs[i].first);
+	}
 	int mpiId = 0;
 #ifdef HAVE_MPI
 	// TODO: Change this to using smart pointer
@@ -703,7 +718,7 @@ void DensityField::calcField(ElectricField& electricField,
 	mpiId = MPI::COMM_WORLD.Get_rank();
 	if (mpiId == 0) {
 		DensityField::requestDensityFromSlaves(electricField,
-				potentialField, faceType, vertexType,
+				potentialField_ptr, sortedNodes, faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation, outFile);
 		for (int node=0; node<entities.size(); node++) {
 			density[node] = this->getField(entities[node]);
@@ -712,7 +727,7 @@ void DensityField::calcField(ElectricField& electricField,
 		}
 	} else {
 		DensityField::processDensityRequests(electricField,
-				potentialField, referenceDensity, faceType, vertexType,
+				potentialField_ptr, referenceDensity, faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation);
 	}
 	MPI::COMM_WORLD.Bcast(density, entities.size(), MPI::DOUBLE, 0);
@@ -729,7 +744,8 @@ void DensityField::calcField(ElectricField& electricField,
 #else
 	extern_findTet=0;
 	clock_t startClock = clock(); // timing
-	for (int node=0; node<entities.size(); node++) {
+	for (int i=0; i<entities.size(); i++) {
+		int node=sortedNodes[i];
 		double *densities = new double[numberOfComponents];
 		double *densityErrors = new double[numberOfComponents];
 		vect3d *averageVelocities = new vect3d[numberOfComponents];
@@ -737,7 +753,7 @@ void DensityField::calcField(ElectricField& electricField,
 		double *temperatures = new double[numberOfComponents];
 		double *temperatureErrors = new double[numberOfComponents];
 	    this->calculateDensity(node, electricField,
-				potentialField, referenceDensity,
+				*potentialField_ptr, referenceDensity,
 				faceType, vertexType, shortestEdge,
 				charge, potentialPerturbation, densities, densityErrors,
 				averageVelocities, averageVelocityErrors,
@@ -959,28 +975,31 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 
 #ifdef HAVE_MPI
 void DensityField::requestDensityFromSlaves(ElectricField& electricField,
-		PotentialField potentialField,
+		PotentialField *potentialField_ptr, vector<int>& sortedNodes,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdge, double charge,
 		double potentialPerturbation, FILE *outFile) {
 	int nProcesses = MPI::COMM_WORLD.Get_size();
 	MPI::Status status;
-	int node=0;
+	int nodeCounter=0;
+	int node=sortedNodes[nodeCounter];
 
 	// Send one node to each process
 	for (int rank=1; rank<nProcesses; ++rank) {
-		if (node<entities.size()) {
+		if (nodeCounter<entities.size()) {
 			MPI::COMM_WORLD.Send(&node, 1, MPI::INT, rank, WORKTAG);
-			node++;
+			nodeCounter++;
+			node = sortedNodes[nodeCounter];
 		}
 	}
 
 	// Process incoming density and send new nodes until all done
-	while (node<entities.size()) {
+	while (nodeCounter<entities.size()) {
 		status = this->receiveDensity(outFile);
 		MPI::COMM_WORLD.Send(&node, 1, MPI::INT, status.Get_source(),
 				WORKTAG);
-		node++;
+		nodeCounter++;
+		node = sortedNodes[nodeCounter];
 	}
 
 	// Process any outstanding densities
@@ -1050,7 +1069,7 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 
 #ifdef HAVE_MPI
 void DensityField::processDensityRequests(ElectricField& electricField,
-		PotentialField& potentialField, DensityField& referenceDensity,
+		PotentialField *potentialField_ptr, DensityField& referenceDensity,
 		Field<int> faceType, CodeField vertexType,
 		ShortestEdgeField shortestEdge, double charge,
 		double potentialPerturbation) {
@@ -1071,7 +1090,7 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		double *temperatures = new double[numberOfComponents];
 		double *temperatureErrors = new double[numberOfComponents];
 		this->calculateDensity(node, electricField,
-				potentialField, referenceDensity,
+				*potentialField_ptr, referenceDensity,
 				faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation,
 				&densities[0], &densityErrors[0],
