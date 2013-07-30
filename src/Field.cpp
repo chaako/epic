@@ -621,17 +621,20 @@ void PotentialField::calcField(DensityField ionDensity,
 		fprintf(outFile, "\n\n\n\n");
 }
 
-void PotentialField::computePerturbedPotentials(double minPotential, double maxPotential) {
-	if (numberOfComponents>2) {
+void PotentialField::computePerturbedPotentials(double negativePerturbation,
+		double positivePerturbation, double minPotential, double maxPotential) {
+	if (numberOfComponents>1) {
 		double *potentials_ptr = new double[numberOfComponents];
 		for (int i=0; i<entities.size(); i++) {
 			double referencePotential = this->getField(entities[i]);
-			double lowerLimit = min(minPotential,referencePotential);
-			double upperLimit = max(maxPotential,referencePotential);
-			double step = (upperLimit-lowerLimit)/(numberOfComponents-2);
-			potentials_ptr[0] = referencePotential;
-			for (int j=1; j<numberOfComponents; j++) {
-				potentials_ptr[j] = lowerLimit+(j-1)*step;
+			double lowerLimit = min(minPotential,referencePotential+negativePerturbation);
+			double upperLimit = max(maxPotential,referencePotential+positivePerturbation);
+			double step = (upperLimit-lowerLimit)/(numberOfComponents-1);
+//			potentials_ptr[0] = referencePotential;
+//			for (int j=1; j<numberOfComponents; j++) {
+//				potentials_ptr[j] = lowerLimit+(j-1)*step;
+			for (int j=0; j<numberOfComponents; j++) {
+				potentials_ptr[j] = lowerLimit+j*step;
 			}
 			this->setField(entities[i],potentials_ptr);
 		}

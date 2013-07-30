@@ -239,7 +239,9 @@ public:
 			double negativePotentialPerturbation,
 			FILE *outFile);
 
-	void computePerturbedPotentials(double minPotential=-1., double maxPotential=0.);
+	// TODO: not very transparent to use inverted defaults to disable min/max
+	void computePerturbedPotentials(double negativePerturbation,
+			double positivePertubation, double minPotential=10., double maxPotential=-10.);
 
 	void setReferenceElectronDensity(DensityField& referenceElectronDensity);
 	void setReferenceElectronTemperature(SpatialDependence& referenceElectronTemperature);

@@ -239,8 +239,8 @@ int main(int argc, char *argv[]) {
 	SurfaceField<double,vtkDoubleArray> surfaceReferenceDensity(&surfaceMesh, "surfaceReferenceDensity");
 
 	double noPotentialPerturbation = 0.;
-//	double positivePotentialPerturbation = 0.05;
-//	double negativePotentialPerturbation = -0.05;
+	double positivePotentialPerturbation = 0.15;
+	double negativePotentialPerturbation = -0.15;
 
 	if (mpiId == 0)
 		cout << endl << "Calculating shortest edge of each region..." << endl;
@@ -412,12 +412,13 @@ int main(int argc, char *argv[]) {
 			if (mpiId == 0)
 				cout << endl << "Using ion density from input file." << endl;
 		} else {
-			if (numberOfPotentialValues>2) {
+			if (numberOfPotentialValues>1) {
 				if (mpiId == 0)
 					cout << endl << "Setting potential scan values..." << endl;
 				// TODO: this only works because copyValues hasn't been generalized to multi-comp.
 				potentialScan.copyValues(potential);
-				potentialScan.computePerturbedPotentials();
+				potentialScan.computePerturbedPotentials(negativePotentialPerturbation,
+						positivePotentialPerturbation);
 				if (mpiId == 0)
 					cout << endl << "Calculating ion density scan..." << endl;
 				// TODO: use different density file
