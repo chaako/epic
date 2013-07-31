@@ -198,7 +198,7 @@ public:
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile);
-	MPI::Status receiveDensity(FILE *outFile);
+	MPI::Status receiveDensity(double *potential,FILE *outFile);
 	void processDensityRequests(ElectricField& electricField,
 			PotentialField *potentialField_ptr, DensityField& referenceDensity,
 			Field<int> faceType, CodeField vertexType,
@@ -227,6 +227,8 @@ public:
 	void calcField(DensityField& ionDensity, Field<vect3d>& ionVelocity,
 			CodeField& vertexType, FILE *outFile, double boundaryPotential,
 			double sheathPotential, bool fixSheathPotential);
+	void calcFieldAtNode(entHandle entity, double ionDensity, int vertexType,
+			double boundaryPotential, double sheathPotential, bool fixSheathPotential);
 	void calcField(DensityField& ionDensity, DerivativeField& ionDensityDerivative,
 			CodeField& vertexType, FILE *outFile, double boundaryPotential,
 			double sheathPotential, bool fixSheathPotential);

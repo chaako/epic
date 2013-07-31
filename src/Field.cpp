@@ -503,6 +503,34 @@ void PotentialField::calcField(DensityField& ionDensity, Field<vect3d>& ionVeloc
 		fprintf(outFile, "\n\n\n\n");
 }
 
+void PotentialField::calcFieldAtNode(entHandle entity, double ionDensity, int vertexType,
+		double boundaryPotential, double sheathPotential, bool fixSheathPotential) {
+	vect3d nodePosition = mesh_ptr->getCoordinates(entity);
+	double potential;
+	// TODO: don't hard-code boundary type
+	if (vertexType==5) {
+		potential = boundaryPotential;
+	} else {
+		// TODO: separate this out to function since here and in calcField?
+		double currentPotential = this->getField(entity);
+		double referenceDensity = referenceElectronDensity_ptr->getField(entity);
+		double referenceElectronTemperature =
+				referenceElectronTemperature_ptr->operator()(nodePosition);
+		double boltzmannPotential = boundaryPotential +
+				referenceElectronTemperature*
+				log(ionDensity/referenceDensity);
+		potential = (currentPotential+boltzmannPotential)/2.;
+	}
+	if (fixSheathPotential) {
+		// TODO: think about possible influence of background E field
+		// TODO: don't hard-code boundary type
+		if (vertexType==4) {
+			potential = sheathPotential;
+		}
+	}
+	this->setField(entity, potential);
+}
+
 void PotentialField::calcField(DensityField& ionDensity, DerivativeField& ionDensityDerivative,
 		CodeField& vertexType, FILE *outFile, double boundaryPotential,
 		double sheathPotential, bool fixSheathPotential) {
@@ -764,6 +792,12 @@ void DensityField::calcField(ElectricField& electricField,
 		this->setField(entities[node], densities);
 		averageVelocity_ptr->setField(entities[node], averageVelocities);
 		temperature_ptr->setField(entities[node], temperatures);
+		// TODO: handle multi-component case or treat in more transparent manner?
+		if (numberOfComponents==1) {
+			// TODO: don't hard-code boundary potential etc.
+			potentialField_ptr->calcFieldAtNode(entities[node],*densities,vertexType[node],
+					0.,-0.5,false);
+		}
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		cout << nodePosition.norm() << " " << density << " " << error << endl;
 		if (outFile)
@@ -906,7 +940,7 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 			xmax[j] = 1.;
 		}
 		// TODO: should make number of orbits adaptive
-		int numberOfOrbits=100;
+		int numberOfOrbits=1000;
 //		if (charge<0.)
 //		if (charge>0.)
 //			numberOfOrbits*=10;
@@ -986,11 +1020,18 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	MPI::Status status;
 	int nodeCounter=0;
 	int node=sortedNodes[nodeCounter];
+	double potential;
+	double *potentials = new double[entities.size()];
+	for (int i=0; i<entities.size(); i++) {
+		potentials[i] = potentialField_ptr->getField(entities[i]);
+	}
 
 	// Send one node to each process
 	for (int rank=1; rank<nProcesses; ++rank) {
 		if (nodeCounter<entities.size()) {
 			MPI::COMM_WORLD.Send(&node, 1, MPI::INT, rank, WORKTAG);
+			MPI::COMM_WORLD.Send(&potentials[0], entities.size(), MPI::DOUBLE,
+					rank, WORKTAG);
 			nodeCounter++;
 			node = sortedNodes[nodeCounter];
 		}
@@ -998,9 +1039,16 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 
 	// Process incoming density and send new nodes until all done
 	while (nodeCounter<entities.size()) {
-		status = this->receiveDensity(outFile);
+		status = this->receiveDensity(&potential,outFile);
+		// TODO: deal with multi-component case or make more transparent
+		if (numberOfComponents==1) {
+			potentialField_ptr->setField(entities[status.Get_tag()],potential);
+			potentials[status.Get_tag()] = potential;
+		}
 		MPI::COMM_WORLD.Send(&node, 1, MPI::INT, status.Get_source(),
 				WORKTAG);
+		MPI::COMM_WORLD.Send(&potentials[0], entities.size(), MPI::DOUBLE,
+				status.Get_source(), WORKTAG);
 		nodeCounter++;
 		node = sortedNodes[nodeCounter];
 	}
@@ -1010,18 +1058,23 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	if (nProcesses>=entities.size())
 		throw string("have assumed more nodes than processes in parallelization");
 	for (int rank=1; rank<nProcesses; ++rank) {
-		status = this->receiveDensity(outFile);
+		status = this->receiveDensity(&potential,outFile);
+		// TODO: deal with multi-component case or make more transparent
+		if (numberOfComponents==1) {
+			potentialField_ptr->setField(entities[status.Get_tag()],potential);
+		}
 	}
 
 	// Send empty message with DIETAG to signal done with nodes
 	for (int rank=1; rank<nProcesses; ++rank) {
 		MPI::COMM_WORLD.Send(0, 0, MPI::INT, rank, DIETAG);
 	}
+	delete[] potentials;
 }
 #endif
 
 #ifdef HAVE_MPI
-MPI::Status DensityField::receiveDensity(FILE *outFile) {
+MPI::Status DensityField::receiveDensity(double *potential, FILE *outFile) {
 	MPI::Status status;
 	double *densities = new double[numberOfComponents];
 	double *densityErrors = new double[numberOfComponents];
@@ -1047,6 +1100,10 @@ MPI::Status DensityField::receiveDensity(FILE *outFile) {
 		this->setField(entities[node], densities[0]);
 		averageVelocity_ptr->setField(entities[node], averageVelocities[0]);
 		temperature_ptr->setField(entities[node], temperatures[0]);
+		// TODO: handle multi-component case or treat in more transparent manner?
+		if (numberOfComponents==1) {
+			MPI::COMM_WORLD.Recv(&potential[0], numberOfComponents, MPI::DOUBLE, source, node, status);
+		}
 	}
 	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 	if ((nodePosition-incomingNodePosition).norm()>NODE_DISTANCE_THRESHOLD) {
@@ -1078,12 +1135,21 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		double potentialPerturbation) {
 	MPI::Status status;
 	int node;
+	double *potentials = new double[entities.size()];
 
 	while (1) {
 		MPI::COMM_WORLD.Recv(&node, 1, MPI::INT, 0, MPI_ANY_TAG,
 				status);
 		if (status.Get_tag() == DIETAG) {
 			return;
+		}
+		MPI::COMM_WORLD.Recv(&potentials, entities.size(), MPI::DOUBLE, 0, MPI_ANY_TAG,
+				status);
+		// TODO: handle multi-component case or treat in more transparent manner?
+		if (numberOfComponents==1) {
+			for (int i=0; i<entities.size(); i++) {
+				potentialField_ptr->setField(entities[i],potentials[i]);
+			}
 		}
 		double *densities = new double[numberOfComponents];
 		double *densityErrors = new double[numberOfComponents];
@@ -1107,6 +1173,14 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		MPI::COMM_WORLD.Send(&nodePosition, sizeof(vect3d), MPI::BYTE, 0, node);
 		MPI::COMM_WORLD.Send(&temperatures[0], numberOfComponents, MPI::DOUBLE, 0, node);
 		MPI::COMM_WORLD.Send(&temperatureErrors[0], numberOfComponents, MPI::DOUBLE, 0, node);
+		// TODO: handle multi-component case or treat in more transparent manner?
+		if (numberOfComponents==1) {
+			// TODO: don't hard-code boundary potential etc.
+			potentialField_ptr->calcFieldAtNode(entities[node],*densities,vertexType[node],
+					0.,-0.5,false);
+			double potential=potentialField_ptr->getField(entities[node]);
+			MPI::COMM_WORLD.Send(&potential, numberOfComponents, MPI::DOUBLE, 0, node);
+		}
 		delete[] densities;
 		delete[] densityErrors;
 		delete[] averageVelocities;
@@ -1114,6 +1188,7 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		delete[] temperatures;
 		delete[] temperatureErrors;
 	}
+	delete[] potentials;
 }
 #endif
 

@@ -490,11 +490,11 @@ int main(int argc, char *argv[]) {
 //		previousPotential += negativePotentialPerturbation;
 //		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 		if (debyeLength==0.) {
-			if (mpiId == 0)
-				cout << endl << "Calculating updated potential..." << endl;
-//			if (i==0 && !usePotentialFromInput) {
-				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
-						sheathPotential, fixSheathPotential);
+//			if (mpiId == 0)
+//				cout << endl << "Calculating updated potential..." << endl;
+////			if (i==0 && !usePotentialFromInput) {
+//				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
+//						sheathPotential, fixSheathPotential);
 //			} else {
 //				potential.calcField(ionDensity, ionDensityDerivative, vertexType, potentialFile, boundaryPotential,
 //						sheathPotential, fixSheathPotential);
