@@ -17,11 +17,25 @@ import IPython.core.display as IPdisp
 
 # <codecell>
 
-file_names = ["/home/chaako/meshtest/fromLoki/densityGradient18/densityGradient/spheres_iter07.vtk",
-              "/home/chaako/meshtest/fromLoki/densityGradient31/densityGradient/spheres_iter01.vtk"]
+#file_names = ["/home/chaako/epic/src/testCase00.vtu"]
+#file_names = ["/home/chaako/epic/src/spheres_scan1000_narrow00.vtu",
+#              "/home/chaako/epic/src/spheres_scan4000_narrow00.vtu",
+#              "/home/chaako/epic/src/spheres_scan1000_00.vtu"]
+#file_names = ["/home/chaako/epic/src/runsTesting/dG16_01/spheres5_scan4000_narrow00.vtu",
+#              "/home/chaako/epic/src/spheres6_scan4000_narrow00.vtu",
+#              "/home/chaako/epic/src/spheres_scan4000_narrow00.vtu"]
+#file_names = ["/home/chaako/epic/src/runsTesting/dG22_10/spheres00_scan1000_narrow00.vtu",
+#              "/home/chaako/epic/src/runsTesting/dG22_11/spheres01_scan1000_narrow00.vtu",
+#             "/home/chaako/epic/src/runsTesting/dG22_12/spheres02_scan1000_narrow00.vtu",
+#              "/home/chaako/epic/src/runsTesting/dG22_13/spheres03_scan1000_narrow00.vtu",
+#              "/home/chaako/epic/src/runsTesting/dG22_14/spheres04_scan1000_narrow00.vtu",
+#              "/home/chaako/epic/src/runsTesting/dG22_15/spheres05_scan1000_narrow00.vtu",
+#              "/home/chaako/epic/src/runsTesting/dG22_16/spheres06_scan1000_narrow00.vtu"]
+#file_names = ["/home/chaako/meshtest/fromLoki/densityGradient40/densityGradient/spheres_iter00.vtu"]
+file_names = ["/home/chaako/meshtest/fromLoki/iterationTest17/iterationTest/spheres_iter00.vtu"]
 vtk_readers = []
 for file_name in file_names:
-    reader = vtkUnstructuredGridReader()
+    reader = vtkXMLUnstructuredGridReader()
     reader.SetFileName(file_name)
     reader.Update()
     vtk_readers.append(reader.GetOutput())
@@ -29,12 +43,30 @@ vtk_mesh = vtk_readers[0]
 
 # <codecell>
 
+#target_point = np.array([-0.160938, 0.752753, 2.82129])
+#target_point = np.array([-0.165899, 0.990274, 6.2703])
+#target_point = np.array([-0.387776, 0.357946, -2.1117])
+#target_point = np.array([0.252365, 0.769792, 5.80838])
+#target_point = np.array([0.801777, 0.72545, 13.814])
+#target_point = np.array([0.131742, 0.528943, -3.84111])
+#target_point = np.array([0.406818, 1.12104, 14.7508])
+#target_point = np.array([-0.109546, 0.794057, -4.72881])
+target_point = np.array([0.0501395, 1.3243, -7.43127])
+closeness_threshold = 0.001
+
+# <codecell>
+
 coordinates = []
+target_point_index = -1
 number_of_points = vtk_mesh.GetNumberOfPoints()
 vtk_points = vtk_mesh.GetPoints();
 for i in range(0,number_of_points):
     coordinates.append(vtk_points.GetPoint(i))
+    #print np.linalg.norm(np.array(coordinates[i])-target_point)
+    if (np.linalg.norm(np.array(coordinates[i])-target_point)<closeness_threshold):
+        target_point_index = i
 coordinates_np = np.array(coordinates)
+print target_point_index, number_of_points
 
 # <codecell>
 
@@ -68,15 +100,47 @@ def getTupleArrayFromVtkXYZ(vtk_reader, array_name):
 # <codecell>
 
 ion_densities = []
+ion_densities_scan = []
 potentials = []
+potentials_scan = []
 ion_velocities = []
 for vtk_reader in vtk_readers:
-    ion_densities.append(getValueArrayFromVtk(vtk_reader, "ionDensity"))
-    potentials.append(getValueArrayFromVtk(vtk_reader, "potential"))
-    ion_velocities.append(getTupleArrayFromVtkXYZ(vtk_reader, "ionVelocity"))
+    ion_densities.append(getTupleArrayFromVtk(vtk_reader, "ionDensity"))
+    ion_densities_scan.append(getTupleArrayFromVtk(vtk_reader, "ionDensityScan"))
+    potentials.append(getTupleArrayFromVtk(vtk_reader, "potential"))
+    potentials_scan.append(getTupleArrayFromVtk(vtk_reader, "potentialScan"))
+    ion_velocities.append(getTupleArrayFromVtk(vtk_reader, "ionVelocityScan"))
 ion_densities_np = np.array(ion_densities)
 potentials_np = np.array(potentials)
 ion_velocities_np = np.array(ion_velocities)
+
+# <codecell>
+
+plt.clf()
+
+fig, axes = plt.subplots(nrows=1, ncols=7, figsize=(24,4))
+i=0
+j=0
+for ax in axes:
+    if (i<len(file_names)):
+        print i, target_point_index+j
+        x = potentials_scan[i][target_point_index+j]
+        y = ion_densities_scan[i][target_point_index+j]
+        sct = ax.scatter(x,y)
+        print y[0]
+        y = np.exp(potentials_scan[i][target_point_index+j])
+        sct = ax.scatter(x,y,color='red')
+        x = potentials[i][target_point_index+j]
+        y = ion_densities[i][target_point_index+j]
+        sct = ax.scatter(x,y,color='green')
+        print y[0]
+        #i = i+1
+        j = j+100
+
+#plt.savefig("data.svg")
+#IPdisp.SVG(filename="data.svg")
+plt.savefig("data.png")
+IPdisp.Image(filename="data.png")
 
 # <codecell>
 
@@ -102,6 +166,9 @@ axes[0].view_init(0,0)
 #IPdisp.SVG(filename="data.svg")
 plt.savefig("data.png")
 IPdisp.Image(filename="data.png")
+
+# <codecell>
+
 
 # <codecell>
 
