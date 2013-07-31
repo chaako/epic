@@ -765,13 +765,10 @@ void DensityField::calcField(ElectricField& electricField,
 	MPI::COMM_WORLD.Bcast(density, entities.size(), MPI::DOUBLE, 0);
 	MPI::COMM_WORLD.Bcast(averageVelocity, entities.size()*sizeof(vect3d), MPI::BYTE, 0);
 	MPI::COMM_WORLD.Bcast(temperature, entities.size(), MPI::DOUBLE, 0);
-	// TODO: doing this on master overwrites densityScan...should fix and be consistent
-	if (mpiId != 0) {
-		for (int node=0; node<entities.size(); node++) {
-			this->setField(entities[node], density[node]);
-			averageVelocity_ptr->setField(entities[node], averageVelocity[node]);
-			temperature_ptr->setField(entities[node], temperature[node]);
-		}
+	for (int node=0; node<entities.size(); node++) {
+		this->setField(entities[node], density[node]);
+		averageVelocity_ptr->setField(entities[node], averageVelocity[node]);
+		temperature_ptr->setField(entities[node], temperature[node]);
 	}
 	delete[] density;
 	delete[] averageVelocity;

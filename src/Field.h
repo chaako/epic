@@ -779,6 +779,7 @@ void Field<T>::setField(entHandle node, T field) {
 		this->setField(node,&field);
 	} else {
 		T *field_ptr = new T[numberOfComponents];
+		this->getField(node,field_ptr);
 		field_ptr[0] = field;
 		this->setField(node,field_ptr);
 		delete[] field_ptr;
@@ -793,12 +794,13 @@ void Field<T>::setField(entHandle node, T *field_ptr) {
 	int ierr;
 	void *components_ptr;
 	int field_size;
-	// TODO: handle vectors of vect3d?
-	double vect3dBuffer[NDIM];
+	vect3d *vect3dBuffer = new vect3d[NDIM*numberOfComponents];
 	if (boost::is_same<T,vect3d>::value) {
-		for (int i=0; i<NDIM; i++)
-			vect3dBuffer[i] = ((vect3d*)field_ptr)->operator[](i);
-		components_ptr = vect3dBuffer;
+		for (int k=0; k<numberOfComponents; k++) {
+			for (int i=0; i<NDIM; i++)
+				vect3dBuffer[k][i] = (((vect3d*)field_ptr)[k])[i];
+		}
+		components_ptr = (T*)vect3dBuffer;
 //		// TODO: figure out why using .data() breaks in optimization
 //		//       (adding print .transpose() prevents optimization and works)
 //		vect3d vector(field);
@@ -817,12 +819,13 @@ void Field<T>::setField(entHandle node, T *field_ptr) {
 template <class T>
 void Field<T>::setVtkField(entHandle node, T *field_ptr) {
 	void *components_ptr;
-	// TODO: handle vectors of vect3d?
-	double vect3dBuffer[NDIM];
+	vect3d *vect3dBuffer = new vect3d[NDIM*numberOfComponents];
 	if (boost::is_same<T,vect3d>::value) {
-		for (int i=0; i<NDIM; i++)
-			vect3dBuffer[i] = ((vect3d*)field_ptr)->operator[](i);
-		components_ptr = (T*)&vect3dBuffer[0];
+		for (int k=0; k<numberOfComponents; k++) {
+			for (int i=0; i<NDIM; i++)
+				vect3dBuffer[k][i] = (((vect3d*)field_ptr)[k])[i];
+		}
+		components_ptr = (T*)vect3dBuffer;
 	} else {
 		components_ptr = field_ptr;
 	}
