@@ -1097,9 +1097,9 @@ MPI::Status DensityField::receiveDensity(double *potential, FILE *outFile) {
 	MPI::COMM_WORLD.Recv(&temperatures[0], numberOfComponents, MPI::DOUBLE, source, node, status);
 	MPI::COMM_WORLD.Recv(&temperatureErrors[0], numberOfComponents, MPI::DOUBLE, source, node, status);
 	if (node>=0 && node<entities.size()) {
-		this->setField(entities[node], densities[0]);
-		averageVelocity_ptr->setField(entities[node], averageVelocities[0]);
-		temperature_ptr->setField(entities[node], temperatures[0]);
+		this->setField(entities[node], &densities[0]);
+		averageVelocity_ptr->setField(entities[node], &averageVelocities[0]);
+		temperature_ptr->setField(entities[node], &temperatures[0]);
 		// TODO: handle multi-component case or treat in more transparent manner?
 		if (numberOfComponents==1) {
 			MPI::COMM_WORLD.Recv(&potential[0], numberOfComponents, MPI::DOUBLE, source, node, status);
@@ -1143,7 +1143,7 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		if (status.Get_tag() == DIETAG) {
 			return;
 		}
-		MPI::COMM_WORLD.Recv(&potentials, entities.size(), MPI::DOUBLE, 0, MPI_ANY_TAG,
+		MPI::COMM_WORLD.Recv(potentials, entities.size(), MPI::DOUBLE, 0, MPI_ANY_TAG,
 				status);
 		// TODO: handle multi-component case or treat in more transparent manner?
 		if (numberOfComponents==1) {
