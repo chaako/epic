@@ -1031,7 +1031,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	for (int rank=1; rank<nProcesses; ++rank) {
 		if (nodeCounter<entities.size()) {
 			MPI::COMM_WORLD.Send(&node, 1, MPI::INT, rank, WORKTAG);
-			MPI::COMM_WORLD.Send(&potentials[0], entities.size(), MPI::DOUBLE,
+			MPI::COMM_WORLD.Send(potentials, entities.size(), MPI::DOUBLE,
 					rank, WORKTAG);
 			nodeCounter++;
 			node = sortedNodes[nodeCounter];
@@ -1048,7 +1048,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 		}
 		MPI::COMM_WORLD.Send(&node, 1, MPI::INT, status.Get_source(),
 				WORKTAG);
-		MPI::COMM_WORLD.Send(&potentials[0], entities.size(), MPI::DOUBLE,
+		MPI::COMM_WORLD.Send(potentials, entities.size(), MPI::DOUBLE,
 				status.Get_source(), WORKTAG);
 		nodeCounter++;
 		node = sortedNodes[nodeCounter];
@@ -1084,26 +1084,26 @@ MPI::Status DensityField::receiveDensity(double *potential, FILE *outFile) {
 	vect3d incomingNodePosition;
 	double *temperatures = new double[numberOfComponents];
 	double *temperatureErrors = new double[numberOfComponents];
-	MPI::COMM_WORLD.Recv(&densities[0], numberOfComponents, MPI::DOUBLE, MPI_ANY_SOURCE,
+	MPI::COMM_WORLD.Recv(densities, numberOfComponents, MPI::DOUBLE, MPI_ANY_SOURCE,
 			MPI_ANY_TAG, status);
 	int node = status.Get_tag();
 	int source = status.Get_source();
-	MPI::COMM_WORLD.Recv(&densityErrors[0], numberOfComponents, MPI::DOUBLE, source, node, status);
-	MPI::COMM_WORLD.Recv(&averageVelocities[0], numberOfComponents*sizeof(vect3d), MPI::BYTE,
+	MPI::COMM_WORLD.Recv(densityErrors, numberOfComponents, MPI::DOUBLE, source, node, status);
+	MPI::COMM_WORLD.Recv(averageVelocities, numberOfComponents*sizeof(vect3d), MPI::BYTE,
 			source, node, status);
-	MPI::COMM_WORLD.Recv(&averageVelocityErrors[0], numberOfComponents*sizeof(vect3d), MPI::BYTE,
+	MPI::COMM_WORLD.Recv(averageVelocityErrors, numberOfComponents*sizeof(vect3d), MPI::BYTE,
 			source, node, status);
 	MPI::COMM_WORLD.Recv(&incomingNodePosition, sizeof(vect3d), MPI::BYTE,
 			source, node, status);
-	MPI::COMM_WORLD.Recv(&temperatures[0], numberOfComponents, MPI::DOUBLE, source, node, status);
-	MPI::COMM_WORLD.Recv(&temperatureErrors[0], numberOfComponents, MPI::DOUBLE, source, node, status);
+	MPI::COMM_WORLD.Recv(temperatures, numberOfComponents, MPI::DOUBLE, source, node, status);
+	MPI::COMM_WORLD.Recv(temperatureErrors, numberOfComponents, MPI::DOUBLE, source, node, status);
 	if (node>=0 && node<entities.size()) {
-		this->setField(entities[node], &densities[0]);
-		averageVelocity_ptr->setField(entities[node], &averageVelocities[0]);
-		temperature_ptr->setField(entities[node], &temperatures[0]);
+		this->setField(entities[node], densities);
+		averageVelocity_ptr->setField(entities[node], averageVelocities);
+		temperature_ptr->setField(entities[node], temperatures);
 		// TODO: handle multi-component case or treat in more transparent manner?
 		if (numberOfComponents==1) {
-			MPI::COMM_WORLD.Recv(&potential[0], numberOfComponents, MPI::DOUBLE, source, node, status);
+			MPI::COMM_WORLD.Recv(potential, numberOfComponents, MPI::DOUBLE, source, node, status);
 		}
 	}
 	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
@@ -1163,17 +1163,17 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 				*potentialField_ptr, referenceDensity,
 				faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation,
-				&densities[0], &densityErrors[0],
-				&averageVelocities[0], &averageVelocityErrors[0],
-				&temperatures[0], &temperatureErrors[0]);
+				densities, densityErrors,
+				averageVelocities, averageVelocityErrors,
+				temperatures, temperatureErrors);
 		// TODO: just send one big data-structure?
-		MPI::COMM_WORLD.Send(&densities[0], numberOfComponents, MPI::DOUBLE, 0, node);
-		MPI::COMM_WORLD.Send(&densityErrors[0], numberOfComponents, MPI::DOUBLE, 0, node);
-		MPI::COMM_WORLD.Send(&averageVelocities[0], numberOfComponents*sizeof(vect3d), MPI::BYTE, 0, node);
-		MPI::COMM_WORLD.Send(&averageVelocityErrors[0], numberOfComponents*sizeof(vect3d), MPI::BYTE, 0, node);
+		MPI::COMM_WORLD.Send(densities, numberOfComponents, MPI::DOUBLE, 0, node);
+		MPI::COMM_WORLD.Send(densityErrors, numberOfComponents, MPI::DOUBLE, 0, node);
+		MPI::COMM_WORLD.Send(averageVelocities, numberOfComponents*sizeof(vect3d), MPI::BYTE, 0, node);
+		MPI::COMM_WORLD.Send(averageVelocityErrors, numberOfComponents*sizeof(vect3d), MPI::BYTE, 0, node);
 		MPI::COMM_WORLD.Send(&nodePosition, sizeof(vect3d), MPI::BYTE, 0, node);
-		MPI::COMM_WORLD.Send(&temperatures[0], numberOfComponents, MPI::DOUBLE, 0, node);
-		MPI::COMM_WORLD.Send(&temperatureErrors[0], numberOfComponents, MPI::DOUBLE, 0, node);
+		MPI::COMM_WORLD.Send(temperatures, numberOfComponents, MPI::DOUBLE, 0, node);
+		MPI::COMM_WORLD.Send(temperatureErrors, numberOfComponents, MPI::DOUBLE, 0, node);
 		// TODO: handle multi-component case or treat in more transparent manner?
 		if (numberOfComponents==1) {
 			// TODO: don't hard-code boundary potential etc.
