@@ -765,10 +765,13 @@ void DensityField::calcField(ElectricField& electricField,
 	MPI::COMM_WORLD.Bcast(density, entities.size(), MPI::DOUBLE, 0);
 	MPI::COMM_WORLD.Bcast(averageVelocity, entities.size()*sizeof(vect3d), MPI::BYTE, 0);
 	MPI::COMM_WORLD.Bcast(temperature, entities.size(), MPI::DOUBLE, 0);
-	for (int node=0; node<entities.size(); node++) {
-		this->setField(entities[node], density[node]);
-		averageVelocity_ptr->setField(entities[node], averageVelocity[node]);
-		temperature_ptr->setField(entities[node], temperature[node]);
+	// TODO: doing this on master overwrites densityScan...should fix and be consistent
+	if (mpiId != 0) {
+		for (int node=0; node<entities.size(); node++) {
+			this->setField(entities[node], density[node]);
+			averageVelocity_ptr->setField(entities[node], averageVelocity[node]);
+			temperature_ptr->setField(entities[node], temperature[node]);
+		}
 	}
 	delete[] density;
 	delete[] averageVelocity;
@@ -874,7 +877,8 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 		double potentialPerturbation, double *density, double *error,
 		vect3d *averageVelocity, vect3d *averageVelocityError,
 		double *temperature, double *temperatureError) {
-	*density = 0.;
+	for (int k=0; k<numberOfComponents; k++)
+		density[k] = 0.;
 	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 	bool doThisNode = false;
 	bool recordThisNode = false;
@@ -894,11 +898,13 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 	}
 	// TODO: Need unified way of specifying unperturbed boundary plasma
 	if (vertexType[node]==5) {
-		*averageVelocity = -extern_VEXB;
-		*averageVelocityError = vect3d(0.,0.,0.);
-		*temperature = 1.;
-		*temperatureError = 0.;
-		*density = referenceDensity[node];
+		for (int k=0; k<numberOfComponents; k++) {
+			averageVelocity[k] = -extern_VEXB;
+			averageVelocityError[k] = vect3d(0.,0.,0.);
+			temperature[k] = 1.;
+			temperatureError[k] = 0.;
+			density[k] = referenceDensity[node];
+		}
 //	} else if (vertexType[node]==4) {
 //		// TODO: don't need sheath entrance density if specifying potential,
 //		//       but might be interested in it or other moments later
@@ -988,9 +994,9 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 					averageVelocityError[k][i] = errors[i+1]/density[k];
 				}
 				// Subtract ordered kinetic energy from second moment to get temperature
-				temperature[k] = moments[4]/ *density - pow(averageVelocity[k].norm(),2.)/3.;
+				temperature[k] = moments[4]/density[k] - pow(averageVelocity[k].norm(),2.)/3.;
 				// TODO: calculate temperature error more carefully
-				temperatureError[k] = sqrt(pow(errors[4]/ *density,2.) + pow(errors[0],2.) +
+				temperatureError[k] = sqrt(pow(errors[4]/density[k],2.) + pow(errors[0],2.) +
 						pow(0.5*averageVelocityError[k].norm(),2.));
 				probabilityThatTrueError = probabilities[0];
 			}
