@@ -651,23 +651,24 @@ void PotentialField::calcField(DensityField ionDensity,
 
 void PotentialField::computePerturbedPotentials(double negativePerturbation,
 		double positivePerturbation, double minPotential, double maxPotential) {
-	if (numberOfComponents>1) {
-		double *potentials_ptr = new double[numberOfComponents];
-		for (int i=0; i<entities.size(); i++) {
-			double referencePotential = this->getField(entities[i]);
+	double *potentials_ptr = new double[numberOfComponents];
+	for (int i=0; i<entities.size(); i++) {
+		double referencePotential = this->getField(entities[i]);
+		potentials_ptr[0] = referencePotential;
+		if (numberOfComponents>2) {
 			double lowerLimit = min(minPotential,referencePotential+negativePerturbation);
 			double upperLimit = max(maxPotential,referencePotential+positivePerturbation);
-			double step = (upperLimit-lowerLimit)/(numberOfComponents-1);
-//			potentials_ptr[0] = referencePotential;
-//			for (int j=1; j<numberOfComponents; j++) {
-//				potentials_ptr[j] = lowerLimit+(j-1)*step;
-			for (int j=0; j<numberOfComponents; j++) {
-				potentials_ptr[j] = lowerLimit+j*step;
+			double step = (upperLimit-lowerLimit)/(numberOfComponents-2);
+			for (int j=1; j<numberOfComponents; j++) {
+				potentials_ptr[j] = lowerLimit+(j-1)*step;
 			}
-			this->setField(entities[i],potentials_ptr);
+		} else if (numberOfComponents==2) {
+			// TODO: better behaviour here?
+			potentials_ptr[1] = referencePotential+negativePerturbation;
 		}
-		delete[] potentials_ptr;
+		this->setField(entities[i],potentials_ptr);
 	}
+	delete[] potentials_ptr;
 }
 
 void PotentialField::setReferenceElectronDensity(DensityField& referenceElectronDensity){
@@ -982,9 +983,9 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 				if (NDIM!=3)
 					throw string("can only handle NDIM==3");
 				for (int i=0; i<NDIM; i++) {
-					averageVelocity[k][i] = moments[i+1]/ *density;
+					averageVelocity[k][i] = moments[i+1]/density[k];
 					// TODO: include density error
-					averageVelocityError[k][i] = errors[i+1]/ *density;
+					averageVelocityError[k][i] = errors[i+1]/density[k];
 				}
 				// Subtract ordered kinetic energy from second moment to get temperature
 				temperature[k] = moments[4]/ *density - pow(averageVelocity[k].norm(),2.)/3.;
