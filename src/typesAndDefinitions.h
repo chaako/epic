@@ -55,6 +55,7 @@ enum {
 #include <boost/array.hpp>
 #include <boost/ref.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/scoped_array.hpp>
 #include <time.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp> // For sleep function

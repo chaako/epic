@@ -736,7 +736,8 @@ T Field<T>::getFieldFromMeshDB(entHandle entityHandle) {
 template <class T>
 void Field<T>::getFieldFromMeshDB(entHandle entityHandle, T *fieldOutput_ptr,
 		int requestedNumberOfComponents) {
-	T *field_ptr = new T[numberOfComponents];
+	boost::scoped_array<T> buffer(new T[numberOfComponents]);
+	T *field_ptr = buffer.get();
 	int field_alloc;
 	int field_size;
 	if (boost::is_same<T,vect3d>::value) {
@@ -749,13 +750,11 @@ void Field<T>::getFieldFromMeshDB(entHandle entityHandle, T *fieldOutput_ptr,
 	iMesh_getData(mesh_ptr->meshInstance, entityHandle, tag, &field_ptr,
 			&field_alloc, &field_size, &ierr);
 	if (ierr != iBase_SUCCESS) {
-		delete[] field_ptr;
 		throw int(FAILURE_GETTING_FIELD);
 	}
 	for (int i=0; i<min(requestedNumberOfComponents,numberOfComponents); i++) {
 		fieldOutput_ptr[i] = field_ptr[i];
 	}
-	delete[] field_ptr;
 }
 
 template <class T>
@@ -778,11 +777,11 @@ void Field<T>::setField(entHandle node, T field) {
 	if (numberOfComponents==1) {
 		this->setField(node,&field);
 	} else {
-		T *field_ptr = new T[numberOfComponents];
+		boost::scoped_array<T> buffer(new T[numberOfComponents]);
+		T *field_ptr = buffer.get();
 		this->getField(node,field_ptr);
 		field_ptr[0] = field;
 		this->setField(node,field_ptr);
-		delete[] field_ptr;
 	}
 }
 
@@ -794,13 +793,13 @@ void Field<T>::setField(entHandle node, T *field_ptr) {
 	int ierr;
 	void *components_ptr;
 	int field_size;
-	vect3d *vect3dBuffer = new vect3d[NDIM*numberOfComponents];
+	boost::scoped_array<vect3d> vect3dBuffer(new vect3d[NDIM*numberOfComponents]);
 	if (boost::is_same<T,vect3d>::value) {
 		for (int k=0; k<numberOfComponents; k++) {
 			for (int i=0; i<NDIM; i++)
 				vect3dBuffer[k][i] = (((vect3d*)field_ptr)[k])[i];
 		}
-		components_ptr = (T*)vect3dBuffer;
+		components_ptr = (T*)(vect3dBuffer.get());
 //		// TODO: figure out why using .data() breaks in optimization
 //		//       (adding print .transpose() prevents optimization and works)
 //		vect3d vector(field);
@@ -819,13 +818,13 @@ void Field<T>::setField(entHandle node, T *field_ptr) {
 template <class T>
 void Field<T>::setVtkField(entHandle node, T *field_ptr) {
 	void *components_ptr;
-	vect3d *vect3dBuffer = new vect3d[NDIM*numberOfComponents];
+	boost::scoped_array<vect3d> vect3dBuffer(new vect3d[NDIM*numberOfComponents]);
 	if (boost::is_same<T,vect3d>::value) {
 		for (int k=0; k<numberOfComponents; k++) {
 			for (int i=0; i<NDIM; i++)
 				vect3dBuffer[k][i] = (((vect3d*)field_ptr)[k])[i];
 		}
-		components_ptr = (T*)vect3dBuffer;
+		components_ptr = (T*)(vect3dBuffer.get());
 	} else {
 		components_ptr = field_ptr;
 	}

@@ -651,7 +651,7 @@ void PotentialField::calcField(DensityField ionDensity,
 
 void PotentialField::computePerturbedPotentials(double negativePerturbation,
 		double positivePerturbation, double minPotential, double maxPotential) {
-	double *potentials_ptr = new double[numberOfComponents];
+	boost::scoped_array<double> potentials_ptr(new double[numberOfComponents]);
 	for (int i=0; i<entities.size(); i++) {
 		double referencePotential = this->getField(entities[i]);
 		potentials_ptr[0] = referencePotential;
@@ -666,9 +666,8 @@ void PotentialField::computePerturbedPotentials(double negativePerturbation,
 			// TODO: better behaviour here?
 			potentials_ptr[1] = referencePotential+negativePerturbation;
 		}
-		this->setField(entities[i],potentials_ptr);
+		this->setField(entities[i],potentials_ptr.get());
 	}
-	delete[] potentials_ptr;
 }
 
 void PotentialField::setReferenceElectronDensity(DensityField& referenceElectronDensity){
@@ -743,9 +742,9 @@ void DensityField::calcField(ElectricField& electricField,
 	int mpiId = 0;
 #ifdef HAVE_MPI
 	// TODO: Change this to using smart pointer
-	double *density = new double[entities.size()];
-	vect3d *averageVelocity = new vect3d[entities.size()];
-	double *temperature = new double[entities.size()];
+	boost::scoped_array<double> density(new double[entities.size()]);
+	boost::scoped_array<vect3d> averageVelocity(new vect3d[entities.size()]);
+	boost::scoped_array<double> temperature(new double[entities.size()]);
 	// TODO: Am assuming here that fields are identical on master and slaves
 	mpiId = MPI::COMM_WORLD.Get_rank();
 	if (mpiId == 0) {
@@ -762,53 +761,44 @@ void DensityField::calcField(ElectricField& electricField,
 				potentialField_ptr, referenceDensity, faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation);
 	}
-	MPI::COMM_WORLD.Bcast(density, entities.size(), MPI::DOUBLE, 0);
-	MPI::COMM_WORLD.Bcast(averageVelocity, entities.size()*sizeof(vect3d), MPI::BYTE, 0);
-	MPI::COMM_WORLD.Bcast(temperature, entities.size(), MPI::DOUBLE, 0);
+	MPI::COMM_WORLD.Bcast(density.get(), entities.size(), MPI::DOUBLE, 0);
+	MPI::COMM_WORLD.Bcast(averageVelocity.get(), entities.size()*sizeof(vect3d), MPI::BYTE, 0);
+	MPI::COMM_WORLD.Bcast(temperature.get(), entities.size(), MPI::DOUBLE, 0);
 	for (int node=0; node<entities.size(); node++) {
 		this->setField(entities[node], density[node]);
 		averageVelocity_ptr->setField(entities[node], averageVelocity[node]);
 		temperature_ptr->setField(entities[node], temperature[node]);
 	}
-	delete[] density;
-	delete[] averageVelocity;
-	delete[] temperature;
 #else
 	extern_findTet=0;
 	clock_t startClock = clock(); // timing
 	for (int i=0; i<entities.size(); i++) {
 		int node=sortedNodes[i];
-		double *densities = new double[numberOfComponents];
-		double *densityErrors = new double[numberOfComponents];
-		vect3d *averageVelocities = new vect3d[numberOfComponents];
-		vect3d *averageVelocityErrors = new vect3d[numberOfComponents];
-		double *temperatures = new double[numberOfComponents];
-		double *temperatureErrors = new double[numberOfComponents];
+		boost::scoped_array<double> densities(new double[numberOfComponents]);
+		boost::scoped_array<double> densityErrors(new double[numberOfComponents]);
+		boost::scoped_array<vect3d> averageVelocities(new vect3d[numberOfComponents]);
+		boost::scoped_array<vect3d> averageVelocityErrors(new vect3d[numberOfComponents]);
+		boost::scoped_array<double> temperatures(new double[numberOfComponents]);
+		boost::scoped_array<double> temperatureErrors(new double[numberOfComponents]);
 	    this->calculateDensity(node, electricField,
 				*potentialField_ptr, referenceDensity,
 				faceType, vertexType, shortestEdge,
-				charge, potentialPerturbation, densities, densityErrors,
-				averageVelocities, averageVelocityErrors,
-				temperatures, temperatureErrors);
-		this->setField(entities[node], densities);
-		averageVelocity_ptr->setField(entities[node], averageVelocities);
-		temperature_ptr->setField(entities[node], temperatures);
+				charge, potentialPerturbation, densities.get(), densityErrors.get(),
+				averageVelocities.get(), averageVelocityErrors.get(),
+				temperatures.get(), temperatureErrors.get());
+		this->setField(entities[node], densities.get());
+		averageVelocity_ptr->setField(entities[node], averageVelocities.get());
+		temperature_ptr->setField(entities[node], temperatures.get());
 		// TODO: handle multi-component case or treat in more transparent manner?
 		if (numberOfComponents==1) {
 			// TODO: don't hard-code boundary potential etc.
-			potentialField_ptr->calcFieldAtNode(entities[node],*densities,vertexType[node],
+			potentialField_ptr->calcFieldAtNode(entities[node],densities[0],vertexType[node],
 					0.,-0.5,false);
 		}
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		cout << nodePosition.norm() << " " << density << " " << error << endl;
 		if (outFile)
 			fprintf(outFile, "%g %g %g\n", nodePosition.norm(), densities[0], densityErrors[0]);
-		delete[] densities;
-		delete[] densityErrors;
-		delete[] averageVelocities;
-		delete[] averageVelocityErrors;
-		delete[] temperatures;
-		delete[] temperatureErrors;
 	}
 	clock_t endClock = clock(); // timing
 	cout << "calcField total (s)= "
@@ -964,8 +954,8 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 //					&density, error, &probabilityThatTrueError);
 			if (potentialField.numberOfComponents!=numberOfComponents)
 				throw string("number of components differ in density and potential");
-			double *potentials_ptr = new double[numberOfComponents];
-			potentialField.getField(entities[node],potentials_ptr);
+			boost::scoped_array<double> potentials_ptr(new double[numberOfComponents]);
+			potentialField.getField(entities[node],potentials_ptr.get());
 			for (int k=0; k<numberOfComponents; k++) {
 				potentialField[node] = potentials_ptr[k];
 				double moments[5];
@@ -998,7 +988,6 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 				probabilityThatTrueError = probabilities[0];
 			}
 			potentialField[node] = potentials_ptr[0];
-			delete[] potentials_ptr;
 		}
 		// TODO: make potential perturbation more robust, transparent, and flexible
 		potentialField[node] -= potentialPerturbation;
@@ -1025,7 +1014,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	int nodeCounter=0;
 	int node=sortedNodes[nodeCounter];
 	double potential;
-	double *potentials = new double[entities.size()];
+	boost::scoped_array<double> potentials(new double[entities.size()]);
 	for (int i=0; i<entities.size(); i++) {
 		potentials[i] = potentialField_ptr->getField(entities[i]);
 	}
@@ -1034,7 +1023,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	for (int rank=1; rank<nProcesses; ++rank) {
 		if (nodeCounter<entities.size()) {
 			MPI::COMM_WORLD.Send(&node, 1, MPI::INT, rank, WORKTAG);
-			MPI::COMM_WORLD.Send(potentials, entities.size(), MPI::DOUBLE,
+			MPI::COMM_WORLD.Send(potentials.get(), entities.size(), MPI::DOUBLE,
 					rank, WORKTAG);
 			nodeCounter++;
 			node = sortedNodes[nodeCounter];
@@ -1051,7 +1040,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 		}
 		MPI::COMM_WORLD.Send(&node, 1, MPI::INT, status.Get_source(),
 				WORKTAG);
-		MPI::COMM_WORLD.Send(potentials, entities.size(), MPI::DOUBLE,
+		MPI::COMM_WORLD.Send(potentials.get(), entities.size(), MPI::DOUBLE,
 				status.Get_source(), WORKTAG);
 		nodeCounter++;
 		node = sortedNodes[nodeCounter];
@@ -1073,37 +1062,36 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	for (int rank=1; rank<nProcesses; ++rank) {
 		MPI::COMM_WORLD.Send(0, 0, MPI::INT, rank, DIETAG);
 	}
-	delete[] potentials;
 }
 #endif
 
 #ifdef HAVE_MPI
 MPI::Status DensityField::receiveDensity(double *potential, FILE *outFile) {
 	MPI::Status status;
-	double *densities = new double[numberOfComponents];
-	double *densityErrors = new double[numberOfComponents];
-	vect3d *averageVelocities = new vect3d[numberOfComponents];
-	vect3d *averageVelocityErrors = new vect3d[numberOfComponents];
+	boost::scoped_array<double> densities(new double[numberOfComponents]);
+	boost::scoped_array<double> densityErrors(new double[numberOfComponents]);
+	boost::scoped_array<vect3d> averageVelocities(new vect3d[numberOfComponents]);
+	boost::scoped_array<vect3d> averageVelocityErrors(new vect3d[numberOfComponents]);
 	vect3d incomingNodePosition;
-	double *temperatures = new double[numberOfComponents];
-	double *temperatureErrors = new double[numberOfComponents];
-	MPI::COMM_WORLD.Recv(densities, numberOfComponents, MPI::DOUBLE, MPI_ANY_SOURCE,
+	boost::scoped_array<double> temperatures(new double[numberOfComponents]);
+	boost::scoped_array<double> temperatureErrors(new double[numberOfComponents]);
+	MPI::COMM_WORLD.Recv(densities.get(), numberOfComponents, MPI::DOUBLE, MPI_ANY_SOURCE,
 			MPI_ANY_TAG, status);
 	int node = status.Get_tag();
 	int source = status.Get_source();
-	MPI::COMM_WORLD.Recv(densityErrors, numberOfComponents, MPI::DOUBLE, source, node, status);
-	MPI::COMM_WORLD.Recv(averageVelocities, numberOfComponents*sizeof(vect3d), MPI::BYTE,
+	MPI::COMM_WORLD.Recv(densityErrors.get(), numberOfComponents, MPI::DOUBLE, source, node, status);
+	MPI::COMM_WORLD.Recv(averageVelocities.get(), numberOfComponents*sizeof(vect3d), MPI::BYTE,
 			source, node, status);
-	MPI::COMM_WORLD.Recv(averageVelocityErrors, numberOfComponents*sizeof(vect3d), MPI::BYTE,
+	MPI::COMM_WORLD.Recv(averageVelocityErrors.get(), numberOfComponents*sizeof(vect3d), MPI::BYTE,
 			source, node, status);
 	MPI::COMM_WORLD.Recv(&incomingNodePosition, sizeof(vect3d), MPI::BYTE,
 			source, node, status);
-	MPI::COMM_WORLD.Recv(temperatures, numberOfComponents, MPI::DOUBLE, source, node, status);
-	MPI::COMM_WORLD.Recv(temperatureErrors, numberOfComponents, MPI::DOUBLE, source, node, status);
+	MPI::COMM_WORLD.Recv(temperatures.get(), numberOfComponents, MPI::DOUBLE, source, node, status);
+	MPI::COMM_WORLD.Recv(temperatureErrors.get(), numberOfComponents, MPI::DOUBLE, source, node, status);
 	if (node>=0 && node<entities.size()) {
-		this->setField(entities[node], densities);
-		averageVelocity_ptr->setField(entities[node], averageVelocities);
-		temperature_ptr->setField(entities[node], temperatures);
+		this->setField(entities[node], densities.get());
+		averageVelocity_ptr->setField(entities[node], averageVelocities.get());
+		temperature_ptr->setField(entities[node], temperatures.get());
 		// TODO: handle multi-component case or treat in more transparent manner?
 		if (numberOfComponents==1) {
 			MPI::COMM_WORLD.Recv(potential, numberOfComponents, MPI::DOUBLE, source, node, status);
@@ -1120,13 +1108,6 @@ MPI::Status DensityField::receiveDensity(double *potential, FILE *outFile) {
 	if (outFile)
 		fprintf(outFile, "%g %g %g\n", nodePosition.norm(), densities[0], densityErrors[0]);
 
-	delete[] densities;
-	delete[] densityErrors;
-	delete[] averageVelocities;
-	delete[] averageVelocityErrors;
-	delete[] temperatures;
-	delete[] temperatureErrors;
-
 	return status;
 }
 #endif
@@ -1139,7 +1120,7 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		double potentialPerturbation) {
 	MPI::Status status;
 	int node;
-	double *potentials = new double[entities.size()];
+	boost::scoped_array<double> potentials(new double[entities.size()]);
 
 	while (1) {
 		MPI::COMM_WORLD.Recv(&node, 1, MPI::INT, 0, MPI_ANY_TAG,
@@ -1147,7 +1128,7 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		if (status.Get_tag() == DIETAG) {
 			return;
 		}
-		MPI::COMM_WORLD.Recv(potentials, entities.size(), MPI::DOUBLE, 0, MPI_ANY_TAG,
+		MPI::COMM_WORLD.Recv(potentials.get(), entities.size(), MPI::DOUBLE, 0, MPI_ANY_TAG,
 				status);
 		// TODO: handle multi-component case or treat in more transparent manner?
 		if (numberOfComponents==1) {
@@ -1155,44 +1136,37 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 				potentialField_ptr->setField(entities[i],potentials[i]);
 			}
 		}
-		double *densities = new double[numberOfComponents];
-		double *densityErrors = new double[numberOfComponents];
-		vect3d *averageVelocities = new vect3d[numberOfComponents];
-		vect3d *averageVelocityErrors = new vect3d[numberOfComponents];
+		boost::scoped_ptr<double> densities(new double[numberOfComponents]);
+		boost::scoped_ptr<double> densityErrors(new double[numberOfComponents]);
+		boost::scoped_ptr<vect3d> averageVelocities(new vect3d[numberOfComponents]);
+		boost::scoped_ptr<vect3d> averageVelocityErrors(new vect3d[numberOfComponents]);
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
-		double *temperatures = new double[numberOfComponents];
-		double *temperatureErrors = new double[numberOfComponents];
+		boost::scoped_ptr<double> temperatures(new double[numberOfComponents]);
+		boost::scoped_ptr<double> temperatureErrors(new double[numberOfComponents]);
 		this->calculateDensity(node, electricField,
 				*potentialField_ptr, referenceDensity,
 				faceType, vertexType,
 				shortestEdge, charge, potentialPerturbation,
-				densities, densityErrors,
-				averageVelocities, averageVelocityErrors,
-				temperatures, temperatureErrors);
+				densities.get(), densityErrors.get(),
+				averageVelocities.get(), averageVelocityErrors.get(),
+				temperatures.get(), temperatureErrors,get());
 		// TODO: just send one big data-structure?
-		MPI::COMM_WORLD.Send(densities, numberOfComponents, MPI::DOUBLE, 0, node);
-		MPI::COMM_WORLD.Send(densityErrors, numberOfComponents, MPI::DOUBLE, 0, node);
-		MPI::COMM_WORLD.Send(averageVelocities, numberOfComponents*sizeof(vect3d), MPI::BYTE, 0, node);
-		MPI::COMM_WORLD.Send(averageVelocityErrors, numberOfComponents*sizeof(vect3d), MPI::BYTE, 0, node);
+		MPI::COMM_WORLD.Send(densities.get(), numberOfComponents, MPI::DOUBLE, 0, node);
+		MPI::COMM_WORLD.Send(densityErrors.get(), numberOfComponents, MPI::DOUBLE, 0, node);
+		MPI::COMM_WORLD.Send(averageVelocities.get(), numberOfComponents*sizeof(vect3d), MPI::BYTE, 0, node);
+		MPI::COMM_WORLD.Send(averageVelocityErrors.get(), numberOfComponents*sizeof(vect3d), MPI::BYTE, 0, node);
 		MPI::COMM_WORLD.Send(&nodePosition, sizeof(vect3d), MPI::BYTE, 0, node);
-		MPI::COMM_WORLD.Send(temperatures, numberOfComponents, MPI::DOUBLE, 0, node);
-		MPI::COMM_WORLD.Send(temperatureErrors, numberOfComponents, MPI::DOUBLE, 0, node);
+		MPI::COMM_WORLD.Send(temperatures.get(), numberOfComponents, MPI::DOUBLE, 0, node);
+		MPI::COMM_WORLD.Send(temperatureErrors.get(), numberOfComponents, MPI::DOUBLE, 0, node);
 		// TODO: handle multi-component case or treat in more transparent manner?
 		if (numberOfComponents==1) {
 			// TODO: don't hard-code boundary potential etc.
-			potentialField_ptr->calcFieldAtNode(entities[node],*densities,vertexType[node],
+			potentialField_ptr->calcFieldAtNode(entities[node],densities[0],vertexType[node],
 					0.,-0.5,false);
 			double potential=potentialField_ptr->getField(entities[node]);
 			MPI::COMM_WORLD.Send(&potential, numberOfComponents, MPI::DOUBLE, 0, node);
 		}
-		delete[] densities;
-		delete[] densityErrors;
-		delete[] averageVelocities;
-		delete[] averageVelocityErrors;
-		delete[] temperatures;
-		delete[] temperatureErrors;
 	}
-	delete[] potentials;
 }
 #endif
 
