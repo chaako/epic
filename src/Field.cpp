@@ -1149,7 +1149,7 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 				shortestEdge, charge, potentialPerturbation,
 				densities.get(), densityErrors.get(),
 				averageVelocities.get(), averageVelocityErrors.get(),
-				temperatures.get(), temperatureErrors,get());
+				temperatures.get(), temperatureErrors.get());
 		// TODO: just send one big data-structure?
 		MPI::COMM_WORLD.Send(densities.get(), numberOfComponents, MPI::DOUBLE, 0, node);
 		MPI::COMM_WORLD.Send(densityErrors.get(), numberOfComponents, MPI::DOUBLE, 0, node);
