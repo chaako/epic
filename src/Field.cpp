@@ -1136,13 +1136,13 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 				potentialField_ptr->setField(entities[i],potentials[i]);
 			}
 		}
-		boost::scoped_ptr<double> densities(new double[numberOfComponents]);
-		boost::scoped_ptr<double> densityErrors(new double[numberOfComponents]);
-		boost::scoped_ptr<vect3d> averageVelocities(new vect3d[numberOfComponents]);
-		boost::scoped_ptr<vect3d> averageVelocityErrors(new vect3d[numberOfComponents]);
+		boost::scoped_array<double> densities(new double[numberOfComponents]);
+		boost::scoped_array<double> densityErrors(new double[numberOfComponents]);
+		boost::scoped_array<vect3d> averageVelocities(new vect3d[numberOfComponents]);
+		boost::scoped_array<vect3d> averageVelocityErrors(new vect3d[numberOfComponents]);
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
-		boost::scoped_ptr<double> temperatures(new double[numberOfComponents]);
-		boost::scoped_ptr<double> temperatureErrors(new double[numberOfComponents]);
+		boost::scoped_array<double> temperatures(new double[numberOfComponents]);
+		boost::scoped_array<double> temperatureErrors(new double[numberOfComponents]);
 		this->calculateDensity(node, electricField,
 				*potentialField_ptr, referenceDensity,
 				faceType, vertexType,
