@@ -178,6 +178,9 @@ int main(int argc, char *argv[]) {
 		sleep(secondsToSleepForDebugAttach);
 	}
 
+	// TODO: set random seed as input or based on time(NULL)?
+	srand(54326);
+
 	Mesh mesh(inputMeshFile);
 	mesh.printElementNumbers();
 

@@ -729,8 +729,10 @@ void DensityField::calcField(ElectricField& electricField,
 		double boltzmannDensity = referenceDensity.getField(entities[i])*
 				exp(potentialField_ptr->getField(entities[i]));
 		double densityDifference = this->getField(entities[i])-boltzmannDensity;
-		// TODO: better to use fractional difference?
-		unconvergednessPairs.push_back(make_pair(i,fabs(densityDifference)));
+//		// TODO: better to use fractional difference?
+//		unconvergednessPairs.push_back(make_pair(i,fabs(densityDifference)));
+		// TODO: clean up if really doing random ordering
+		unconvergednessPairs.push_back(make_pair(i,rand()/double(RAND_MAX)));
 	}
 	sort(unconvergednessPairs.begin(),unconvergednessPairs.end(),
 			boost::bind(&std::pair<int, double>::second, _1) >
