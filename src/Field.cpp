@@ -379,14 +379,21 @@ void ElectricField::calcField_Gatsonis(PotentialField potentialField) {
 
 
 PotentialField::PotentialField(Mesh *inputMesh_ptr, string inputName,
-		int numberOfComponents)
-	: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX, numberOfComponents) {
+		double boundaryPotential, double sheathPotential,
+		bool fixSheathPotential, int numberOfComponents)
+	: Field<double>(inputMesh_ptr, inputName, iBase_VERTEX, numberOfComponents),
+	  boundaryPotential(boundaryPotential),
+	  sheathPotential(sheathPotential),
+	  fixSheathPotential(fixSheathPotential) {
 	referenceElectronDensity_ptr = NULL;
 	referenceElectronTemperature_ptr = NULL;
 }
 
 PotentialField::PotentialField(PotentialField potential, string inputName)
-	: Field<double>(potential.mesh_ptr, inputName, iBase_VERTEX) {
+	: Field<double>(potential.mesh_ptr, inputName, iBase_VERTEX),
+	  boundaryPotential(potential.boundaryPotential),
+	  sheathPotential(potential.sheathPotential),
+	  fixSheathPotential(potential.fixSheathPotential) {
 	for (int i=0; i<entities.size(); i++) {
 		this->setField(entities[i], potential.getField(entities[i]));
 	}
@@ -436,7 +443,7 @@ void PotentialField::calcField(DensityField ionDensity,
 //			potential = -1./2.;
 //		} else
 		if (vertexType.getField(entities[i])==5) {
-			// TODO: don't hard-code boudnary potential
+			// TODO: don't hard-code boundary potential
 			potential = 0;
 		} else {
 			potential = this->getField(entities[i]);
@@ -488,10 +495,15 @@ void PotentialField::calcField(DensityField& ionDensity, Field<vect3d>& ionVeloc
 			}
 		}
 		if (fixSheathPotential) {
-			// TODO: think about possible influence of background E field
+			// TODO: make this function since do multiple places
+			vect3d vertexPosition = mesh_ptr->getCoordinates(entities[i]);
+			// TODO: hard-coding zero potential of ExB-field as origin here
+			// TODO: sign of E appears to be wrong in mover, so flip here
+			//       (should be + if one - from shielding and one from -grad(phi) )
+			double shieldedPotential=sheathPotential-vertexPosition.dot(extern_E);
 			// TODO: don't hard-code boundary type
 			if (vertexType.getField(entities[i])==4) {
-				potential = sheathPotential;
+				potential = shieldedPotential;
 			}
 		}
 		this->setField(entities[i], potential);
@@ -522,10 +534,15 @@ void PotentialField::calcFieldAtNode(entHandle entity, double ionDensity, int ve
 		potential = (currentPotential+boltzmannPotential)/2.;
 	}
 	if (fixSheathPotential) {
-		// TODO: think about possible influence of background E field
+		// TODO: make this function since do multiple places
+		vect3d vertexPosition = mesh_ptr->getCoordinates(entity);
+		// TODO: hard-coding zero potential of ExB-field as origin here
+		// TODO: sign of E appears to be wrong in mover, so flip here
+		//       (should be + if one - from shielding and one from -grad(phi) )
+		double shieldedPotential=sheathPotential-vertexPosition.dot(extern_E);
 		// TODO: don't hard-code boundary type
 		if (vertexType==4) {
-			potential = sheathPotential;
+			potential = shieldedPotential;
 		}
 	}
 	this->setField(entity, potential);
@@ -795,7 +812,8 @@ void DensityField::calcField(ElectricField& electricField,
 		if (numberOfComponents==1) {
 			// TODO: don't hard-code boundary potential etc.
 			potentialField_ptr->calcFieldAtNode(entities[node],densities[0],vertexType[node],
-					0.,-0.5,false);
+					potentialField_ptr->boundaryPotential,potentialField_ptr->sheathPotential,
+					potentialField_ptr->fixSheathPotential);
 		}
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		cout << nodePosition.norm() << " " << density << " " << error << endl;
@@ -1164,7 +1182,8 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		if (numberOfComponents==1) {
 			// TODO: don't hard-code boundary potential etc.
 			potentialField_ptr->calcFieldAtNode(entities[node],densities[0],vertexType[node],
-					0.,-0.5,false);
+					potentialField_ptr->boundaryPotential,potentialField_ptr->sheathPotential,
+					potentialField_ptr->fixSheathPotential);
 			double potential=potentialField_ptr->getField(entities[node]);
 			MPI::COMM_WORLD.Send(&potential, numberOfComponents, MPI::DOUBLE, 0, node);
 		}

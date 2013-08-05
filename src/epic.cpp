@@ -208,9 +208,12 @@ int main(int argc, char *argv[]) {
 		cout << endl << "Setting vertex codes..." << endl;
 	vertexType.calcField(faceType);
 	// TODO: create error fields with pointer in corresponding fields
-	PotentialField potential(&mesh,string("potential"));
-//	PotentialField previousPotential(&mesh,string("previousPotential"));
-	PotentialField potentialScan(&mesh,string("potentialScan"),numberOfPotentialValues);
+	PotentialField potential(&mesh,string("potential"),boundaryPotential,
+			sheathPotential,fixSheathPotential);
+//	PotentialField previousPotential(&mesh,string("previousPotential"),
+//			boundaryPotential,sheathPotential,fixSheathPotential);
+	PotentialField potentialScan(&mesh,string("potentialScan"),boundaryPotential,
+			sheathPotential,fixSheathPotential,numberOfPotentialValues);
 	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
 	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
 	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);

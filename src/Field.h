@@ -215,7 +215,9 @@ public:
 
 class PotentialField : public Field<double> {
 public:
-	PotentialField(Mesh *inputMesh_ptr, string inputName, int numberOfComponents=1);
+	PotentialField(Mesh *inputMesh_ptr, string inputName, double boundaryPotential=0.,
+			double sheathPotential=-0.5, bool fixSheathPotential=false,
+			int numberOfComponents=1);
 	PotentialField(PotentialField potential, string inputName);
 	virtual ~PotentialField() {}
 
@@ -247,6 +249,10 @@ public:
 
 	void setReferenceElectronDensity(DensityField& referenceElectronDensity);
 	void setReferenceElectronTemperature(SpatialDependence& referenceElectronTemperature);
+
+	double boundaryPotential;
+	double sheathPotential;
+	bool fixSheathPotential;
 
 	DensityField *referenceElectronDensity_ptr;
 	SpatialDependence *referenceElectronTemperature_ptr;
