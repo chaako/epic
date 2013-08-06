@@ -54,6 +54,8 @@ public:
 			int interpolationOrder=INTERPOLATIONORDER);
 	T getField(entHandle node);
 	void getField(entHandle entityHandle, T *field_ptr);
+	vector<T> getFieldVector(entHandle entityHandle);
+	void getFieldVector(entHandle entityHandle, vector<T> *fieldVector_ptr);
 	T getFieldFromMeshDB(entHandle entityHandle);
 	void getFieldFromMeshDB(entHandle entityHandle, T *field_ptr,
 			int requestedNumberOfComponents=1);
@@ -67,6 +69,7 @@ public:
 			int interpolationOrder=INTERPOLATIONORDER);
 	void setField(entHandle node, T field, int targetSlot=0);
 	void setField(entHandle node, T *field_ptr);
+	void setFieldVector(entHandle entityHandle, vector<T>& fieldVector);
 	void setVtkField(entHandle node, T *field_ptr);
 	Eigen::VectorXd getErrorCoefficients(entHandle element,
 			int interpolationOrder);
@@ -242,6 +245,9 @@ public:
 			double positivePotentialPerturbation,
 			double negativePotentialPerturbation,
 			FILE *outFile);
+
+	void computeWeightedAverage(PotentialField *averagePotential_ptr,
+			vector<double> weights);
 
 	// TODO: not very transparent to use inverted defaults to disable min/max
 	void computePerturbedPotentials(double negativePerturbation,
@@ -740,6 +746,26 @@ T Field<T>::getFieldFromMeshDB(entHandle entityHandle) {
 }
 
 template <class T>
+vector<T> Field<T>::getFieldVector(entHandle entityHandle) {
+	vector<T> fieldVector(numberOfComponents);
+	this->getFieldVector(entityHandle, &fieldVector);
+	return fieldVector;
+}
+
+template <class T>
+void Field<T>::getFieldVector(entHandle entityHandle,
+		vector<T> *fieldVector_ptr) {
+	boost::scoped_array<T> buffer(new T[numberOfComponents]);
+	T *field_ptr = buffer.get();
+	this->getFieldFromMeshDB(entityHandle, field_ptr, numberOfComponents);
+	if (fieldVector_ptr->size()!=numberOfComponents)
+		throw string("fieldVector_ptr->size() != numberOfComponents in setFieldVector");
+	for (int i=0; i<fieldVector_ptr->size(); i++) {
+		fieldVector_ptr->operator[](i) = field_ptr[i];
+	}
+}
+
+template <class T>
 void Field<T>::getFieldFromMeshDB(entHandle entityHandle, T *fieldOutput_ptr,
 		int requestedNumberOfComponents) {
 	boost::scoped_array<T> buffer(new T[numberOfComponents]);
@@ -821,6 +847,18 @@ void Field<T>::setField(entHandle node, T *field_ptr) {
 			field_size, &ierr);
 	if (ierr != iBase_SUCCESS)
 		throw string("Failure setting field.");
+}
+
+template <class T>
+void Field<T>::setFieldVector(entHandle entityHandle, vector<T>& fieldVector) {
+	boost::scoped_array<T> buffer(new T[numberOfComponents]);
+	T *field_ptr = buffer.get();
+	if (fieldVector.size()!=numberOfComponents)
+		throw string("fieldVector.size() != numberOfComponents in setFieldVector");
+	for (int i=0; i<fieldVector.size(); i++) {
+		field_ptr[i] = fieldVector[i];
+	}
+	this->setField(entityHandle,field_ptr);
 }
 
 template <class T>

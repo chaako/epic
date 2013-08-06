@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 	extern_evalPositions_ptr = &evaluationPositions;
 	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest, fixSheathPotential;
 	bool usePotentialFromInput, useDensityFromInput;
-	int secondsToSleepForDebugAttach, numberOfIterations;
+	int secondsToSleepForDebugAttach, numberOfIterations, numberOfIterationsToAveragePotentialOver;
 	int numberOfPotentialValues;
 	double debyeLength, boundaryPotential, objectPotential, sheathPotential;
 	double densityGradient, parallelDriftGradient;
@@ -62,6 +62,9 @@ int main(int argc, char *argv[]) {
 					("outputFile", po::value<string>(&outputFile), "output file")
 					("numberOfIterations", po::value<int>(&numberOfIterations)->default_value(2),
 							"number of iterations")
+					("numberOfIterationsToAveragePotentialOver",
+							po::value<int>(&numberOfIterationsToAveragePotentialOver)->default_value(1),
+							"number of iterations to average potential over")
 					("magneticFieldStrength", po::value<double>(&extern_B[2])->default_value(0.),
 							"magnetic field strength")
 					("electricFieldStrength", po::value<double>(&extern_E[0])->default_value(0.),
@@ -524,6 +527,26 @@ int main(int argc, char *argv[]) {
 //			// TODO: parallelize FEM eField-from-potential solve
 //			eField.calcField(potential);
 			eField.calcField_Gatsonis(potential);
+
+			if (mpiId == 0)
+				cout << endl << "Averaging potential over iterations..." << endl;
+			vector<double> weights(numberOfIterations);
+			for (int j=0; j<numberOfIterations; j++) {
+				if (j>(i+1-numberOfIterationsToAveragePotentialOver) && j<i+2) {
+					if (i+2<numberOfIterationsToAveragePotentialOver) {
+						weights[j] = 1./(i+2);
+					} else {
+						weights[j] = 1./numberOfIterationsToAveragePotentialOver;
+					}
+				} else {
+					weights[j] = 0.;
+				}
+//				// TODO: debugging
+//				cout << weights[j] << "...";
+			}
+//			// TODO: debugging
+//			cout << endl;
+			potentialHistory.computeWeightedAverage(&potential,weights);
 		} else {
 			if (mpiId == 0)
 				cout << endl << "Calculating updated potential and electric field..." << endl;
