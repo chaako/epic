@@ -43,7 +43,7 @@ public:
 	// TODO: Does an empty destructor cause a memory leak?
 	virtual ~Field() {}
 
-	void copyValues(Field<T>& fieldToCopy);
+	void copyValues(Field<T>& fieldToCopy, int targetSlot=0);
 
 	T& operator[](entHandle& entity);
 	T& operator[](int& entityIndex);
@@ -65,7 +65,7 @@ public:
 			Eigen::Matrix<T,NDIM,1> *fieldDeriv,
 			const vect3d &position, int *entityIndex=-1,
 			int interpolationOrder=INTERPOLATIONORDER);
-	void setField(entHandle node, T field);
+	void setField(entHandle node, T field, int targetSlot=0);
 	void setField(entHandle node, T *field_ptr);
 	void setVtkField(entHandle node, T *field_ptr);
 	Eigen::VectorXd getErrorCoefficients(entHandle element,
@@ -362,9 +362,9 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 }
 
 template <class T>
-void Field<T>::copyValues(Field<T>& fieldToCopy) {
+void Field<T>::copyValues(Field<T>& fieldToCopy, int targetSlot) {
 	for (int i=0; i<entities.size(); i++) {
-		this->setField(entities[i],fieldToCopy.getField(entities[i]));
+		this->setField(entities[i],fieldToCopy.getField(entities[i]),targetSlot);
 	}
 }
 
@@ -779,14 +779,16 @@ T Field<T>::getAverageField(entHandle element) {
 }
 
 template <class T>
-void Field<T>::setField(entHandle node, T field) {
+void Field<T>::setField(entHandle node, T field, int targetSlot) {
 	if (numberOfComponents==1) {
 		this->setField(node,&field);
 	} else {
 		boost::scoped_array<T> buffer(new T[numberOfComponents]);
 		T *field_ptr = buffer.get();
 		this->getField(node,field_ptr);
-		field_ptr[0] = field;
+		if (targetSlot>=numberOfComponents)
+			throw string("targetSlot >= numberOfComponents in setField");
+		field_ptr[targetSlot] = field;
 		this->setField(node,field_ptr);
 	}
 }

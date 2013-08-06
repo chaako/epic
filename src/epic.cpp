@@ -210,10 +210,13 @@ int main(int argc, char *argv[]) {
 	// TODO: create error fields with pointer in corresponding fields
 	PotentialField potential(&mesh,string("potential"),boundaryPotential,
 			sheathPotential,fixSheathPotential);
-//	PotentialField previousPotential(&mesh,string("previousPotential"),
-//			boundaryPotential,sheathPotential,fixSheathPotential);
+	PotentialField previousPotential(&mesh,string("previousPotential"),
+			boundaryPotential,sheathPotential,fixSheathPotential);
 	PotentialField potentialScan(&mesh,string("potentialScan"),boundaryPotential,
 			sheathPotential,fixSheathPotential,numberOfPotentialValues);
+	// TODO: this doesn't work properly with restart/continuation
+	PotentialField potentialHistory(&mesh,string("potentialHistory"),boundaryPotential,
+			sheathPotential,fixSheathPotential,numberOfIterations);
 	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
 	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
 	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
@@ -313,12 +316,6 @@ int main(int argc, char *argv[]) {
 	ionDensity.setDistributionFunction(distributionFunction);
 	ionDensityScan.setDistributionFunction(distributionFunction);
 //	ionDensityNegativePerturbation.setDistributionFunction(distributionFunction);
-	if (!useDensityFromInput) {
-		if (mpiId == 0)
-			cout << endl << "Setting density..." << endl;
-		ionDensity.calcField(vertexType, potential, referenceElectronDensity,
-				*parallelTemperatureProfile_ptr.get(), 1.);
-	}
 
 	// TODO: add more robust detection and handling of existing fields
 //	if (!mesh.vtkInputMesh && !doPoissonTest) {
@@ -338,7 +335,15 @@ int main(int argc, char *argv[]) {
 			cout << endl << "Setting potential..." << endl;
 		potential.calcField(vertexType, debyeLength, boundaryPotential,
 				objectPotential, sheathPotential);
-//		previousPotential.copyValues(potential);
+		previousPotential.copyValues(potential);
+	}
+	potentialHistory.copyValues(potential,0);
+
+	if (!useDensityFromInput) {
+		if (mpiId == 0)
+			cout << endl << "Setting density..." << endl;
+		ionDensity.calcField(vertexType, potential, referenceElectronDensity,
+				*parallelTemperatureProfile_ptr.get(), 1.);
 	}
 
 	if (doPoissonTest) {
@@ -348,6 +353,7 @@ int main(int argc, char *argv[]) {
 		if (mpiId == 0)
 			cout << endl << "Calculating electric field..." << endl;
 		eField.calcField(&potential, vertexType, ionDensity, debyeLength);
+		potentialHistory.copyValues(potential,1);
 		if (mpiId == 0){
 			int i = 0;
 			stringstream iterMeshFileName;
@@ -437,6 +443,7 @@ int main(int argc, char *argv[]) {
 			ionDensity.calcField(eField, &potential, referenceElectronDensity, faceType, vertexType,
 					shortestEdge, 1., noPotentialPerturbation,
 					densityFile);
+			potentialHistory.copyValues(potential,i+1);
 //			if (mpiId == 0)
 //				cout << endl << "Calculating NP ion charge-density..." << endl;
 //			ionDensityNegativePerturbation.calcField(eField, potential,
@@ -492,7 +499,7 @@ int main(int argc, char *argv[]) {
 //		stringstream potentialCopyName;
 //		potentialCopyName << "potIter" << setfill('0') << setw(2) << i;
 //		PotentialField potentialCopy(potential,potentialCopyName.str());
-//		previousPotential.copyValues(potential);
+		previousPotential.copyValues(potential);
 //		previousPotential += negativePotentialPerturbation;
 //		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 		if (debyeLength==0.) {
