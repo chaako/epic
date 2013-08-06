@@ -282,23 +282,31 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 	name = inputName;
 	int ierr;
 	int size, type;
+	int vtkSize;
 //	if (is_same<T,double>::value) {
 	if (boost::is_same<T,double>::value) {
 		size = numberOfComponents;
 		type = iBase_DOUBLE;
+		vtkSize = size;
 		vtkField_ptr = vtkSmartPointer<vtkDoubleArray>::New();
 //	} else if (is_same<T,int>::value) {
 	} else if (boost::is_same<T,int>::value) {
 		size = numberOfComponents;
 		type = iBase_INTEGER;
+		vtkSize = size;
 		vtkField_ptr = vtkSmartPointer<vtkIntArray>::New();
 	} else if (boost::is_same<T,vect3d>::value) {
-		size = NDIM*numberOfComponents;
-		type = iBase_DOUBLE;
+		// TODO: figure out why multiple iBase_DOUBLEs break load
+		size = numberOfComponents*(int)sizeof(T);
+		type = iBase_BYTES;
+//		size = NDIM*numberOfComponents;
+//		type = iBase_DOUBLE;
+		vtkSize = NDIM*numberOfComponents;
 		vtkField_ptr = vtkSmartPointer<vtkDoubleArray>::New();
 	} else {
 		size = numberOfComponents*(int)sizeof(T);
 		type = iBase_BYTES;
+		vtkSize = size;
 //		// TODO: figure out why this doesn't work
 //		vtkField_ptr = vtkSmartPointer<vtkDataArray>::New();
 	}
@@ -329,7 +337,7 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 			throw string("vtkMesh and mesh don't have the same number of elements");
 		// TODO: add try/catch?
 		vtkField_ptr->SetName(name.c_str());
-		vtkField_ptr->SetNumberOfComponents(size);
+		vtkField_ptr->SetNumberOfComponents(vtkSize);
 		vtkField_ptr->SetNumberOfTuples(entities.size());
 		// TODO: verify that this doens't make a copy, i.e. can use field_ptr to modify
 		mesh_ptr->vtkMesh_ptr->GetPointData()->AddArray(vtkField_ptr);
@@ -772,11 +780,11 @@ void Field<T>::getFieldFromMeshDB(entHandle entityHandle, T *fieldOutput_ptr,
 	T *field_ptr = buffer.get();
 	int field_alloc;
 	int field_size;
-	if (boost::is_same<T,vect3d>::value) {
-		field_alloc = numberOfComponents*3*sizeof(double);
-	} else {
+//	if (boost::is_same<T,vect3d>::value) {
+//		field_alloc = numberOfComponents*3*sizeof(double);
+//	} else {
 		field_alloc = numberOfComponents*sizeof(T);
-	}
+//	}
 	field_size = field_alloc;
 	int ierr;
 	iMesh_getData(mesh_ptr->meshInstance, entityHandle, tag, &field_ptr,
@@ -827,22 +835,22 @@ void Field<T>::setField(entHandle node, T *field_ptr) {
 	int ierr;
 	void *components_ptr;
 	int field_size;
-	boost::scoped_array<vect3d> vect3dBuffer(new vect3d[NDIM*numberOfComponents]);
-	if (boost::is_same<T,vect3d>::value) {
-		for (int k=0; k<numberOfComponents; k++) {
-			for (int i=0; i<NDIM; i++)
-				vect3dBuffer[k][i] = (((vect3d*)field_ptr)[k])[i];
-		}
-		components_ptr = (T*)(vect3dBuffer.get());
-//		// TODO: figure out why using .data() breaks in optimization
-//		//       (adding print .transpose() prevents optimization and works)
-//		vect3d vector(field);
-//		field_ptr = vector.data();
-		field_size = NDIM*numberOfComponents*sizeof(double);
-	} else {
+//	boost::scoped_array<vect3d> vect3dBuffer(new vect3d[NDIM*numberOfComponents]);
+//	if (boost::is_same<T,vect3d>::value) {
+//		for (int k=0; k<numberOfComponents; k++) {
+//			for (int i=0; i<NDIM; i++)
+//				vect3dBuffer[k][i] = (((vect3d*)field_ptr)[k])[i];
+//		}
+//		components_ptr = (T*)(vect3dBuffer.get());
+////		// TODO: figure out why using .data() breaks in optimization
+////		//       (adding print .transpose() prevents optimization and works)
+////		vect3d vector(field);
+////		field_ptr = vector.data();
+//		field_size = NDIM*numberOfComponents*sizeof(double);
+//	} else {
 		components_ptr = field_ptr;
 		field_size = numberOfComponents*sizeof(T);
-	}
+//	}
 	iMesh_setData(mesh_ptr->meshInstance, node, tag, components_ptr,
 			field_size, &ierr);
 	if (ierr != iBase_SUCCESS)
@@ -864,16 +872,16 @@ void Field<T>::setFieldVector(entHandle entityHandle, vector<T>& fieldVector) {
 template <class T>
 void Field<T>::setVtkField(entHandle node, T *field_ptr) {
 	void *components_ptr;
-	boost::scoped_array<vect3d> vect3dBuffer(new vect3d[NDIM*numberOfComponents]);
-	if (boost::is_same<T,vect3d>::value) {
-		for (int k=0; k<numberOfComponents; k++) {
-			for (int i=0; i<NDIM; i++)
-				vect3dBuffer[k][i] = (((vect3d*)field_ptr)[k])[i];
-		}
-		components_ptr = (T*)(vect3dBuffer.get());
-	} else {
+//	boost::scoped_array<vect3d> vect3dBuffer(new vect3d[NDIM*numberOfComponents]);
+//	if (boost::is_same<T,vect3d>::value) {
+//		for (int k=0; k<numberOfComponents; k++) {
+//			for (int i=0; i<NDIM; i++)
+//				vect3dBuffer[k][i] = (((vect3d*)field_ptr)[k])[i];
+//		}
+//		components_ptr = (T*)(vect3dBuffer.get());
+//	} else {
 		components_ptr = field_ptr;
-	}
+//	}
 	if (storeVtkField) {
 		vtkIdType vtkNode = mesh_ptr->iMeshToVtk[node];
 		// TODO: other cases than int or double?
