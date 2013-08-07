@@ -443,9 +443,18 @@ int main(int argc, char *argv[]) {
 			}
 			if (mpiId == 0)
 				cout << endl << "Calculating ion density..." << endl;
+			// TODO: Make these inputs?
+			bool doAllNodes;
+			int doAllNodesEveryNIterations=10;
+			if ((i%doAllNodesEveryNIterations)==0 || i==numberOfIterations-1) {
+				doAllNodes=true;
+			} else {
+				doAllNodes=false;
+			}
+			double unconvergednessThreshold=0.03;
 			ionDensity.calcField(eField, &potential, referenceElectronDensity, faceType, vertexType,
 					shortestEdge, 1., noPotentialPerturbation,
-					densityFile);
+					doAllNodes, unconvergednessThreshold, densityFile);
 			potentialHistory.copyValues(potential,i+1);
 //			if (mpiId == 0)
 //				cout << endl << "Calculating NP ion charge-density..." << endl;

@@ -183,7 +183,8 @@ public:
 			PotentialField *potentialField_ptr, DensityField& referenceDensity,
 			Field<int>& faceType, CodeField& vertexType,
 			ShortestEdgeField& shortestEdge, double charge,
-			double potentialPerturbation, FILE *outFile=NULL);
+			double potentialPerturbation, bool doAllNodes=false,
+			double unconvergednessThreshold=0.03, FILE *outFile=NULL);
 	// TODO: make reference density its own class?
 	void calcField(CodeField& vertexType,
 			DistributionFunction& distributionFunction, double charge);

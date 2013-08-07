@@ -755,12 +755,15 @@ void DensityField::calcField(ElectricField& electricField,
 		PotentialField *potentialField_ptr, DensityField& referenceDensity,
 		Field<int>& faceType, CodeField& vertexType,
 		ShortestEdgeField& shortestEdge, double charge,
-		double potentialPerturbation, FILE *outFile) {
+		double potentialPerturbation, bool doAllNodes,
+		double unconvergednessThreshold, FILE *outFile) {
 	vector<pair<int,double> > unconvergednessPairs;
+	vector<double> absDensityDifferences;
 	for (int i=0; i<entities.size(); i++) {
 		double boltzmannDensity = referenceDensity.getField(entities[i])*
 				exp(potentialField_ptr->getField(entities[i]));
 		double densityDifference = this->getField(entities[i])-boltzmannDensity;
+		absDensityDifferences.push_back(fabs(densityDifference));
 //		// TODO: better to use fractional difference?
 //		unconvergednessPairs.push_back(make_pair(i,fabs(densityDifference)));
 		// TODO: clean up if really doing random ordering
@@ -771,7 +774,9 @@ void DensityField::calcField(ElectricField& electricField,
 			boost::bind(&std::pair<int, double>::second, _2));
 	vector<int> sortedNodes;
 	for (int i=0; i<entities.size(); i++) {
-		sortedNodes.push_back(unconvergednessPairs[i].first);
+		double absDensityDifference=absDensityDifferences[unconvergednessPairs[i].first];
+		if (doAllNodes || absDensityDifference>unconvergednessThreshold)
+			sortedNodes.push_back(unconvergednessPairs[i].first);
 	}
 	int mpiId = 0;
 #ifdef HAVE_MPI
@@ -806,7 +811,7 @@ void DensityField::calcField(ElectricField& electricField,
 #else
 	extern_findTet=0;
 	clock_t startClock = clock(); // timing
-	for (int i=0; i<entities.size(); i++) {
+	for (int i=0; i<sortedNodes.size(); i++) {
 		int node=sortedNodes[i];
 		boost::scoped_array<double> densities(new double[numberOfComponents]);
 		boost::scoped_array<double> densityErrors(new double[numberOfComponents]);
@@ -1047,26 +1052,30 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	int nProcesses = MPI::COMM_WORLD.Get_size();
 	MPI::Status status;
 	int nodeCounter=0;
-	int node=sortedNodes[nodeCounter];
+	int node=-1;
 	double potential;
 	boost::scoped_array<double> potentials(new double[entities.size()]);
 	for (int i=0; i<entities.size(); i++) {
 		potentials[i] = potentialField_ptr->getField(entities[i]);
 	}
 
-	// Send one node to each process
-	for (int rank=1; rank<nProcesses; ++rank) {
-		if (nodeCounter<entities.size()) {
+	// Send one node to each process (some may not get one)
+	for (int rank=1; rank<min(nProcesses,sortedNodes.size()+1); ++rank) {
+		if (nodeCounter<sortedNodes.size()) {
+			node = sortedNodes[nodeCounter];
+			nodeCounter++;
 			MPI::COMM_WORLD.Send(&node, 1, MPI::INT, rank, WORKTAG);
 			MPI::COMM_WORLD.Send(potentials.get(), entities.size(), MPI::DOUBLE,
 					rank, WORKTAG);
-			nodeCounter++;
-			node = sortedNodes[nodeCounter];
+		} else {
+			throw string("nodeCounter out of bounds in requestDensityFromSlaves");
 		}
 	}
 
 	// Process incoming density and send new nodes until all done
-	while (nodeCounter<entities.size()) {
+	while (nodeCounter<sortedNodes.size()) {
+		node = sortedNodes[nodeCounter];
+		nodeCounter++;
 		status = this->receiveDensity(&potential,outFile);
 		// TODO: deal with multi-component case or make more transparent
 		if (numberOfComponents==1) {
@@ -1077,15 +1086,10 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 				WORKTAG);
 		MPI::COMM_WORLD.Send(potentials.get(), entities.size(), MPI::DOUBLE,
 				status.Get_source(), WORKTAG);
-		nodeCounter++;
-		node = sortedNodes[nodeCounter];
 	}
 
 	// Process any outstanding densities
-	// TODO: could run into problems here if fewer nodes than processes?
-	if (nProcesses>=entities.size())
-		throw string("have assumed more nodes than processes in parallelization");
-	for (int rank=1; rank<nProcesses; ++rank) {
+	for (int rank=1; rank<min(nProcesses,sortedNodes.size()+1); ++rank) {
 		status = this->receiveDensity(&potential,outFile);
 		// TODO: deal with multi-component case or make more transparent
 		if (numberOfComponents==1) {
