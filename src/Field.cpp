@@ -1060,7 +1060,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	}
 
 	// Send one node to each process (some may not get one)
-	for (int rank=1; rank<min(nProcesses,sortedNodes.size()+1); ++rank) {
+	for (int rank=1; rank<min(nProcesses,int(sortedNodes.size()+1)); ++rank) {
 		if (nodeCounter<sortedNodes.size()) {
 			node = sortedNodes[nodeCounter];
 			nodeCounter++;
@@ -1089,7 +1089,7 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	}
 
 	// Process any outstanding densities
-	for (int rank=1; rank<min(nProcesses,sortedNodes.size()+1); ++rank) {
+	for (int rank=1; rank<min(nProcesses,int(sortedNodes.size()+1)); ++rank) {
 		status = this->receiveDensity(&potential,outFile);
 		// TODO: deal with multi-component case or make more transparent
 		if (numberOfComponents==1) {
