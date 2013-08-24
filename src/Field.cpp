@@ -829,12 +829,11 @@ void DensityField::calcField(ElectricField& electricField,
 		averageVelocity_ptr->setField(entities[node], averageVelocities.get());
 		temperature_ptr->setField(entities[node], temperatures.get());
 		// TODO: handle multi-component case or treat in more transparent manner?
-		if (numberOfComponents==1) {
-			// TODO: don't hard-code boundary potential etc.
-			potentialField_ptr->calcFieldAtNode(entities[node],densities[0],vertexType[node],
-					potentialField_ptr->boundaryPotential,potentialField_ptr->sheathPotential,
-					potentialField_ptr->fixSheathPotential);
-		}
+//		if (numberOfComponents==1) {
+//			potentialField_ptr->calcFieldAtNode(entities[node],densities[0],vertexType[node],
+//					potentialField_ptr->boundaryPotential,potentialField_ptr->sheathPotential,
+//					potentialField_ptr->fixSheathPotential);
+//		}
 		vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 //		cout << nodePosition.norm() << " " << density << " " << error << endl;
 		if (outFile)
@@ -1054,10 +1053,10 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 	int nodeCounter=0;
 	int node=-1;
 	double potential;
-	boost::scoped_array<double> potentials(new double[entities.size()]);
-	for (int i=0; i<entities.size(); i++) {
-		potentials[i] = potentialField_ptr->getField(entities[i]);
-	}
+//	boost::scoped_array<double> potentials(new double[entities.size()]);
+//	for (int i=0; i<entities.size(); i++) {
+//		potentials[i] = potentialField_ptr->getField(entities[i]);
+//	}
 
 	// Send one node to each process (some may not get one)
 	for (int rank=1; rank<min(nProcesses,int(sortedNodes.size()+1)); ++rank) {
@@ -1065,8 +1064,8 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 			node = sortedNodes[nodeCounter];
 			nodeCounter++;
 			MPI::COMM_WORLD.Send(&node, 1, MPI::INT, rank, WORKTAG);
-			MPI::COMM_WORLD.Send(potentials.get(), entities.size(), MPI::DOUBLE,
-					rank, WORKTAG);
+//			MPI::COMM_WORLD.Send(potentials.get(), entities.size(), MPI::DOUBLE,
+//					rank, WORKTAG);
 		} else {
 			throw string("nodeCounter out of bounds in requestDensityFromSlaves");
 		}
@@ -1077,24 +1076,24 @@ void DensityField::requestDensityFromSlaves(ElectricField& electricField,
 		node = sortedNodes[nodeCounter];
 		nodeCounter++;
 		status = this->receiveDensity(&potential,outFile);
-		// TODO: deal with multi-component case or make more transparent
-		if (numberOfComponents==1) {
-			potentialField_ptr->setField(entities[status.Get_tag()],potential);
-			potentials[status.Get_tag()] = potential;
-		}
+//		// TODO: deal with multi-component case or make more transparent
+//		if (numberOfComponents==1) {
+//			potentialField_ptr->setField(entities[status.Get_tag()],potential);
+//			potentials[status.Get_tag()] = potential;
+//		}
 		MPI::COMM_WORLD.Send(&node, 1, MPI::INT, status.Get_source(),
 				WORKTAG);
-		MPI::COMM_WORLD.Send(potentials.get(), entities.size(), MPI::DOUBLE,
-				status.Get_source(), WORKTAG);
+//		MPI::COMM_WORLD.Send(potentials.get(), entities.size(), MPI::DOUBLE,
+//				status.Get_source(), WORKTAG);
 	}
 
 	// Process any outstanding densities
 	for (int rank=1; rank<min(nProcesses,int(sortedNodes.size()+1)); ++rank) {
 		status = this->receiveDensity(&potential,outFile);
-		// TODO: deal with multi-component case or make more transparent
-		if (numberOfComponents==1) {
-			potentialField_ptr->setField(entities[status.Get_tag()],potential);
-		}
+//		// TODO: deal with multi-component case or make more transparent
+//		if (numberOfComponents==1) {
+//			potentialField_ptr->setField(entities[status.Get_tag()],potential);
+//		}
 	}
 
 	// Send empty message with DIETAG to signal done with nodes
@@ -1131,10 +1130,10 @@ MPI::Status DensityField::receiveDensity(double *potential, FILE *outFile) {
 		this->setField(entities[node], densities.get());
 		averageVelocity_ptr->setField(entities[node], averageVelocities.get());
 		temperature_ptr->setField(entities[node], temperatures.get());
-		// TODO: handle multi-component case or treat in more transparent manner?
-		if (numberOfComponents==1) {
-			MPI::COMM_WORLD.Recv(potential, numberOfComponents, MPI::DOUBLE, source, node, status);
-		}
+//		// TODO: handle multi-component case or treat in more transparent manner?
+//		if (numberOfComponents==1) {
+//			MPI::COMM_WORLD.Recv(potential, numberOfComponents, MPI::DOUBLE, source, node, status);
+//		}
 	}
 	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 	if ((nodePosition-incomingNodePosition).norm()>NODE_DISTANCE_THRESHOLD) {
@@ -1159,7 +1158,7 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		double potentialPerturbation) {
 	MPI::Status status;
 	int node;
-	boost::scoped_array<double> potentials(new double[entities.size()]);
+//	boost::scoped_array<double> potentials(new double[entities.size()]);
 
 	while (1) {
 		MPI::COMM_WORLD.Recv(&node, 1, MPI::INT, 0, MPI_ANY_TAG,
@@ -1167,14 +1166,14 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		if (status.Get_tag() == DIETAG) {
 			return;
 		}
-		MPI::COMM_WORLD.Recv(potentials.get(), entities.size(), MPI::DOUBLE, 0, MPI_ANY_TAG,
-				status);
-		// TODO: handle multi-component case or treat in more transparent manner?
-		if (numberOfComponents==1) {
-			for (int i=0; i<entities.size(); i++) {
-				potentialField_ptr->setField(entities[i],potentials[i]);
-			}
-		}
+//		MPI::COMM_WORLD.Recv(potentials.get(), entities.size(), MPI::DOUBLE, 0, MPI_ANY_TAG,
+//				status);
+//		// TODO: handle multi-component case or treat in more transparent manner?
+//		if (numberOfComponents==1) {
+//			for (int i=0; i<entities.size(); i++) {
+//				potentialField_ptr->setField(entities[i],potentials[i]);
+//			}
+//		}
 		boost::scoped_array<double> densities(new double[numberOfComponents]);
 		boost::scoped_array<double> densityErrors(new double[numberOfComponents]);
 		boost::scoped_array<vect3d> averageVelocities(new vect3d[numberOfComponents]);
@@ -1197,15 +1196,14 @@ void DensityField::processDensityRequests(ElectricField& electricField,
 		MPI::COMM_WORLD.Send(&nodePosition, sizeof(vect3d), MPI::BYTE, 0, node);
 		MPI::COMM_WORLD.Send(temperatures.get(), numberOfComponents, MPI::DOUBLE, 0, node);
 		MPI::COMM_WORLD.Send(temperatureErrors.get(), numberOfComponents, MPI::DOUBLE, 0, node);
-		// TODO: handle multi-component case or treat in more transparent manner?
-		if (numberOfComponents==1) {
-			// TODO: don't hard-code boundary potential etc.
-			potentialField_ptr->calcFieldAtNode(entities[node],densities[0],vertexType[node],
-					potentialField_ptr->boundaryPotential,potentialField_ptr->sheathPotential,
-					potentialField_ptr->fixSheathPotential);
-			double potential=potentialField_ptr->getField(entities[node]);
-			MPI::COMM_WORLD.Send(&potential, numberOfComponents, MPI::DOUBLE, 0, node);
-		}
+//		// TODO: handle multi-component case or treat in more transparent manner?
+//		if (numberOfComponents==1) {
+//			potentialField_ptr->calcFieldAtNode(entities[node],densities[0],vertexType[node],
+//					potentialField_ptr->boundaryPotential,potentialField_ptr->sheathPotential,
+//					potentialField_ptr->fixSheathPotential);
+//			double potential=potentialField_ptr->getField(entities[node]);
+//			MPI::COMM_WORLD.Send(&potential, numberOfComponents, MPI::DOUBLE, 0, node);
+//		}
 	}
 }
 #endif

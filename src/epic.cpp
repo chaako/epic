@@ -444,18 +444,17 @@ int main(int argc, char *argv[]) {
 			if (mpiId == 0)
 				cout << endl << "Calculating ion density..." << endl;
 			// TODO: Make these inputs?
-			bool doAllNodes;
-			int doAllNodesEveryNIterations=10;
-			if ((i%doAllNodesEveryNIterations)==0 || i==numberOfIterations-1) {
-				doAllNodes=true;
-			} else {
-				doAllNodes=false;
-			}
+			bool doAllNodes=true;
+//			int doAllNodesEveryNIterations=10;
+//			if ((i%doAllNodesEveryNIterations)==0 || i==numberOfIterations-1) {
+//				doAllNodes=true;
+//			} else {
+//				doAllNodes=false;
+//			}
 			double unconvergednessThreshold=0.03;
 			ionDensity.calcField(eField, &potential, referenceElectronDensity, faceType, vertexType,
 					shortestEdge, 1., noPotentialPerturbation,
 					doAllNodes, unconvergednessThreshold, densityFile);
-			potentialHistory.copyValues(potential,i+1);
 //			if (mpiId == 0)
 //				cout << endl << "Calculating NP ion charge-density..." << endl;
 //			ionDensityNegativePerturbation.calcField(eField, potential,
@@ -464,6 +463,7 @@ int main(int argc, char *argv[]) {
 //					densityFile);
 //			previousIonDensity.copyValues(ionDensityNegativePerturbation);
 		}
+		potentialHistory.copyValues(potential,i+1);
 //		if (mpiId == 0)
 //			cout << endl << "Calculating PP ion charge-density..." << endl;
 //		ionDensityPositivePerturbation.calcField(eField, potential,
@@ -515,11 +515,11 @@ int main(int argc, char *argv[]) {
 //		previousPotential += negativePotentialPerturbation;
 //		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 		if (debyeLength==0.) {
-//			if (mpiId == 0)
-//				cout << endl << "Calculating updated potential..." << endl;
-////			if (i==0 && !usePotentialFromInput) {
-//				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
-//						sheathPotential, fixSheathPotential);
+			if (mpiId == 0)
+				cout << endl << "Calculating updated potential..." << endl;
+//			if (i==0 && !usePotentialFromInput) {
+				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
+						sheathPotential, fixSheathPotential);
 //			} else {
 //				potential.calcField(ionDensity, ionDensityDerivative, vertexType, potentialFile, boundaryPotential,
 //						sheathPotential, fixSheathPotential);
