@@ -80,6 +80,9 @@ public:
 			Eigen::VectorXd *errorCoefficients);
 	void updateTagHandle();
 
+	void computeWeightedAverage(Field<T> *averageField_ptr,
+			vector<double> weights);
+
 	void print();
 
 	Mesh *mesh_ptr;
@@ -246,9 +249,6 @@ public:
 			double positivePotentialPerturbation,
 			double negativePotentialPerturbation,
 			FILE *outFile);
-
-	void computeWeightedAverage(PotentialField *averagePotential_ptr,
-			vector<double> weights);
 
 	// TODO: not very transparent to use inverted defaults to disable min/max
 	void computePerturbedPotentials(double negativePerturbation,
@@ -1074,6 +1074,24 @@ void Field<T>::getErrorCoefficients(
 template <class T>
 void Field<T>::updateTagHandle() {
 	tag = mesh_ptr->getTagHandle(name);
+}
+
+template <class T>
+void Field<T>::computeWeightedAverage(Field<T> *averageField_ptr,
+		vector<double> weights) {
+	vector<T> fields(numberOfComponents);
+	for (int i=0; i<entities.size(); i++) {
+		fields = this->getFieldVector(entities[i]);
+		// TODO: improve initialization?
+		T weightedAverage=0;
+		weightedAverage *= 0.;
+		if (weights.size()!=numberOfComponents)
+			throw string("weights.size() != numberOfComponents in computeWeightedAverage");
+		for (int j=0; j<weights.size(); j++) {
+			weightedAverage += weights[j]*fields[j];
+		}
+		averageField_ptr->setField(entities[i],weightedAverage);
+	}
 }
 
 template <class T>

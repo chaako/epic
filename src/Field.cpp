@@ -666,21 +666,6 @@ void PotentialField::calcField(DensityField ionDensity,
 		fprintf(outFile, "\n\n\n\n");
 }
 
-void PotentialField::computeWeightedAverage(PotentialField *averagePotential_ptr,
-		vector<double> weights) {
-	vector<double> fields(numberOfComponents);
-	for (int i=0; i<entities.size(); i++) {
-		fields = this->getFieldVector(entities[i]);
-		double weightedAverage=0.;
-		if (weights.size()!=numberOfComponents)
-			throw string("weights.size() != numberOfComponents in computeWeightedAverage");
-		for (int j=0; j<weights.size(); j++) {
-			weightedAverage += weights[j]*fields[j];
-		}
-		averagePotential_ptr->setField(entities[i],weightedAverage);
-	}
-}
-
 void PotentialField::computePerturbedPotentials(double negativePerturbation,
 		double positivePerturbation, double minPotential, double maxPotential) {
 	boost::scoped_array<double> potentials_ptr(new double[numberOfComponents]);
