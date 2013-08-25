@@ -555,7 +555,7 @@ int main(int argc, char *argv[]) {
 			}
 //			// TODO: debugging
 //			cout << endl;
-			potentialHistory.computeWeightedAverage(&potential,weights);
+//			potentialHistory.computeWeightedAverage(&potential,weights);
 		} else {
 			if (mpiId == 0)
 				cout << endl << "Calculating updated potential and electric field..." << endl;
