@@ -520,6 +520,18 @@ int main(int argc, char *argv[]) {
 //		previousPotential += negativePotentialPerturbation;
 //		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 		if (debyeLength==0.) {
+			if (mpiId == 0)
+				cout << endl << "Storing quantities for DIIS..." << endl;
+			int numberOfNodes=ionDensity.entities.size();
+			Eigen::VectorXd residual(numberOfNodes);
+			Eigen::VectorXd diisPotential(numberOfNodes);
+			for (int k=0; k<numberOfNodes; k++) {
+				diisPotential[k] = potential.getField(ionDensity.entities[k]);
+				residual[k] = -( ionDensity.getField(ionDensity.entities[k]) -
+						exp(diisPotential[k]) );
+			}
+			diisResiduals.push_back(residual);
+			diisPotentials.push_back(diisPotential);
 			// TODO: rename numberOfIterationsToAveragePotentialOver since now different
 			if (i<numberOfIterationsToAveragePotentialOver+1) {
 				if (mpiId == 0)
@@ -530,16 +542,6 @@ int main(int argc, char *argv[]) {
 			} else {
 				if (mpiId == 0)
 					cout << endl << "Updating potential using DIIS..." << endl;
-				int numberOfNodes=ionDensity.entities.size();
-				Eigen::VectorXd residual(numberOfNodes);
-				Eigen::VectorXd diisPotential(numberOfNodes);
-				for (int k=0; k<numberOfNodes; k++) {
-					diisPotential[k] = potential.getField(ionDensity.entities[k]);
-					residual[k] = -( ionDensity.getField(ionDensity.entities[k]) -
-							exp(diisPotential[k]) );
-				}
-				diisResiduals.push_back(residual);
-				diisPotentials.push_back(diisPotential);
 				int nIterDIIS = min(i+1,numberOfIterationsToAveragePotentialOver);
 				Eigen::MatrixXd leastSquaresMatrix;
 				Eigen::VectorXd leastSquaresRHS;
