@@ -520,58 +520,65 @@ int main(int argc, char *argv[]) {
 //		previousPotential += negativePotentialPerturbation;
 //		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 		if (debyeLength==0.) {
-//			if (mpiId == 0)
-//				cout << endl << "Calculating updated potential..." << endl;
-////			if (i==0 && !usePotentialFromInput) {
-//				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
-//						sheathPotential, fixSheathPotential);
-
-			if (mpiId == 0)
-				cout << endl << "Updating potential using DIIS..." << endl;
-			int numberOfNodes=ionDensity.entities.size();
-			Eigen::VectorXd residual(numberOfNodes);
-			Eigen::VectorXd diisPotential(numberOfNodes);
-			for (int k=0; k<numberOfNodes; k++) {
-				diisPotential[k] = potential.getField(ionDensity.entities[k]);
-				residual[k] = -( ionDensity.getField(ionDensity.entities[k]) -
-						exp(diisPotential[k]) );
-			}
-			diisResiduals.push_back(residual);
-			diisPotentials.push_back(diisPotential);
-			int nIterDIIS = min(i+1,numberOfIterationsToAveragePotentialOver);
-			Eigen::MatrixXd leastSquaresMatrix;
-			Eigen::VectorXd leastSquaresRHS;
-			Eigen::VectorXd leastSquaresSolution;
-			leastSquaresMatrix = Eigen::MatrixXd::Zero(nIterDIIS+1, nIterDIIS+1);
-			leastSquaresRHS = Eigen::VectorXd::Zero(nIterDIIS+1);
-			leastSquaresSolution = Eigen::VectorXd::Zero(nIterDIIS+1);
-			vector<Eigen::VectorXd> residuals;
-			vector<int> residualIndexToIteration;
-			for (int j=0; j<nIterDIIS; j++) {
-				int correspondingIteration = i-(nIterDIIS-1)+j;
-//				int correspondingIteration = i-j;
-				residualIndexToIteration.push_back(correspondingIteration);
-				residuals.push_back(diisResiduals[correspondingIteration]);
-			}
-			for (int j=0; j<nIterDIIS; j++) {
-				// TODO: could do this with Eigen (sub)matrix operations
-				leastSquaresMatrix(j,nIterDIIS) = -1.;
-				leastSquaresMatrix(nIterDIIS,j) = -1.;
-				for (int k=0; k<nIterDIIS; k++) {
-					leastSquaresMatrix(j,k) = residuals[j].dot(residuals[k]);
+			// TODO: rename numberOfIterationsToAveragePotentialOver since now different
+			if (i<numberOfIterationsToAveragePotentialOver+1) {
+				if (mpiId == 0)
+					cout << endl << "Calculating updated potential..." << endl;
+//				if (i==0 && !usePotentialFromInput) {
+					potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
+							sheathPotential, fixSheathPotential);
+			} else {
+				if (mpiId == 0)
+					cout << endl << "Updating potential using DIIS..." << endl;
+				int numberOfNodes=ionDensity.entities.size();
+				Eigen::VectorXd residual(numberOfNodes);
+				Eigen::VectorXd diisPotential(numberOfNodes);
+				for (int k=0; k<numberOfNodes; k++) {
+					diisPotential[k] = potential.getField(ionDensity.entities[k]);
+					residual[k] = -( ionDensity.getField(ionDensity.entities[k]) -
+							exp(diisPotential[k]) );
 				}
-			}
-			leastSquaresRHS[nIterDIIS] = -1.;
-			leastSquaresSolution = leastSquaresMatrix.inverse()*leastSquaresRHS;
-//			// TODO: debugging
-//			cout << leastSquaresMatrix << leastSquaresSolution << leastSquaresRHS << endl;
+				diisResiduals.push_back(residual);
+				diisPotentials.push_back(diisPotential);
+				int nIterDIIS = min(i+1,numberOfIterationsToAveragePotentialOver);
+				Eigen::MatrixXd leastSquaresMatrix;
+				Eigen::VectorXd leastSquaresRHS;
+				Eigen::VectorXd leastSquaresSolution;
+				leastSquaresMatrix = Eigen::MatrixXd::Zero(nIterDIIS+1, nIterDIIS+1);
+				leastSquaresRHS = Eigen::VectorXd::Zero(nIterDIIS+1);
+				leastSquaresSolution = Eigen::VectorXd::Zero(nIterDIIS+1);
+				vector<Eigen::VectorXd> residuals;
+				vector<int> residualIndexToIteration;
+				for (int j=0; j<nIterDIIS; j++) {
+					int correspondingIteration = i-(nIterDIIS-1)+j;
+//					int correspondingIteration = i-j;
+					residualIndexToIteration.push_back(correspondingIteration);
+					residuals.push_back(diisResiduals[correspondingIteration]);
+				}
+				for (int j=0; j<nIterDIIS; j++) {
+					// TODO: could do this with Eigen (sub)matrix operations
+					leastSquaresMatrix(j,nIterDIIS) = -1.;
+					leastSquaresMatrix(nIterDIIS,j) = -1.;
+					for (int k=0; k<nIterDIIS; k++) {
+						leastSquaresMatrix(j,k) = residuals[j].dot(residuals[k]);
+					}
+				}
+				leastSquaresRHS[nIterDIIS] = -1.;
+				leastSquaresSolution = leastSquaresMatrix.inverse()*leastSquaresRHS;
+				// TODO: debugging
+				if (mpiId == 0) {
+					cout << leastSquaresMatrix << endl << endl <<
+							leastSquaresSolution << endl << endl;
+//							leastSquaresRHS << endl;
+				}
 
-			Eigen::VectorXd newPotential(numberOfNodes);
-			for (int j=0; j<nIterDIIS; j++) {
-				newPotential = leastSquaresSolution[j]*(diisPotentials[j]+diisResiduals[j]);
-			}
-			for (int k=0; k<numberOfNodes; k++) {
-				potential.setField(potential.entities[k],newPotential[k]);
+				Eigen::VectorXd newPotential(numberOfNodes);
+				for (int j=0; j<nIterDIIS; j++) {
+					newPotential = leastSquaresSolution[j]*(diisPotentials[j]+diisResiduals[j]);
+				}
+				for (int k=0; k<numberOfNodes; k++) {
+					potential.setField(potential.entities[k],newPotential[k]);
+				}
 			}
 
 //			potentialHistory.copyValues(potential,i+1);
