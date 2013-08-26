@@ -404,6 +404,9 @@ int main(int argc, char *argv[]) {
 //		return 0;
 //	}
 
+	vector<Eigen::VectorXd> diisResiduals;
+	vector<Eigen::VectorXd> diisPotentials;
+
 	for (int i=0; i<numberOfIterations; i++) {
 		if (mpiId == 0)
 			cout << endl  << endl << "ITERATION " << i << endl;
@@ -517,12 +520,61 @@ int main(int argc, char *argv[]) {
 //		previousPotential += negativePotentialPerturbation;
 //		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 		if (debyeLength==0.) {
+//			if (mpiId == 0)
+//				cout << endl << "Calculating updated potential..." << endl;
+////			if (i==0 && !usePotentialFromInput) {
+//				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
+//						sheathPotential, fixSheathPotential);
+
 			if (mpiId == 0)
-				cout << endl << "Calculating updated potential..." << endl;
-//			if (i==0 && !usePotentialFromInput) {
-				potential.calcField(ionDensity, ionVelocity, vertexType, potentialFile, boundaryPotential,
-						sheathPotential, fixSheathPotential);
-				potentialHistory.copyValues(potential,i+1);
+				cout << endl << "Updating potential using DIIS..." << endl;
+			int numberOfNodes=ionDensity.entities.size();
+			Eigen::VectorXd residual(numberOfNodes);
+			Eigen::VectorXd diisPotential(numberOfNodes);
+			for (int k=0; k<numberOfNodes; k++) {
+				diisPotential[k] = potential.getField(ionDensity.entities[k]);
+				residual[k] = -( ionDensity.getField(ionDensity.entities[k]) -
+						exp(diisPotential[k]) );
+			}
+			diisResiduals.push_back(residual);
+			diisPotentials.push_back(diisPotential);
+			int nIterDIIS = min(i+1,numberOfIterationsToAveragePotentialOver);
+			Eigen::MatrixXd leastSquaresMatrix;
+			Eigen::VectorXd leastSquaresRHS;
+			Eigen::VectorXd leastSquaresSolution;
+			leastSquaresMatrix = Eigen::MatrixXd::Zero(nIterDIIS+1, nIterDIIS+1);
+			leastSquaresRHS = Eigen::VectorXd::Zero(nIterDIIS+1);
+			leastSquaresSolution = Eigen::VectorXd::Zero(nIterDIIS+1);
+			vector<Eigen::VectorXd> residuals;
+			vector<int> residualIndexToIteration;
+			for (int j=0; j<nIterDIIS; j++) {
+				int correspondingIteration = i-(nIterDIIS-1)+j;
+//				int correspondingIteration = i-j;
+				residualIndexToIteration.push_back(correspondingIteration);
+				residuals.push_back(diisResiduals[correspondingIteration]);
+			}
+			for (int j=0; j<nIterDIIS; j++) {
+				// TODO: could do this with Eigen (sub)matrix operations
+				leastSquaresMatrix(j,nIterDIIS) = -1.;
+				leastSquaresMatrix(nIterDIIS,j) = -1.;
+				for (int k=0; k<nIterDIIS; k++) {
+					leastSquaresMatrix(j,k) = residuals[j].dot(residuals[k]);
+				}
+			}
+			leastSquaresRHS[nIterDIIS] = -1.;
+			leastSquaresSolution = leastSquaresMatrix.inverse()*leastSquaresRHS;
+//			// TODO: debugging
+//			cout << leastSquaresMatrix << leastSquaresSolution << leastSquaresRHS << endl;
+
+			Eigen::VectorXd newPotential(numberOfNodes);
+			for (int j=0; j<nIterDIIS; j++) {
+				newPotential = leastSquaresSolution[j]*(diisPotentials[j]+diisResiduals[j]);
+			}
+			for (int k=0; k<numberOfNodes; k++) {
+				potential.setField(potential.entities[k],newPotential[k]);
+			}
+
+			potentialHistory.copyValues(potential,i+1);
 //			} else {
 //				potential.calcField(ionDensity, ionDensityDerivative, vertexType, potentialFile, boundaryPotential,
 //						sheathPotential, fixSheathPotential);
@@ -540,24 +592,22 @@ int main(int argc, char *argv[]) {
 //			eField.calcField(potential);
 			eField.calcField_Gatsonis(potential);
 
-			if (mpiId == 0)
-				cout << endl << "Averaging potential over iterations..." << endl;
-			vector<double> weights(numberOfIterations);
-			for (int j=0; j<numberOfIterations; j++) {
-				if (j>(i+1-numberOfIterationsToAveragePotentialOver) && j<i+2) {
-					if (i+2<numberOfIterationsToAveragePotentialOver) {
-						weights[j] = 1./(i+2);
-					} else {
-						weights[j] = 1./numberOfIterationsToAveragePotentialOver;
-					}
-				} else {
-					weights[j] = 0.;
-				}
-//				// TODO: debugging
-//				cout << weights[j] << "...";
-			}
-//			// TODO: debugging
-//			cout << endl;
+//			if (mpiId == 0)
+//				cout << endl << "Averaging potential over iterations..." << endl;
+//			vector<double> weights(numberOfIterations);
+//			for (int j=0; j<numberOfIterations; j++) {
+//				if (j>(i+1-numberOfIterationsToAveragePotentialOver) && j<i+2) {
+//					if (i+2<numberOfIterationsToAveragePotentialOver) {
+//						weights[j] = 1./(i+2);
+//					} else {
+//						weights[j] = 1./numberOfIterationsToAveragePotentialOver;
+//					}
+//				} else {
+//					weights[j] = 0.;
+//				}
+////				// TODO: debugging
+////				cout << weights[j] << "...";
+//			}
 //			potentialHistory.computeWeightedAverage(&potential,weights);
 		} else {
 			if (mpiId == 0)
