@@ -218,8 +218,8 @@ int main(int argc, char *argv[]) {
 	PotentialField potentialScan(&mesh,string("potentialScan"),boundaryPotential,
 			sheathPotential,fixSheathPotential,numberOfPotentialValues);
 	// TODO: this doesn't work properly with restart/continuation
-	Field<double> potentialHistory(&mesh,string("potentialHistory"),numberOfIterations);
-	Field<double> ionDensityHistory(&mesh,string("ionDensityHistory"),numberOfIterations);
+//	Field<double> potentialHistory(&mesh,string("potentialHistory"),numberOfIterations);
+//	Field<double> ionDensityHistory(&mesh,string("ionDensityHistory"),numberOfIterations);
 	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
 	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
 	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
@@ -340,7 +340,7 @@ int main(int argc, char *argv[]) {
 				objectPotential, sheathPotential);
 		previousPotential.copyValues(potential);
 	}
-	potentialHistory.copyValues(potential,0);
+//	potentialHistory.copyValues(potential,0);
 
 	if (!useDensityFromInput) {
 		if (mpiId == 0)
@@ -348,7 +348,7 @@ int main(int argc, char *argv[]) {
 		ionDensity.calcField(vertexType, potential, referenceElectronDensity,
 				*parallelTemperatureProfile_ptr.get(), 1.);
 	}
-	ionDensityHistory.copyValues(ionDensity,0);
+//	ionDensityHistory.copyValues(ionDensity,0);
 
 	if (doPoissonTest) {
 		if (mpiId == 0)
@@ -357,8 +357,8 @@ int main(int argc, char *argv[]) {
 		if (mpiId == 0)
 			cout << endl << "Calculating electric field..." << endl;
 		eField.calcField(&potential, vertexType, ionDensity, debyeLength);
-		potentialHistory.copyValues(potential,1);
-		ionDensityHistory.copyValues(ionDensity,1);
+//		potentialHistory.copyValues(potential,1);
+//		ionDensityHistory.copyValues(ionDensity,1);
 		if (mpiId == 0){
 			int i = 0;
 			stringstream iterMeshFileName;
@@ -468,7 +468,7 @@ int main(int argc, char *argv[]) {
 //					densityFile);
 //			previousIonDensity.copyValues(ionDensityNegativePerturbation);
 		}
-		ionDensityHistory.copyValues(ionDensity,i+1);
+//		ionDensityHistory.copyValues(ionDensity,i+1);
 //		if (mpiId == 0)
 //			cout << endl << "Calculating PP ion charge-density..." << endl;
 //		ionDensityPositivePerturbation.calcField(eField, potential,
@@ -574,7 +574,7 @@ int main(int argc, char *argv[]) {
 				potential.setField(potential.entities[k],newPotential[k]);
 			}
 
-			potentialHistory.copyValues(potential,i+1);
+//			potentialHistory.copyValues(potential,i+1);
 //			} else {
 //				potential.calcField(ionDensity, ionDensityDerivative, vertexType, potentialFile, boundaryPotential,
 //						sheathPotential, fixSheathPotential);
@@ -613,7 +613,7 @@ int main(int argc, char *argv[]) {
 			if (mpiId == 0)
 				cout << endl << "Calculating updated potential and electric field..." << endl;
 			eField.calcField(&potential, vertexType, ionDensity, debyeLength);
-			potentialHistory.copyValues(potential,i+1);
+//			potentialHistory.copyValues(potential,i+1);
 		}
 //		ionDensityDerivative.calcField(ionDensity,previousIonDensity,potential,previousPotential);
 	}
