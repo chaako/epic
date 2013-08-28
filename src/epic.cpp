@@ -550,12 +550,15 @@ int main(int argc, char *argv[]) {
 				leastSquaresRHS = Eigen::VectorXd::Zero(nIterDIIS+1);
 				leastSquaresSolution = Eigen::VectorXd::Zero(nIterDIIS+1);
 				vector<Eigen::VectorXd> residuals;
+				vector<Eigen::VectorXd> potentials;
 				vector<int> residualIndexToIteration;
 				for (int j=0; j<nIterDIIS; j++) {
 					int correspondingIteration = i-(nIterDIIS-1)+j;
 //					int correspondingIteration = i-j;
+					// TODO: could use residualIndexToIteration rather than copying to vectors
 					residualIndexToIteration.push_back(correspondingIteration);
 					residuals.push_back(diisResiduals[correspondingIteration]);
+					potentials.push_back(diisPotentials[correspondingIteration]);
 				}
 				for (int j=0; j<nIterDIIS; j++) {
 					// TODO: could do this with Eigen (sub)matrix operations
@@ -574,9 +577,10 @@ int main(int argc, char *argv[]) {
 //							leastSquaresRHS << endl;
 				}
 
-				Eigen::VectorXd newPotential(numberOfNodes);
+				Eigen::VectorXd newPotential;
+				newPotential = Eigen::VectorXd::Zero(numberOfNodes);
 				for (int j=0; j<nIterDIIS; j++) {
-					newPotential = leastSquaresSolution[j]*(diisPotentials[j]+diisResiduals[j]);
+					newPotential += leastSquaresSolution[j]*(potentials[j]+residuals[j]);
 				}
 				for (int k=0; k<numberOfNodes; k++) {
 					potential.setField(potential.entities[k],newPotential[k]);
