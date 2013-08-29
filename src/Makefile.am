@@ -23,7 +23,8 @@ epic_CXXFLAGS += -I ../superlu/SuperLU_DIST_3.2/SRC/
 else
 epic_CXXFLAGS += -I ../superlu/SuperLU_4.3/SRC/
 endif
-epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lMeshAdapt -lrt -lboost_program_options\
+epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lMeshAdapt -lrt \
+			-lboost_program_options -lboost_system -lboost_filesystem -lboost_regex \
 			-L @abs_top_builddir@/lib/ -L @abs_top_builddir@/lib/vtk-5.10/ \
 			-lLSDyna -lMapReduceMPI -lvtkalglib -lvtkCharts -lvtkCommon -lvtkDICOMParser \
 			-lvtkexoIIc -lvtkexpat -lvtkFiltering -lvtkfreetype -lvtkftgl -lvtkGenericFiltering \

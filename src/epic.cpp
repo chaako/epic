@@ -34,7 +34,9 @@ int main(int argc, char *argv[]) {
 //	cout << "  Process " << mpiId << " says 'Hello, world!'\n";
 #endif
 
-	string inputMeshFile, outputFile;
+	string inputMeshFile, inputDirectory, outputFile;
+	vector<string> inputMeshFiles;
+	vector<int> inputIterations;
 	string inputSurfaceMeshFile, outputSurfaceMeshFile;
 	string noSurfaceMeshFile("noSurfaceMeshFile.vtu");
 	SurfaceMesh surfaceMesh;
@@ -59,6 +61,7 @@ int main(int argc, char *argv[]) {
 			desc.add_options()
 					("help", "produce help message")
 					("inputFile", po::value<string>(&inputMeshFile), "input file")
+					("inputDirectory", po::value<string>(&inputDirectory), "input directory to continue run from")
 					("outputFile", po::value<string>(&outputFile), "output file")
 					("numberOfIterations", po::value<int>(&numberOfIterations)->default_value(2),
 							"number of iterations")
@@ -128,17 +131,66 @@ int main(int argc, char *argv[]) {
 			if (vm.count("inputFile")) {
 				if (mpiId==0)
 					cout << "Input file: " << inputMeshFile << endl;
+			} else if (vm.count("inputDirectory")) {
+				if (mpiId==0)
+					cout << "Continuing run from directory: " << inputDirectory << endl;
+				boost::filesystem::path p(inputDirectory);
+
+				try {
+					if (boost::filesystem::exists(p)) {
+						if (boost::filesystem::is_directory(p)) {
+							vector<boost::filesystem::path> v;
+							copy(boost::filesystem::directory_iterator(p),
+									boost::filesystem::directory_iterator(),
+									back_inserter(v));
+							// TODO: this only works if all .sms files have same bareFilename
+							sort(v.begin(), v.end());
+							for (vector<boost::filesystem::path>::const_iterator
+									it(v.begin()); it!=v.end(); ++it) {
+								string fileExtension = it->extension().string();
+								if (fileExtension.compare(".sms")==0) {
+//									boost::filesystem::path fn = it->filename();
+									string bareFilename = it->stem().string();
+									boost::regex e("(\\D+)(\\d{2})");
+									boost::smatch what;
+									if(boost::regex_match(bareFilename, what, e)) {
+										int iterationNumber;
+										istringstream(what[2]) >> iterationNumber;
+										inputMeshFiles.push_back(it->string());
+										inputIterations.push_back(iterationNumber);
+										if (mpiId==0) {
+											cout << what[1] << setfill('0') << setw(2) << iterationNumber <<
+													fileExtension << " taken as existing iteration" << endl;
+										}
+										outputFile = what[1] + fileExtension;
+									} else {
+										if (mpiId==0)
+											cout << "No iteration number found in " << bareFilename << endl;
+									}
+								}
+							}
+						}
+					} else {
+						if (mpiId==0)
+							cout << p << " does not exist" << endl;
+					}
+				} catch (const boost::filesystem::filesystem_error& ex) {
+					cout << ex.what() << endl;
+				}
 			} else {
 				if (mpiId==0)
-					cout << "Error: --inputFile was not set" << endl;
+					cout << "Error: neither --inputFile nor --inputDirectory was set" << endl;
 				exit(1);
 			}
 			if (vm.count("outputFile")) {
 				if (mpiId==0)
 					cout << "Output file: " << outputFile << endl;
+			} else if (vm.count("inputDirectory")) {
+				if (mpiId==0)
+					cout << "Output file set by --inputDirectory: " << outputFile << endl;
 			} else {
 				if (mpiId==0)
-					cout << "Error: --outputFile was not set" << endl;
+					cout << "Error: neither --outputFile nor --inputDirectory was set" << endl;
 				exit(1);
 			}
 

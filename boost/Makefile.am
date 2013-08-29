@@ -2,7 +2,8 @@ all: boost_1_49_0/boost/type_traits.hpp
 
 boost_1_49_0/boost/type_traits.hpp:
 	tar -xf boost_1_49_0.tar.gz
-	cd boost_1_49_0 && ./bootstrap.sh --prefix=@abs_top_builddir@ --with-libraries=python,mpi,program_options \
+	cd boost_1_49_0 && ./bootstrap.sh --prefix=@abs_top_builddir@ \
+	--with-libraries=python,mpi,program_options,system,filesystem,regex \
 	--with-python=@abs_top_builddir@/bin/python && echo "using mpi ;" >> project-config.jam && ./b2 install
 
 clean:

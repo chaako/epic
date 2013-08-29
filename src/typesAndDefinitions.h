@@ -72,6 +72,8 @@ enum {
 #include <boost/program_options.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
+#include <boost/regex.hpp>
+#include <boost/filesystem.hpp>
 
 #include "iMesh.h"
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
