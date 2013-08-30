@@ -248,6 +248,7 @@ int main(int argc, char *argv[]) {
 
 	int lastInputIteration=0;
 	for (int i=0; i<inputIterations.size(); i++) {
+		int numberOfNodes=-1;
 		if (mpiId == 0) {
 			boost::filesystem::path cwd(".");
 			boost::filesystem::path cwdPath = boost::filesystem::system_complete(cwd);
@@ -265,23 +266,41 @@ int main(int argc, char *argv[]) {
 			} catch (const boost::filesystem::filesystem_error& ex) {
 				cout << ex.what() << endl;
 			}
+			// TODO: if loading takes a long time could have nodes do different files,
+			//       and/or only load as many as needed by DIIS
+			Mesh mesh(inputMeshFiles[i]);
+			PotentialField potential(&mesh,string("potential"),boundaryPotential,
+					sheathPotential,fixSheathPotential);
+			DensityField ionDensity(&mesh,string("ionDensity"));
+			numberOfNodes = potential.entities.size();
+			Eigen::VectorXd residual(numberOfNodes);
+			Eigen::VectorXd diisPotential(numberOfNodes);
+			for (int k=0; k<numberOfNodes; k++) {
+				diisPotential[k] = potential.getField(ionDensity.entities[k]);
+				// TODO: make residual calculation a function so don't risk inconsistency
+				residual[k] = ( ionDensity.getField(ionDensity.entities[k]) -
+						exp(diisPotential[k]) );
+			}
+			diisResiduals.push_back(residual);
+			diisPotentials.push_back(diisPotential);
 		}
-		// TODO: only have master read files?
-		Mesh mesh(inputMeshFiles[i]);
-		PotentialField potential(&mesh,string("potential"),boundaryPotential,
-				sheathPotential,fixSheathPotential);
-		DensityField ionDensity(&mesh,string("ionDensity"));
-		int numberOfNodes = potential.entities.size();
+#ifdef HAVE_MPI
+		MPI::COMM_WORLD.Bcast(&numberOfNodes, 1, MPI::INTEGER, 0);
 		Eigen::VectorXd residual(numberOfNodes);
 		Eigen::VectorXd diisPotential(numberOfNodes);
-		for (int k=0; k<numberOfNodes; k++) {
-			diisPotential[k] = potential.getField(ionDensity.entities[k]);
-			// TODO: make residual calculation a function so don't risk inconsistency
-			residual[k] = ( ionDensity.getField(ionDensity.entities[k]) -
-					exp(diisPotential[k]) );
+		residual = Eigen::VectorXd::Zero(numberOfNodes);
+		diisPotential = Eigen::VectorXd::Zero(numberOfNodes);
+		if (mpiId == 0) {
+			residual = diisResiduals[i];
+			diisPotential = diisPotentials[i];
 		}
-		diisResiduals.push_back(residual);
-		diisPotentials.push_back(diisPotential);
+		MPI::COMM_WORLD.Bcast(residual.data(), residual.size(), MPI::DOUBLE, 0);
+		MPI::COMM_WORLD.Bcast(diisPotential.data(), diisPotential.size(), MPI::DOUBLE, 0);
+		if (mpiId != 0) {
+			diisResiduals.push_back(residual);
+			diisPotentials.push_back(diisPotential);
+		}
+#endif
 		lastInputIteration = inputIterations[i];
 	}
 
