@@ -36,6 +36,7 @@ int main(int argc, char *argv[]) {
 
 	string inputMeshFile, inputDirectory, outputFile;
 	vector<string> inputMeshFiles;
+	vector<boost::filesystem::path> inputPaths;
 	vector<int> inputIterations;
 	string inputSurfaceMeshFile, outputSurfaceMeshFile;
 	string noSurfaceMeshFile("noSurfaceMeshFile.vtu");
@@ -149,7 +150,10 @@ int main(int argc, char *argv[]) {
 									it(v.begin()); it!=v.end(); ++it) {
 								string fileExtension = it->extension().string();
 								if (fileExtension.compare(".sms")==0) {
-//									boost::filesystem::path fn = it->filename();
+									inputMeshFile = it->string();
+									// TODO: message about this or allow input override?
+									usePotentialFromInput = true;
+									useDensityFromInput = true;
 									string bareFilename = it->stem().string();
 									boost::regex e("(\\D+)(\\d{2})");
 									boost::smatch what;
@@ -157,15 +161,18 @@ int main(int argc, char *argv[]) {
 										int iterationNumber;
 										istringstream(what[2]) >> iterationNumber;
 										inputMeshFiles.push_back(it->string());
+										inputPaths.push_back(*it);
 										inputIterations.push_back(iterationNumber);
 										if (mpiId==0) {
 											cout << what[1] << setfill('0') << setw(2) << iterationNumber <<
-													fileExtension << " taken as existing iteration" << endl;
+													setfill(' ') << setw(0) << fileExtension
+													<< " taken as existing iteration" << endl;
 										}
 										outputFile = what[1] + fileExtension;
 									} else {
 										if (mpiId==0)
-											cout << "No iteration number found in " << bareFilename << endl;
+											cout << "No iteration number found in " <<
+											it->filename() << endl;
 									}
 								}
 							}
@@ -235,6 +242,48 @@ int main(int argc, char *argv[]) {
 
 	// TODO: set random seed as input or based on time(NULL)?
 	srand(54326);
+
+	vector<Eigen::VectorXd> diisResiduals;
+	vector<Eigen::VectorXd> diisPotentials;
+
+	int lastInputIteration=0;
+	for (int i=0; i<inputIterations.size(); i++) {
+		if (mpiId == 0) {
+			boost::filesystem::path cwd(".");
+			boost::filesystem::path cwdPath = boost::filesystem::system_complete(cwd);
+			// TODO: better way to strip off "."/get full path?
+			try {
+				boost::filesystem::path copyTarget(cwdPath.parent_path().string()+"/"+inputPaths[i].filename().string());
+				boost::filesystem::copy_file(inputMeshFiles[i],copyTarget);
+				boost::filesystem::path copyTargetVtu(cwdPath.parent_path().string()+"/"+inputPaths[i].stem().string() + ".vtu");
+//				boost::filesystem::path vtuExtension(".vtu");
+				boost::filesystem::path inputFileVtu(inputMeshFiles[i]);
+				inputFileVtu.replace_extension(".vtu");
+				boost::filesystem::copy_file(inputFileVtu,copyTargetVtu);
+				cout << "Copied " << copyTarget.filename() << " and " <<
+						copyTargetVtu.filename() << " to current dir." << endl;
+			} catch (const boost::filesystem::filesystem_error& ex) {
+				cout << ex.what() << endl;
+			}
+		}
+		// TODO: only have master read files?
+		Mesh mesh(inputMeshFiles[i]);
+		PotentialField potential(&mesh,string("potential"),boundaryPotential,
+				sheathPotential,fixSheathPotential);
+		DensityField ionDensity(&mesh,string("ionDensity"));
+		int numberOfNodes = potential.entities.size();
+		Eigen::VectorXd residual(numberOfNodes);
+		Eigen::VectorXd diisPotential(numberOfNodes);
+		for (int k=0; k<numberOfNodes; k++) {
+			diisPotential[k] = potential.getField(ionDensity.entities[k]);
+			// TODO: make residual calculation a function so don't risk inconsistency
+			residual[k] = ( ionDensity.getField(ionDensity.entities[k]) -
+					exp(diisPotential[k]) );
+		}
+		diisResiduals.push_back(residual);
+		diisPotentials.push_back(diisPotential);
+		lastInputIteration = inputIterations[i];
+	}
 
 	Mesh mesh(inputMeshFile);
 	mesh.printElementNumbers();
@@ -416,7 +465,8 @@ int main(int argc, char *argv[]) {
 			stringstream iterMeshFileName;
 			int periodLocation = outputFile.rfind(".");
 			iterMeshFileName << outputFile.substr(0,periodLocation)
-					<< setfill('0') << setw(2) << i << outputFile.substr(periodLocation);
+					<< setfill('0') << setw(2) << i << setfill(' ') << setw(0) <<
+					outputFile.substr(periodLocation);
 //			// TODO: debugging
 //			cout << iterMeshFileName.str() << endl;
 			mesh.save(iterMeshFileName.str());
@@ -456,10 +506,7 @@ int main(int argc, char *argv[]) {
 //		return 0;
 //	}
 
-	vector<Eigen::VectorXd> diisResiduals;
-	vector<Eigen::VectorXd> diisPotentials;
-
-	for (int i=0; i<numberOfIterations; i++) {
+	for (int i=lastInputIteration+1; i<numberOfIterations; i++) {
 		if (mpiId == 0)
 			cout << endl  << endl << "ITERATION " << i << endl;
 //		if (mpiId == 0)
@@ -544,7 +591,8 @@ int main(int argc, char *argv[]) {
 			stringstream iterMeshFileName;
 			int periodLocation = outputFile.rfind(".");
 			iterMeshFileName << outputFile.substr(0,periodLocation)
-					<< setfill('0') << setw(2) << i << outputFile.substr(periodLocation);
+					<< setfill('0') << setw(2) << i << setfill(' ') << setw(0) <<
+					outputFile.substr(periodLocation);
 			mesh.save(iterMeshFileName.str());
 			// mesh.save() destroys vector tags, so update
 			// TODO: do this automatically?
@@ -556,7 +604,8 @@ int main(int argc, char *argv[]) {
 				stringstream iterSurfaceMeshFileName;
 				periodLocation = outputSurfaceMeshFile.rfind(".");
 				iterSurfaceMeshFileName << outputSurfaceMeshFile.substr(0,periodLocation)
-						<< setfill('0') << setw(2) << i << outputSurfaceMeshFile.substr(periodLocation);
+						<< setfill('0') << setw(2) << i << setfill(' ') << setw(0) <<
+						outputSurfaceMeshFile.substr(periodLocation);
 				surfaceMesh.save(iterSurfaceMeshFileName.str());
 			}
 		}
@@ -579,7 +628,7 @@ int main(int argc, char *argv[]) {
 			Eigen::VectorXd diisPotential(numberOfNodes);
 			for (int k=0; k<numberOfNodes; k++) {
 				diisPotential[k] = potential.getField(ionDensity.entities[k]);
-				residual[k] = -( ionDensity.getField(ionDensity.entities[k]) -
+				residual[k] = ( ionDensity.getField(ionDensity.entities[k]) -
 						exp(diisPotential[k]) );
 			}
 			diisResiduals.push_back(residual);
