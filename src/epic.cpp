@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
 									} else {
 										if (mpiId==0)
 											cout << "No iteration number found in " <<
-											it->filename() << endl;
+													it->filename() << endl;
 									}
 								}
 							}
@@ -247,7 +247,8 @@ int main(int argc, char *argv[]) {
 	vector<Eigen::VectorXd> diisPotentials;
 
 	int lastInputIteration=0;
-	for (int i=0; i<inputIterations.size(); i++) {
+	// Omit last input file since will be saved again in first iter.
+	for (int i=0; i<inputIterations.size()-1; i++) {
 		int numberOfNodes=-1;
 		if (mpiId == 0) {
 			boost::filesystem::path cwd(".");
@@ -301,7 +302,8 @@ int main(int argc, char *argv[]) {
 			diisPotentials.push_back(diisPotential);
 		}
 #endif
-		lastInputIteration = inputIterations[i];
+//		lastInputIteration = inputIterations[i];
+		lastInputIteration = inputIterations[inputIterations.size()-1];
 	}
 
 	Mesh mesh(inputMeshFile);
@@ -525,7 +527,8 @@ int main(int argc, char *argv[]) {
 //		return 0;
 //	}
 
-	for (int i=lastInputIteration+1; i<numberOfIterations; i++) {
+	int startIteration=lastInputIteration;
+	for (int i=startIteration; i<numberOfIterations; i++) {
 		if (mpiId == 0)
 			cout << endl  << endl << "ITERATION " << i << endl;
 //		if (mpiId == 0)
@@ -546,7 +549,7 @@ int main(int argc, char *argv[]) {
 //				shortestEdge, -1., negativePotentialPerturbation,
 //				density_electronsFile);
 //		previousIonDensity.copyValues(ionDensity);
-		if (useDensityFromInput && i==0) {
+		if (useDensityFromInput && i==startIteration) {
 			if (mpiId == 0)
 				cout << endl << "Using ion density from input file." << endl;
 		} else {
@@ -653,7 +656,8 @@ int main(int argc, char *argv[]) {
 			diisResiduals.push_back(residual);
 			diisPotentials.push_back(diisPotential);
 			// TODO: rename numberOfIterationsToAveragePotentialOver since now different
-			if (i<numberOfIterationsToAveragePotentialOver+1) {
+			if (i<numberOfIterationsToAveragePotentialOver+1 ||
+					numberOfIterationsToAveragePotentialOver==1) {
 				if (mpiId == 0)
 					cout << endl << "Calculating updated potential..." << endl;
 //				if (i==0 && !usePotentialFromInput) {
@@ -689,6 +693,10 @@ int main(int argc, char *argv[]) {
 					}
 				}
 				leastSquaresRHS[nIterDIIS] = -1.;
+//				// TODO: debugging
+//				cout << mpiId << ": " << leastSquaresMatrix.rows() <<
+//						"x" << leastSquaresMatrix.cols() << " " <<
+//						leastSquaresSolution.rows() << " = " << leastSquaresRHS.rows() << endl;
 				leastSquaresSolution = leastSquaresMatrix.inverse()*leastSquaresRHS;
 				// TODO: debugging
 				if (mpiId == 0) {
