@@ -34,7 +34,7 @@ template <class T> class Field;
 
 class Mesh {
 public:
-	Mesh(string inputMeshFile);
+	Mesh(string inputMeshFile, bool storeAdjacency=true);
 	virtual ~Mesh();
 
 	void printElementNumbers();

@@ -43,7 +43,7 @@ void getIterationDataFromFile(boost::filesystem::path& inputPath,
 	}
 	// TODO: if loading takes a long time could have nodes do different files,
 	//       and/or only load as many as needed by DIIS
-	Mesh mesh(inputMeshFile);
+	Mesh mesh(inputMeshFile, false);
 	PotentialField potential(&mesh,string("potential"));
 	DensityField ionDensity(&mesh,string("ionDensity"));
 	for (int k=0; k<numberOfNodes; k++) {

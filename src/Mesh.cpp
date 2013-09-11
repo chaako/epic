@@ -8,7 +8,7 @@
 #include "epic.h"
 #include "Mesh.h"
 
-Mesh::Mesh(string inputMeshFile) {
+Mesh::Mesh(string inputMeshFile, bool storeAdjacency) {
 	char *options = NULL;
 	int options_len = 0;
 	int ierr;
@@ -46,20 +46,22 @@ Mesh::Mesh(string inputMeshFile) {
 //	// TODO: debugging
 //	cout << inputMeshFile << " " << vtkInputMesh << endl;
 
-	// store adjacency info for fast access
-	adjacentTetsMap = getAdjacentsMap(iBase_REGION, iBase_REGION,
-			iBase_VERTEX);
-	adjacentFacesMap = getAdjacentsMap(iBase_REGION, iBase_FACE);
-	adjacentVertsMap = getAdjacentsMap(iBase_REGION, iBase_VERTEX);
-	surroundingVertsMap = getSurroundingVerticesMap();
-	adjacentTetsToFaceMap = getAdjacentsMap(iBase_FACE, iBase_REGION);
+	if (storeAdjacency) {
+		// store adjacency info for fast access
+		adjacentTetsMap = getAdjacentsMap(iBase_REGION, iBase_REGION,
+				iBase_VERTEX);
+		adjacentFacesMap = getAdjacentsMap(iBase_REGION, iBase_FACE);
+		adjacentVertsMap = getAdjacentsMap(iBase_REGION, iBase_VERTEX);
+		surroundingVertsMap = getSurroundingVerticesMap();
+		adjacentTetsToFaceMap = getAdjacentsMap(iBase_FACE, iBase_REGION);
 
-	// store vertex coordinates for fast access
-	map<entHandle,vector<entHandle> >::iterator iter;
-	for (iter=adjacentVertsMap.begin(); iter!=adjacentVertsMap.end(); ++iter) {
-		vertexVectorsMap[iter->first] = Mesh::getVertexVectors(iter->first, false);
-		if (vertexVectorsMap[iter->first].size()!=4)
-			throw string("Error constructing vertexVectorsMap in Mesh.cpp");
+		// store vertex coordinates for fast access
+		map<entHandle,vector<entHandle> >::iterator iter;
+		for (iter=adjacentVertsMap.begin(); iter!=adjacentVertsMap.end(); ++iter) {
+			vertexVectorsMap[iter->first] = Mesh::getVertexVectors(iter->first, false);
+			if (vertexVectorsMap[iter->first].size()!=4)
+				throw string("Error constructing vertexVectorsMap in Mesh.cpp");
+		}
 	}
 
 	previousCoordsToBasisElement = NULL;
@@ -72,15 +74,17 @@ Mesh::Mesh(string inputMeshFile) {
 		}
 	}
 
-	// Can't combine this loop with above because getAdjacentEntitiesIndices
-	// uses indicesOfEntities
-	for (int i=0; i<=NDIM; i++) {
-		adjacentEntitiesVectors.push_back(
-				vector<vector<vector<int> > >(entitiesVectors[i].size()));
-		for (int j=0; j<entitiesVectors[i].size(); j++) {
-			for (int k=0; k<=NDIM; k++) {
-				adjacentEntitiesVectors[i][j].push_back(
-						this->getAdjacentEntitiesIndices(j,i,k));
+	if (storeAdjacency) {
+		// Can't combine this loop with above because getAdjacentEntitiesIndices
+		// uses indicesOfEntities
+		for (int i=0; i<=NDIM; i++) {
+			adjacentEntitiesVectors.push_back(
+					vector<vector<vector<int> > >(entitiesVectors[i].size()));
+			for (int j=0; j<entitiesVectors[i].size(); j++) {
+				for (int k=0; k<=NDIM; k++) {
+					adjacentEntitiesVectors[i][j].push_back(
+							this->getAdjacentEntitiesIndices(j,i,k));
+				}
 			}
 		}
 	}
@@ -91,55 +95,57 @@ Mesh::Mesh(string inputMeshFile) {
 		verticesPositions.push_back(position);
 	}
 
-	for (int i=0; i<entitiesVectors[iBase_REGION].size(); i++) {
-		entHandle regionHandle = entitiesVectors[iBase_REGION][i];
-		vector<entHandle> &surroundingVerts =
-				surroundingVertsMap[regionHandle];
-		vector<int> surroundingVertices(surroundingVerts.size());
-		for (int j=0; j<surroundingVerts.size(); j++) {
-			surroundingVertices[j] = indicesOfEntities[surroundingVerts[j]];
-		}
-		verticesSurroundingRegions.push_back(surroundingVertices);
+	if (storeAdjacency) {
+		for (int i=0; i<entitiesVectors[iBase_REGION].size(); i++) {
+			entHandle regionHandle = entitiesVectors[iBase_REGION][i];
+			vector<entHandle> &surroundingVerts =
+					surroundingVertsMap[regionHandle];
+			vector<int> surroundingVertices(surroundingVerts.size());
+			for (int j=0; j<surroundingVerts.size(); j++) {
+				surroundingVertices[j] = indicesOfEntities[surroundingVerts[j]];
+			}
+			verticesSurroundingRegions.push_back(surroundingVertices);
 
-		vector<entHandle> &surroundingRegs =
-				adjacentTetsMap[regionHandle];
-		vector<int> surroundingRegions(surroundingRegs.size());
-		for (int j=0; j<surroundingRegs.size(); j++) {
-			surroundingRegions[j] = indicesOfEntities[surroundingRegs[j]];
-		}
-		regionsSurroundingRegions.push_back(surroundingRegions);
+			vector<entHandle> &surroundingRegs =
+					adjacentTetsMap[regionHandle];
+			vector<int> surroundingRegions(surroundingRegs.size());
+			for (int j=0; j<surroundingRegs.size(); j++) {
+				surroundingRegions[j] = indicesOfEntities[surroundingRegs[j]];
+			}
+			regionsSurroundingRegions.push_back(surroundingRegions);
 
-		vector<int> &regionVertices =
-				adjacentEntitiesVectors[iBase_REGION][i][iBase_VERTEX];
-		vector<int> oppositeRegions(regionVertices.size());
-		vector<int> &regionFaces =
-				adjacentEntitiesVectors[iBase_REGION][i][iBase_FACE];
-		for (int k=0; k<regionVertices.size(); k++) {
-			int oppositeFace = -1;
-			for (int j=0; j<regionFaces.size(); j++) {
-				vector<int> &faceVertices =
-						adjacentEntitiesVectors[iBase_FACE][regionFaces[j]][iBase_VERTEX];
-				bool correctFace=true;
-				for (int l=0; l<faceVertices.size(); l++) {
-					if (faceVertices[l]==regionVertices[k])
-						correctFace=false;
+			vector<int> &regionVertices =
+					adjacentEntitiesVectors[iBase_REGION][i][iBase_VERTEX];
+			vector<int> oppositeRegions(regionVertices.size());
+			vector<int> &regionFaces =
+					adjacentEntitiesVectors[iBase_REGION][i][iBase_FACE];
+			for (int k=0; k<regionVertices.size(); k++) {
+				int oppositeFace = -1;
+				for (int j=0; j<regionFaces.size(); j++) {
+					vector<int> &faceVertices =
+							adjacentEntitiesVectors[iBase_FACE][regionFaces[j]][iBase_VERTEX];
+					bool correctFace=true;
+					for (int l=0; l<faceVertices.size(); l++) {
+						if (faceVertices[l]==regionVertices[k])
+							correctFace=false;
+					}
+					if (correctFace)
+						oppositeFace = regionFaces[j];
 				}
-				if (correctFace)
-					oppositeFace = regionFaces[j];
+				vector<int> &faceRegions =
+						adjacentEntitiesVectors[iBase_FACE][oppositeFace][iBase_REGION];
+				if (faceRegions.size()==2) {
+					oppositeRegions[k] = (faceRegions[0]!=i) ? faceRegions[0] : faceRegions[1];
+				} else {
+					oppositeRegions[k] = faceRegions[0];
+				}
 			}
-			vector<int> &faceRegions =
-					adjacentEntitiesVectors[iBase_FACE][oppositeFace][iBase_REGION];
-			if (faceRegions.size()==2) {
-				oppositeRegions[k] = (faceRegions[0]!=i) ? faceRegions[0] : faceRegions[1];
-			} else {
-				oppositeRegions[k] = faceRegions[0];
-			}
-		}
-		regionsOppositeVertices.push_back(oppositeRegions);
+			regionsOppositeVertices.push_back(oppositeRegions);
 
-		vector<vect3d> vVs = this->getVertexVectors(regionHandle);
-		positionsToBases.push_back(
-				this->calculatePositionToBasesMatrix(vVs));
+			vector<vect3d> vVs = this->getVertexVectors(regionHandle);
+			positionsToBases.push_back(
+					this->calculatePositionToBasesMatrix(vVs));
+		}
 	}
 
 //	cout << entitiesVectors[3][adjacentEntitiesVectors[2][15][3][1]] << " " <<
