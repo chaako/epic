@@ -8,10 +8,6 @@
  ============================================================================
  */
 
-#ifdef HAVE_MPI
-#include "mpi.h"
-#endif
-
 #include "epic.h"
 
 int main(int argc, char *argv[]) {
@@ -243,71 +239,40 @@ int main(int argc, char *argv[]) {
 	// TODO: set random seed as input or based on time(NULL)?
 	srand(54326);
 
-	vector<Eigen::VectorXd> diisResiduals;
-	vector<Eigen::VectorXd> diisPotentials;
-
-	int lastInputIteration=0;
-	// Omit last input file since will be saved again in first iter.
-	for (int i=0; i<inputIterations.size()-1; i++) {
-		int numberOfNodes=-1;
-		if (mpiId == 0) {
-			boost::filesystem::path cwd(".");
-			boost::filesystem::path cwdPath = boost::filesystem::system_complete(cwd);
-			// TODO: better way to strip off "."/get full path?
-			try {
-				boost::filesystem::path copyTarget(cwdPath.parent_path().string()+"/"+inputPaths[i].filename().string());
-				boost::filesystem::copy_file(inputMeshFiles[i],copyTarget);
-				boost::filesystem::path copyTargetVtu(cwdPath.parent_path().string()+"/"+inputPaths[i].stem().string() + ".vtu");
-//				boost::filesystem::path vtuExtension(".vtu");
-				boost::filesystem::path inputFileVtu(inputMeshFiles[i]);
-				inputFileVtu.replace_extension(".vtu");
-				boost::filesystem::copy_file(inputFileVtu,copyTargetVtu);
-				cout << "Copied " << copyTarget.filename() << " and " <<
-						copyTargetVtu.filename() << " to current dir." << endl;
-			} catch (const boost::filesystem::filesystem_error& ex) {
-				cout << ex.what() << endl;
-			}
-			// TODO: if loading takes a long time could have nodes do different files,
-			//       and/or only load as many as needed by DIIS
-			Mesh mesh(inputMeshFiles[i]);
-			PotentialField potential(&mesh,string("potential"),boundaryPotential,
-					sheathPotential,fixSheathPotential);
-			DensityField ionDensity(&mesh,string("ionDensity"));
-			numberOfNodes = potential.entities.size();
-			Eigen::VectorXd residual(numberOfNodes);
-			Eigen::VectorXd diisPotential(numberOfNodes);
-			for (int k=0; k<numberOfNodes; k++) {
-				diisPotential[k] = potential.getField(ionDensity.entities[k]);
-				// TODO: make residual calculation a function so don't risk inconsistency
-				residual[k] = ( ionDensity.getField(ionDensity.entities[k]) -
-						exp(diisPotential[k]) );
-			}
-			diisResiduals.push_back(residual);
-			diisPotentials.push_back(diisPotential);
-		}
-#ifdef HAVE_MPI
-		MPI::COMM_WORLD.Bcast(&numberOfNodes, 1, MPI::INTEGER, 0);
-		Eigen::VectorXd residual(numberOfNodes);
-		Eigen::VectorXd diisPotential(numberOfNodes);
-		residual = Eigen::VectorXd::Zero(numberOfNodes);
-		diisPotential = Eigen::VectorXd::Zero(numberOfNodes);
-		if (mpiId == 0) {
-			residual = diisResiduals[i];
-			diisPotential = diisPotentials[i];
-		}
-		MPI::COMM_WORLD.Bcast(residual.data(), residual.size(), MPI::DOUBLE, 0);
-		MPI::COMM_WORLD.Bcast(diisPotential.data(), diisPotential.size(), MPI::DOUBLE, 0);
-		if (mpiId != 0) {
-			diisResiduals.push_back(residual);
-			diisPotentials.push_back(diisPotential);
-		}
-#endif
-//		lastInputIteration = inputIterations[i];
-		lastInputIteration = inputIterations[inputIterations.size()-1];
-	}
-
 	Mesh mesh(inputMeshFile);
 	mesh.printElementNumbers();
+	int numberOfNodes = mesh.entitiesVectors[iBase_VERTEX].size();
+
+	vector<Eigen::VectorXd> diisResiduals;
+	vector<Eigen::VectorXd> diisPotentials;
+	// Omit last input file since will be saved again in first iter.
+	int numberOfInputPathsToProcess=inputPaths.size()-1;
+	for (int i=0; i<numberOfInputPathsToProcess; i++) {
+		Eigen::VectorXd residual(numberOfNodes);
+		Eigen::VectorXd diisPotential(numberOfNodes);
+		diisResiduals.push_back(residual);
+		diisPotentials.push_back(diisPotential);
+	}
+#ifdef HAVE_MPI
+	if (mpiId==0) {
+		requestIterationDataFromSlaves(numberOfInputPathsToProcess, numberOfNodes,
+				&diisPotentials, &diisResiduals);
+	} else {
+		processIterationDataRequests(numberOfNodes, inputPaths, inputMeshFiles);
+	}
+	// Broadcast DIIS quantities from previous iterations
+	for (int i=0; i<numberOfInputPathsToProcess; i++) {
+		MPI::COMM_WORLD.Bcast(diisResiduals[i].data(), diisResiduals[i].size(), MPI::DOUBLE, 0);
+		MPI::COMM_WORLD.Bcast(diisPotentials[i].data(), diisPotentials[i].size(), MPI::DOUBLE, 0);
+	}
+#else
+	for (int i=0; i<numberOfInputPathsToProcess; i++) {
+		getIterationDataFromFile(inputPaths[i], inputMeshFiles[i],
+				&(diisPotentials[i]), &(diisResiduals[i]));
+	}
+#endif
+	int firstInputIteration=inputIterations[0];
+	int lastInputIteration=inputIterations[numberOfInputPathsToProcess];
 
 	// TODO: replace this with something more flexible/modular?
 	FILE *densityFile=NULL;

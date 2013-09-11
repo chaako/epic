@@ -14,6 +14,10 @@
 
 using namespace std;
 
+#ifdef HAVE_MPI
+#include "mpi.h"
+#endif
+
 //const double VOLUME_TOLERANCE=1.e-8;
 const double VOLUME_TOLERANCE=0.;
 const double LENGTH_TOLERANCE=1.e-10;
