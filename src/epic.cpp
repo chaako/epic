@@ -271,8 +271,12 @@ int main(int argc, char *argv[]) {
 				&(diisPotentials[i]), &(diisResiduals[i]));
 	}
 #endif
-	int firstInputIteration=inputIterations[0];
-	int lastInputIteration=inputIterations[numberOfInputPathsToProcess];
+	int firstInputIteration=0;
+	int lastInputIteration=0;
+	if (inputIterations.size()>0) {
+		inputIterations[0];
+		inputIterations[numberOfInputPathsToProcess];
+	}
 
 	// TODO: replace this with something more flexible/modular?
 	FILE *densityFile=NULL;
@@ -615,8 +619,8 @@ int main(int argc, char *argv[]) {
 			Eigen::VectorXd diisPotential(numberOfNodes);
 			for (int k=0; k<numberOfNodes; k++) {
 				diisPotential[k] = potential.getField(ionDensity.entities[k]);
-				residual[k] = ( ionDensity.getField(ionDensity.entities[k]) -
-						exp(diisPotential[k]) );
+				residual[k] = log(ionDensity.getField(ionDensity.entities[k])) -
+						diisPotential[k];
 			}
 			diisResiduals.push_back(residual);
 			diisPotentials.push_back(diisPotential);
