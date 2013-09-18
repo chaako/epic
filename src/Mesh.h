@@ -62,6 +62,7 @@ public:
 			int adjacentsDimension);
 	bool vertexLessThan(entHandle a, entHandle b);
 	vector<entHandle> getEntities(int dimension);
+	bool checkSameVertexOrdering();
 	entHandle getRandomVertex();
 	vector<entHandle> getFaces(entHandle element);
 	map<entHandle,vector<entHandle> >

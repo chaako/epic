@@ -75,6 +75,10 @@ Mesh::Mesh(string inputMeshFile, bool storeAdjacency) {
 	}
 
 	if (storeAdjacency) {
+		// TODO: this will hang the code if not all processes do it (i.e. if only one
+		//       node is loading a file
+		this->checkSameVertexOrdering();
+
 		// Can't combine this loop with above because getAdjacentEntitiesIndices
 		// uses indicesOfEntities
 		for (int i=0; i<=NDIM; i++) {
@@ -675,6 +679,34 @@ vector<entHandle> Mesh::getEntities(int dimension) {
 	if (ents) free(ents);
 	ents_alloc = 0;
 	return elements;
+}
+
+bool Mesh::checkSameVertexOrdering() {
+	bool sameOrdering=false;
+#ifdef HAVE_MPI
+	int mpiId=MPI::COMM_WORLD.Get_rank();
+	vector<entHandle> vertices = this->getEntities(iBase_VERTEX);
+	sameOrdering = true;
+	boost::scoped_array<vect3d> masterCoordinates(new vect3d[vertices.size()]);
+	if (mpiId==0) {
+		for (int i=0; i<vertices.size(); i++) {
+			masterCoordinates[i] = this->getCoordinates(vertices[i]);
+		}
+	}
+	MPI::COMM_WORLD.Bcast(masterCoordinates.get(), vertices.size()*sizeof(vect3d), MPI::BYTE, 0);
+	for (int i=0; i<vertices.size(); i++) {
+		vect3d coords=this->getCoordinates(vertices[i]);
+		if (coords!=masterCoordinates[i]) {
+			cout << "Node ordering differs for " << coords.transpose() << " != " <<
+					masterCoordinates[i].transpose() << endl;
+			sameOrdering = false;
+		}
+
+	}
+#else
+	sameOrdering=true;
+#endif
+	return sameOrdering;
 }
 
 vector<entHandle> Mesh::getVertices(
