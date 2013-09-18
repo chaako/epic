@@ -32,7 +32,7 @@ import IPython.core.display as IPdisp
 #              "/home/chaako/epic/src/runsTesting/dG22_15/spheres05_scan1000_narrow00.vtu",
 #              "/home/chaako/epic/src/runsTesting/dG22_16/spheres06_scan1000_narrow00.vtu"]
 #file_names = ["/home/chaako/meshtest/fromLoki/densityGradient40/densityGradient/spheres_iter00.vtu"]
-file_names = ["/home/chaako/meshtest/fromLoki/iterationTest17/iterationTest/spheres_iter00.vtu"]
+file_names = ["/home/chaako/meshtest/fromLoki/iterationTest23/iterationTest/spheres_iter00.vtu"]
 vtk_readers = []
 for file_name in file_names:
     reader = vtkXMLUnstructuredGridReader()
@@ -107,7 +107,7 @@ ion_velocities = []
 for vtk_reader in vtk_readers:
     ion_densities.append(getTupleArrayFromVtk(vtk_reader, "ionDensity"))
     ion_densities_scan.append(getTupleArrayFromVtk(vtk_reader, "ionDensityScan"))
-    potentials.append(getTupleArrayFromVtk(vtk_reader, "potential"))
+    #potentials.append(getTupleArrayFromVtk(vtk_reader, "previousPotential"))
     potentials_scan.append(getTupleArrayFromVtk(vtk_reader, "potentialScan"))
     ion_velocities.append(getTupleArrayFromVtk(vtk_reader, "ionVelocityScan"))
 ion_densities_np = np.array(ion_densities)
@@ -127,13 +127,15 @@ for ax in axes:
         x = potentials_scan[i][target_point_index+j]
         y = ion_densities_scan[i][target_point_index+j]
         sct = ax.scatter(x,y)
-        print y[0]
+        #print y[0], y[1]
         y = np.exp(potentials_scan[i][target_point_index+j])
         sct = ax.scatter(x,y,color='red')
-        x = potentials[i][target_point_index+j]
+        x = potentials_scan[i][target_point_index+j][0]
         y = ion_densities[i][target_point_index+j]
         sct = ax.scatter(x,y,color='green')
-        print y[0]
+        ax.set_xlim([-0.8,0.2])
+        ax.set_ylim([0,1.2])
+        #print y[0]
         #i = i+1
         j = j+100
 
