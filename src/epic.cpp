@@ -274,8 +274,8 @@ int main(int argc, char *argv[]) {
 	int firstInputIteration=0;
 	int lastInputIteration=0;
 	if (inputIterations.size()>0) {
-		inputIterations[0];
-		inputIterations[numberOfInputPathsToProcess];
+		firstInputIteration = inputIterations[0];
+		lastInputIteration = inputIterations[numberOfInputPathsToProcess];
 	}
 
 	// TODO: replace this with something more flexible/modular?
