@@ -75,9 +75,9 @@ Mesh::Mesh(string inputMeshFile, bool storeAdjacency) {
 	}
 
 	if (storeAdjacency) {
-		// TODO: this will hang the code if not all processes do it (i.e. if only one
-		//       node is loading a file
-		this->checkSameVertexOrdering();
+//		// TODO: this will hang the code if not all processes do it (i.e. if only one
+//		//       node is loading a file
+//		this->checkSameVertexOrdering();
 
 		// Can't combine this loop with above because getAdjacentEntitiesIndices
 		// uses indicesOfEntities

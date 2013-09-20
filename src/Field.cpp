@@ -484,15 +484,15 @@ void PotentialField::calcField(DensityField& ionDensity, Field<vect3d>& ionVeloc
 			double boltzmannPotential = boundaryPotential +
 					referenceElectronTemperature*
 					log(ionDensity.getField(entities[i])/referenceDensity);
-			// Beam-like distribution doesn't give correct potential update
-			// TODO: don't hard-code parallel velocity cutoff
-			// TODO: replace this hack
-			if (fabs(ionVelocity.getField(entities[i]).dot(extern_B))<=0.5*extern_B.norm() ||
-					boltzmannPotential<currentPotential) {
+//			// Beam-like distribution doesn't give correct potential update
+//			// TODO: don't hard-code parallel velocity cutoff
+//			// TODO: replace this hack
+//			if (fabs(ionVelocity.getField(entities[i]).dot(extern_B))<=0.5*extern_B.norm() ||
+//					boltzmannPotential<currentPotential) {
 				potential = (currentPotential+boltzmannPotential)/2.;
-			} else {
-				potential = currentPotential;
-			}
+//			} else {
+//				potential = currentPotential;
+//			}
 		}
 		if (fixSheathPotential) {
 			// TODO: make this function since do multiple places
