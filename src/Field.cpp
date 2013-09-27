@@ -893,7 +893,8 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 	vect3d nodePosition = mesh_ptr->getCoordinates(entities[node]);
 	bool doThisNode = false;
 	bool recordThisNode = false;
-	if (extern_evalPositions_ptr->size()==0) {
+	// TODO: replace with better/more transparent signaling
+	if (extern_evalPositions_ptr->size()==0 || !extern_onlyDoEvalPositions) {
 		doThisNode = true;
 	} else {
 		// TODO: checking every evalPosition for every node is not efficient
@@ -903,8 +904,9 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 			// TODO: don't hard-code distance threshold
 			doThisNode = doThisNode ||
 					(desiredNodePosition-nodePosition).norm()<NODE_DISTANCE_THRESHOLD;
-			// TODO: decouple do and record
-			recordThisNode = doThisNode;
+			// TODO: decouple do and record (and deriv)
+			if (extern_nodeToComputeDerivAt<0)
+				recordThisNode = doThisNode;
 		}
 	}
 	// TODO: Need unified way of specifying unperturbed boundary plasma
@@ -924,7 +926,11 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 	} else {
 		IntegrandContainer integrandContainer;
 		integrandContainer.mesh_ptr = mesh_ptr;
-		integrandContainer.node = entities[node];
+		if (extern_nodeToComputeDerivAt>=0) {
+			integrandContainer.node = entities[extern_nodeToComputeDerivAt];
+		} else {
+			integrandContainer.node = entities[node];
+		}
 		integrandContainer.electricField_ptr = &electricField;
 		integrandContainer.potentialField_ptr = &potentialField;
 		integrandContainer.faceTypeField_ptr = &faceType;
@@ -958,7 +964,7 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 			xmax[j] = 1.;
 		}
 		// TODO: should make number of orbits adaptive
-		int numberOfOrbits=1000;
+		int numberOfOrbits=400;
 //		if (charge<0.)
 //		if (charge>0.)
 //			numberOfOrbits*=10;

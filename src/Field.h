@@ -47,7 +47,9 @@ public:
 
 	T& operator[](entHandle& entity);
 	T& operator[](int& entityIndex);
-	// TODO: operator+= should probably return Field<T>&
+	// TODO: operator= should probably return Field<T>&
+//	void operator=(T& value);
+	void setValues(T& value);
 	void operator+=(T& valueToAdd);
 
 	T getField(vect3d position, entHandle *entity=NULL,
@@ -389,6 +391,14 @@ template <class T>
 T& Field<T>::operator[](int& entityIndex) {
 //	cout << "field[" << entityIndex << "] called" << endl;
 	return this->values[entityIndex];
+}
+
+template <class T>
+//void Field<T>::operator=(T& value) {
+void Field<T>::setValues(T& value) {
+	for (int i=0; i<entities.size(); i++) {
+		this->setField(entities[i],value);
+	}
 }
 
 template <class T>

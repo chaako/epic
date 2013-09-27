@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 	vector<vect3d> evaluationPositions;
 	extern_evalPositions_ptr = &evaluationPositions;
 	bool doLuDecomposition, stopAfterEvalPos, doPoissonTest, fixSheathPotential;
-	bool usePotentialFromInput, useDensityFromInput;
+	bool usePotentialFromInput, useDensityFromInput, evalGlobDensDeriv;
 	int secondsToSleepForDebugAttach, numberOfIterations, numberOfIterationsToAveragePotentialOver;
 	int numberOfPotentialValues;
 	double debyeLength, boundaryPotential, objectPotential, sheathPotential;
@@ -96,6 +96,8 @@ int main(int argc, char *argv[]) {
 					("evalPositionX,x", po::value< vector<double> >(&evalPosX), "evaluation position(s) x")
 					("evalPositionY,y", po::value< vector<double> >(&evalPosY), "evaluation position(s) y")
 					("evalPositionZ,z", po::value< vector<double> >(&evalPosZ), "evaluation position(s) z")
+					("evalGlobDensDerivAtEvalPos", po::value<bool>(&evalGlobDensDeriv)->default_value(false),
+							"whether to evaluate global density derivative at evalPos[0] (true/false)")
 					("doLuDecomposition", po::value<bool>(&doLuDecomposition)->default_value(true),
 							"whether to do LU decomposition (true/false)")
 					("stopAfterEvalPos", po::value<bool>(&stopAfterEvalPos)->default_value(false),
@@ -160,7 +162,7 @@ int main(int argc, char *argv[]) {
 										inputPaths.push_back(*it);
 										inputIterations.push_back(iterationNumber);
 										if (mpiId==0) {
-											cout << what[1] << setfill('0') << setw(2) << iterationNumber <<
+											cout << what[1] << setfill('0') << setw(3) << iterationNumber <<
 													setfill(' ') << setw(0) << fileExtension
 													<< " taken as existing iteration" << endl;
 										}
@@ -209,9 +211,14 @@ int main(int argc, char *argv[]) {
 			}
 
 			int numberOfEvalPositions=min(min(evalPosX.size(),evalPosY.size()),evalPosZ.size());
-			if (numberOfEvalPositions>0 && mpiId==0) {
-				cout << "Number of evaluation positions requested: " <<
-						numberOfEvalPositions << endl;
+			if (numberOfEvalPositions>0) {
+				// TODO: uncouple these options
+				if (!evalGlobDensDeriv)
+					extern_onlyDoEvalPositions = true;
+				if (mpiId==0) {
+					cout << "Number of evaluation positions requested: " <<
+							numberOfEvalPositions << endl;
+				}
 				for (int i=0; i<numberOfEvalPositions; i++)
 					evaluationPositions.push_back(vect3d(evalPosX[i],evalPosY[i],evalPosZ[i]));
 			}
@@ -242,6 +249,24 @@ int main(int argc, char *argv[]) {
 	Mesh mesh(inputMeshFile);
 	mesh.printElementNumbers();
 	int numberOfNodes = mesh.entitiesVectors[iBase_VERTEX].size();
+
+//	map<vect3d,entHandle> evalPosHandles;
+	vect3dMap evalPosIndices(vect3dLessThan);
+	// TODO: checking every evalPosition for every node is not efficient
+	//       (could sort both; evalPosition list probably short enough not to matter)
+	for (int j=0; j<numberOfNodes; j++) {
+		entHandle vertex=mesh.entitiesVectors[iBase_VERTEX][j];
+		vect3d nodePosition = mesh.getCoordinates(vertex);
+		for (int i=0; i<extern_evalPositions_ptr->size(); i++) {
+			vect3d desiredNodePosition=extern_evalPositions_ptr->operator[](i);
+			if ((desiredNodePosition-nodePosition).norm()<NODE_DISTANCE_THRESHOLD) {
+//				evalPosHandles[desiredNodePosition] = vertex;
+				evalPosIndices[desiredNodePosition] = j;
+			}
+		}
+	}
+	// TODO: make this input?
+	extern_nodeToComputeDerivAt = evalPosIndices[extern_evalPositions_ptr->operator[](0)];
 
 	vector<Eigen::VectorXd> diisResiduals;
 	vector<Eigen::VectorXd> diisPotentials;
@@ -306,6 +331,8 @@ int main(int argc, char *argv[]) {
 			sheathPotential,fixSheathPotential);
 	PotentialField previousPotential(&mesh,string("previousPotential"),
 			boundaryPotential,sheathPotential,fixSheathPotential);
+	PotentialField perturbedPotential(&mesh,string("perturbedPotential"),boundaryPotential,
+			sheathPotential,fixSheathPotential);
 	PotentialField potentialScan(&mesh,string("potentialScan"),boundaryPotential,
 			sheathPotential,fixSheathPotential,numberOfPotentialValues);
 	// TODO: this doesn't work properly with restart/continuation
@@ -314,6 +341,8 @@ int main(int argc, char *argv[]) {
 	ElectricField eField(&mesh,string("eField"),vertexType,debyeLength,doLuDecomposition);
 	Field<vect3d> ionVelocity(&mesh,string("ionVelocity"),iBase_VERTEX);
 	Field<double> ionTemperature(&mesh,string("ionTemperature"),iBase_VERTEX);
+	Field<vect3d> ionVelAtEvalPos(&mesh,string("ionVelAtEvalPos"),iBase_VERTEX);
+	Field<double> ionTempAtEvalPos(&mesh,string("ionTempAtEvalPos"),iBase_VERTEX);
 	Field<vect3d> ionVelocityScan(&mesh,string("ionVelocityScan"),iBase_VERTEX,numberOfPotentialValues);
 	Field<double> ionTemperatureScan(&mesh,string("ionTemperatureScan"),iBase_VERTEX,numberOfPotentialValues);
 //	Field<vect3d> ionVelocityNegativePerturbation(&mesh,string("NPionVelocity"),iBase_VERTEX);
@@ -321,6 +350,9 @@ int main(int argc, char *argv[]) {
 	// TODO: updating other moments through density not very clean/transparent
 	DensityField ionDensity(&mesh,string("ionDensity"),&ionVelocity,&ionTemperature);
 //	DensityField previousIonDensity(&mesh,string("previousIonDensity"),&ionVelocity,&ionTemperature);
+	DensityField ionDensityAtEvalPos(&mesh,string("ionDensAtEvalPos"),
+			&ionVelAtEvalPos,&ionTempAtEvalPos);
+	DensityField unperturbedIonDensityAtEvalPos(&mesh,string("ionDensAtEvalPos"));
 	DensityField ionDensityScan(&mesh,string("ionDensityScan"),&ionVelocityScan,&ionTemperatureScan,
 			numberOfPotentialValues);
 	DensityField referenceElectronDensity(&mesh,string("referenceElectronDensity"));
@@ -331,7 +363,7 @@ int main(int argc, char *argv[]) {
 //			&ionVelocityNegativePerturbation,&ionTemperatureNegativePerturbation);
 //	DensityField electronDensityPositivePerturbation(&mesh,string("PPelectronDensity"));
 //	DensityField electronDensityNegativePerturbation(&mesh,string("NPelectronDensity"));
-//	DensityDerivativeField ionDensityDerivative(&mesh,string("ionDensDeriv"),iBase_VERTEX);
+	DensityDerivativeField ionDensityDerivative(&mesh,string("ionDensDeriv"),iBase_VERTEX);
 	ShortestEdgeField shortestEdge(&mesh,string("shortestEdge"));
 
 	SurfaceField<double,vtkDoubleArray> surfacePotential(&surfaceMesh, "surfacePotential");
@@ -408,6 +440,8 @@ int main(int argc, char *argv[]) {
 	// TODO: Allow parallel electron temperature to differ from ions?
 	potential.setReferenceElectronTemperature(*parallelTemperatureProfile_ptr.get());
 	ionDensity.setDistributionFunction(distributionFunction);
+	ionDensityAtEvalPos.setDistributionFunction(distributionFunction);
+	unperturbedIonDensityAtEvalPos.setDistributionFunction(distributionFunction);
 	ionDensityScan.setDistributionFunction(distributionFunction);
 //	ionDensityNegativePerturbation.setDistributionFunction(distributionFunction);
 
@@ -455,7 +489,7 @@ int main(int argc, char *argv[]) {
 			stringstream iterMeshFileName;
 			int periodLocation = outputFile.rfind(".");
 			iterMeshFileName << outputFile.substr(0,periodLocation)
-					<< setfill('0') << setw(2) << i << setfill(' ') << setw(0) <<
+					<< setfill('0') << setw(3) << i << setfill(' ') << setw(0) <<
 					outputFile.substr(periodLocation);
 //			// TODO: debugging
 //			cout << iterMeshFileName.str() << endl;
@@ -558,6 +592,29 @@ int main(int argc, char *argv[]) {
 //					densityFile);
 //			previousIonDensity.copyValues(ionDensityNegativePerturbation);
 		}
+		if (evalGlobDensDeriv) {
+			if (mpiId == 0)
+				cout << endl << "Computing global ion density derivative at evalPos[0]..." << endl;
+			unperturbedIonDensityAtEvalPos.setValues(ionDensity[extern_nodeToComputeDerivAt]);
+			perturbedPotential.copyValues(potential);
+			double potentialPerturbation=0.;
+			potentialPerturbation = positivePotentialPerturbation;
+//				potentialPerturbation = negativePotentialPerturbation;
+			perturbedPotential += potentialPerturbation;
+			// TODO: Make these inputs?
+			bool doAllNodes=true;
+			double unconvergednessThreshold=0.03;
+			// TOOD: this isn't very clean/transparent
+			bool onlyDoEvalPos=extern_onlyDoEvalPositions;
+			extern_onlyDoEvalPositions = false;
+			ionDensityAtEvalPos.calcField(eField, &potential,
+					referenceElectronDensity, faceType, vertexType,
+					shortestEdge, 1., potentialPerturbation,
+					doAllNodes, unconvergednessThreshold, densityFile);
+			extern_onlyDoEvalPositions = onlyDoEvalPos;
+			ionDensityDerivative.calcField(ionDensityAtEvalPos,unperturbedIonDensityAtEvalPos,
+					perturbedPotential,potential);
+		}
 //		ionDensityHistory.copyValues(ionDensity,i+1);
 //		if (mpiId == 0)
 //			cout << endl << "Calculating PP ion charge-density..." << endl;
@@ -582,7 +639,7 @@ int main(int argc, char *argv[]) {
 			stringstream iterMeshFileName;
 			int periodLocation = outputFile.rfind(".");
 			iterMeshFileName << outputFile.substr(0,periodLocation)
-					<< setfill('0') << setw(2) << i << setfill(' ') << setw(0) <<
+					<< setfill('0') << setw(3) << i << setfill(' ') << setw(0) <<
 					outputFile.substr(periodLocation);
 			mesh.save(iterMeshFileName.str());
 			// mesh.save() destroys vector tags, so update
@@ -595,7 +652,7 @@ int main(int argc, char *argv[]) {
 				stringstream iterSurfaceMeshFileName;
 				periodLocation = outputSurfaceMeshFile.rfind(".");
 				iterSurfaceMeshFileName << outputSurfaceMeshFile.substr(0,periodLocation)
-						<< setfill('0') << setw(2) << i << setfill(' ') << setw(0) <<
+						<< setfill('0') << setw(3) << i << setfill(' ') << setw(0) <<
 						outputSurfaceMeshFile.substr(periodLocation);
 				surfaceMesh.save(iterSurfaceMeshFileName.str());
 			}
