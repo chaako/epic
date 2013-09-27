@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
 									usePotentialFromInput = true;
 									useDensityFromInput = true;
 									string bareFilename = it->stem().string();
-									boost::regex e("(\\D+)(\\d{2})");
+									boost::regex e("(\\D+)(\\d{3})");
 									boost::smatch what;
 									if(boost::regex_match(bareFilename, what, e)) {
 										int iterationNumber;
@@ -352,7 +352,7 @@ int main(int argc, char *argv[]) {
 //	DensityField previousIonDensity(&mesh,string("previousIonDensity"),&ionVelocity,&ionTemperature);
 	DensityField ionDensityAtEvalPos(&mesh,string("ionDensAtEvalPos"),
 			&ionVelAtEvalPos,&ionTempAtEvalPos);
-	DensityField unperturbedIonDensityAtEvalPos(&mesh,string("ionDensAtEvalPos"));
+	DensityField unperturbedIonDensityAtEvalPos(&mesh,string("unperturbedIonDensAtEvalPos"));
 	DensityField ionDensityScan(&mesh,string("ionDensityScan"),&ionVelocityScan,&ionTemperatureScan,
 			numberOfPotentialValues);
 	DensityField referenceElectronDensity(&mesh,string("referenceElectronDensity"));
