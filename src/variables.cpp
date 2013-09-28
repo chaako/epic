@@ -8,6 +8,7 @@ int extern_orbitNumber = 0;
 // TODO: don't use external pointer to vector
 vector<vect3d> *extern_evalPositions_ptr=NULL;
 bool extern_onlyDoEvalPositions=false;
+bool extern_computeGlobDeriv=false;
 int extern_nodeToComputeDerivAt=-1;
 vect3dMap *extern_vtkIdOfSurfacePoint_ptr=NULL;
 

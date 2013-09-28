@@ -31,6 +31,7 @@
 
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
 
+class CodeField;
 class DensityField;
 class PotentialField;
 class ShortestEdgeField;
@@ -50,6 +51,7 @@ public:
 	// TODO: operator= should probably return Field<T>&
 //	void operator=(T& value);
 	void setValues(T& value);
+	void setLabeledValues(T& value, CodeField& vertexType, int code);
 	void operator+=(T& valueToAdd);
 
 	T getField(vect3d position, entHandle *entity=NULL,
@@ -398,6 +400,15 @@ template <class T>
 void Field<T>::setValues(T& value) {
 	for (int i=0; i<entities.size(); i++) {
 		this->setField(entities[i],value);
+	}
+}
+
+template <class T>
+//void Field<T>::operator=(T& value) {
+void Field<T>::setLabeledValues(T& value, CodeField& vertexType, int code) {
+	for (int i=0; i<entities.size(); i++) {
+		if (vertexType[i]==code)
+			this->setField(entities[i],value);
 	}
 }
 

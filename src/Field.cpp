@@ -895,7 +895,16 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 	bool recordThisNode = false;
 	// TODO: replace with better/more transparent signaling
 	if (extern_evalPositions_ptr->size()==0 || !extern_onlyDoEvalPositions) {
-		doThisNode = true;
+//		if (extern_computeGlobDeriv) {
+//			vect3d desiredNodePosition =
+//					mesh_ptr->getCoordinates(entities[extern_nodeToComputeDerivAt]);
+//			// TODO: don't hard-code distance threshold
+//			double distanceToComputeDerivWithin=3.;
+//			doThisNode = (desiredNodePosition-nodePosition).norm() <
+//					distanceToComputeDerivWithin;
+//		} else {
+			doThisNode = true;
+//		}
 	} else {
 		// TODO: checking every evalPosition for every node is not efficient
 		//       (evalPosition list probably short enough not to matter)
@@ -905,7 +914,7 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 			doThisNode = doThisNode ||
 					(desiredNodePosition-nodePosition).norm()<NODE_DISTANCE_THRESHOLD;
 			// TODO: decouple do and record (and deriv)
-			if (extern_nodeToComputeDerivAt<0)
+			if (!extern_computeGlobDeriv)
 				recordThisNode = doThisNode;
 		}
 	}
@@ -926,7 +935,7 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 	} else {
 		IntegrandContainer integrandContainer;
 		integrandContainer.mesh_ptr = mesh_ptr;
-		if (extern_nodeToComputeDerivAt>=0) {
+		if (extern_computeGlobDeriv) {
 			integrandContainer.node = entities[extern_nodeToComputeDerivAt];
 		} else {
 			integrandContainer.node = entities[node];
@@ -968,8 +977,6 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 //		if (charge<0.)
 //		if (charge>0.)
 //			numberOfOrbits*=10;
-		// TODO: make potential perturbation more robust, transparent, and flexible
-		potentialField[node] += potentialPerturbation;
 		int actualNumberOfOrbits=0;
 		int failureType=0;
 		double probabilityThatTrueError=0.;
@@ -988,6 +995,8 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 			potentialField.getField(entities[node],potentials_ptr.get());
 			for (int k=0; k<numberOfComponents; k++) {
 				potentialField[node] = potentials_ptr[k];
+				// TODO: make potential perturbation more robust, transparent, and flexible
+				potentialField[node] += potentialPerturbation;
 				double moments[5];
 				double errors[5];
 				double probabilities[5];
@@ -996,6 +1005,8 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 						numberOfOrbits, numberOfOrbits, min(numberOfOrbits,1000), 1000, 1000, 0,
 						NULL, &actualNumberOfOrbits, &failureType,
 						moments, errors, probabilities);
+				// TODO: make potential perturbation more robust, transparent, and flexible
+				potentialField[node] -= potentialPerturbation;
 				// TODO: just set NCOMP higher?
 				if (failureType<0)
 					cout << "failureType: " << failureType <<
@@ -1019,8 +1030,6 @@ void DensityField::calculateDensity(int node, ElectricField& electricField,
 			}
 			potentialField[node] = potentials_ptr[0];
 		}
-		// TODO: make potential perturbation more robust, transparent, and flexible
-		potentialField[node] -= potentialPerturbation;
 		if (integrandContainer.outFile)
 			fclose(integrandContainer.outFile);
 		if (integrandContainer.orbitOutFile)

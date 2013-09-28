@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
 					("evalPositionX,x", po::value< vector<double> >(&evalPosX), "evaluation position(s) x")
 					("evalPositionY,y", po::value< vector<double> >(&evalPosY), "evaluation position(s) y")
 					("evalPositionZ,z", po::value< vector<double> >(&evalPosZ), "evaluation position(s) z")
-					("evalGlobDensDerivAtEvalPos", po::value<bool>(&evalGlobDensDeriv)->default_value(false),
+					("evalGlobDensDeriv", po::value<bool>(&evalGlobDensDeriv)->default_value(false),
 							"whether to evaluate global density derivative at evalPos[0] (true/false)")
 					("doLuDecomposition", po::value<bool>(&doLuDecomposition)->default_value(true),
 							"whether to do LU decomposition (true/false)")
@@ -213,8 +213,9 @@ int main(int argc, char *argv[]) {
 			int numberOfEvalPositions=min(min(evalPosX.size(),evalPosY.size()),evalPosZ.size());
 			if (numberOfEvalPositions>0) {
 				// TODO: uncouple these options
-				if (!evalGlobDensDeriv)
+				if (!evalGlobDensDeriv) {
 					extern_onlyDoEvalPositions = true;
+				}
 				if (mpiId==0) {
 					cout << "Number of evaluation positions requested: " <<
 							numberOfEvalPositions << endl;
@@ -265,8 +266,11 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-	// TODO: make this input?
-	extern_nodeToComputeDerivAt = evalPosIndices[extern_evalPositions_ptr->operator[](0)];
+	if (evalGlobDensDeriv) {
+		// TODO: make this input?
+		extern_nodeToComputeDerivAt = evalPosIndices[extern_evalPositions_ptr->operator[](0)];
+	}
+
 
 	vector<Eigen::VectorXd> diisResiduals;
 	vector<Eigen::VectorXd> diisPotentials;
@@ -596,6 +600,8 @@ int main(int argc, char *argv[]) {
 			if (mpiId == 0)
 				cout << endl << "Computing global ion density derivative at evalPos[0]..." << endl;
 			unperturbedIonDensityAtEvalPos.setValues(ionDensity[extern_nodeToComputeDerivAt]);
+			double boundaryDensity=1.;
+			unperturbedIonDensityAtEvalPos.setLabeledValues(boundaryDensity,vertexType,5);
 			perturbedPotential.copyValues(potential);
 			double potentialPerturbation=0.;
 			potentialPerturbation = positivePotentialPerturbation;
@@ -607,11 +613,13 @@ int main(int argc, char *argv[]) {
 			// TOOD: this isn't very clean/transparent
 			bool onlyDoEvalPos=extern_onlyDoEvalPositions;
 			extern_onlyDoEvalPositions = false;
+			extern_computeGlobDeriv = true;
 			ionDensityAtEvalPos.calcField(eField, &potential,
 					referenceElectronDensity, faceType, vertexType,
 					shortestEdge, 1., potentialPerturbation,
 					doAllNodes, unconvergednessThreshold, densityFile);
 			extern_onlyDoEvalPositions = onlyDoEvalPos;
+			extern_computeGlobDeriv = false;
 			ionDensityDerivative.calcField(ionDensityAtEvalPos,unperturbedIonDensityAtEvalPos,
 					perturbedPotential,potential);
 		}
