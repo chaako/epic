@@ -127,6 +127,7 @@ int main(int argc, char *argv[]) {
 	string inputMeshFile;
 	int numberOfIterations;
 	bool isSurfaceMesh, refineMesh;
+	double netgenFineness, netgenGrading, netgenMinh, netgenMaxh;
 	// TODO: make names more transparent?
 	{
 		namespace po = boost::program_options;
@@ -142,6 +143,14 @@ int main(int argc, char *argv[]) {
 							"whether to do mesh refinement (true/false)")
 					("numberOfIterations", po::value<int>(&numberOfIterations)->default_value(2),
 							"number of refinement iterations")
+					("netgenFineness", po::value<double>(&netgenFineness)->default_value(1.),
+							"Netgen fineness parameter")
+					("netgenGrading", po::value<double>(&netgenGrading)->default_value(0.25),
+							"Netgen grading parameter")
+					("netgenMinh", po::value<double>(&netgenMinh)->default_value(0.),
+							"Netgen minh parameter")
+					("netgenMaxh", po::value<double>(&netgenMaxh)->default_value(1000.),
+							"Netgen maxh parameter")
 			;
 
 			po::variables_map vm;
@@ -212,7 +221,7 @@ int main(int argc, char *argv[]) {
 //				0., scaleFactors, vect3d(0.,0.,0.));
 //		surfaceMesh.transformSurface(4, vect3d(0.,0.,0.), vect3d::UnitY(),
 //				rotationAngle, scaleFactors, translation);
-		surfaceMesh.createVolumeMesh(1.,0.25);
+		surfaceMesh.createVolumeMesh(netgenFineness,netgenGrading,netgenMinh,netgenMaxh);
 		surfaceMesh.scaleVolumeMesh(origin, inverseScaleFactors);
 		int periodLocation = inputMeshFile.rfind(".vtu");
 		volumeMeshFile << inputMeshFile.substr(0,periodLocation)
