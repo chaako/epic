@@ -14,14 +14,23 @@
 
 using namespace std;
 
-const double VOLUME_TOLERANCE=1.e-8;
-//const double VOLUME_TOLERANCE=0.;
+#ifdef HAVE_MPI
+#include "mpi.h"
+#endif
+
+//const double VOLUME_TOLERANCE=1.e-8;
+const double VOLUME_TOLERANCE=0.;
 const double LENGTH_TOLERANCE=1.e-10;
 const double DELTA_LENGTH=1.e-5;
 //const double DELTA_LENGTH=1.e-5;
 const double NODE_DISTANCE_THRESHOLD=1.e-3;
 const double SMALL_VELOCITY=1.e-1;
 const double SMALL_TIME=1.e-8;
+const double SMALL_DENOMINATOR=1.e-5;
+const double SMALL_POTENTIAL_CHANGE=1.e-2;
+const double SMALL_DENSITY_CHANGE=1.e-2;
+const double SMALL_DENSITY_DERIVATIVE=1.e-1;
+const double LARGE_POTENTIAL_CHANGE=5.e-1;
 
 const int WORKTAG=999999998;
 const int DIETAG=999999999;
@@ -50,6 +59,7 @@ enum {
 #include <boost/array.hpp>
 #include <boost/ref.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/scoped_array.hpp>
 #include <time.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp> // For sleep function
@@ -66,6 +76,8 @@ enum {
 #include <boost/program_options.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
+#include <boost/regex.hpp>
+#include <boost/filesystem.hpp>
 
 #include "iMesh.h"
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
@@ -96,7 +108,9 @@ enum {
 #include <vtkXMLUnstructuredGridWriter.h>
 #include <vtkUnstructuredGridWriter.h>
 #include <vtkCellData.h>
+#include <vtkPointData.h>
 #include <vtkIntArray.h>
+#include <vtkDoubleArray.h>
 
 class CodeField;
 
@@ -104,6 +118,7 @@ const int NDIM=3;
 const int INTERPOLATIONORDER=1;
 // Matrix gives better pretty printing than Vector3d in gdb
 typedef Eigen::Matrix<double,NDIM,1> vect3d;
+typedef map<vect3d,int,bool(*)(vect3d,vect3d)> vect3dMap;
 typedef iBase_EntityHandle entHandle;
 
 #endif /* TYPES_H_ */

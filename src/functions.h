@@ -25,4 +25,17 @@ int intersect_SegmentTriangle(vector<vect3d> R,
 
 bool vect3dLessThan(vect3d a, vect3d b);
 
+void getIterationDataFromFile(boost::filesystem::path& inputPath,
+		string& inputMeshFile,
+		Eigen::VectorXd *diisPotential, Eigen::VectorXd *residual);
+
+#ifdef HAVE_MPI
+void requestIterationDataFromSlaves(int numberOfFiles, int numberOfNodes,
+		vector<Eigen::VectorXd> *diisPotentials, vector<Eigen::VectorXd> *diisResiduals);
+MPI::Status receiveIterationData(int numberOfNodes,
+		vector<Eigen::VectorXd> *diisPotentials, vector<Eigen::VectorXd> *diisResiduals);
+void processIterationDataRequests(int numberOfNodes, vector<boost::filesystem::path>& inputPaths,
+		vector<string>& inputMeshFiles);
+#endif
+
 #endif /* FUNCTIONS_H_ */

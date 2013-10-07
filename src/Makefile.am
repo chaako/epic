@@ -6,7 +6,7 @@ bin_PROGRAMS=epic mesher solutionTransfer
 CLASS_FILES = custom_mImportVTK.cc Mesh.cpp Orbit.cpp Field.cpp IntegrandContainer.cpp \
               intersect_RayTriangle.cpp distributionFunctionFromBoundary.cpp Solver.cpp \
               MinimumBasisFunction.cpp variables.cpp SpatialDependence.cpp \
-              DistributionFunction.cpp functions.cpp
+              DistributionFunction.cpp functions.cpp SurfaceMesh.cpp SurfaceField.cpp
 #              VelocityAndAcceleration.cpp
 epic_SOURCES = epic.cpp $(CLASS_FILES)
 epic_CFLAGS = $(AM_CFLAGS) $(IMESH_INCLUDES) -I../fmdb/SCOREC_Software/SCUtil/siter/src/ \
@@ -23,7 +23,8 @@ epic_CXXFLAGS += -I ../superlu/SuperLU_DIST_3.2/SRC/
 else
 epic_CXXFLAGS += -I ../superlu/SuperLU_4.3/SRC/
 endif
-epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lMeshAdapt -lrt -lboost_program_options\
+epic_LDFLAGS = $(AM_LDFLAGS) $(IMESH_LIBS) -lMeshAdapt -lrt \
+			-lboost_program_options -lboost_system -lboost_filesystem -lboost_regex \
 			-L @abs_top_builddir@/lib/ -L @abs_top_builddir@/lib/vtk-5.10/ \
 			-lLSDyna -lMapReduceMPI -lvtkalglib -lvtkCharts -lvtkCommon -lvtkDICOMParser \
 			-lvtkexoIIc -lvtkexpat -lvtkFiltering -lvtkfreetype -lvtkftgl -lvtkGenericFiltering \
@@ -47,7 +48,7 @@ epic_LDADD   += ../superlu/SuperLU_4.3/lib/libsuperlu_4.3.a ../superlu/SuperLU_4
 endif
 
 #mesher
-mesher_SOURCES = mesher.cpp $(CLASS_FILES) playground.cpp SurfaceMesh.cpp
+mesher_SOURCES = mesher.cpp $(CLASS_FILES) playground.cpp
 mesher_CFLAGS = $(epic_CFLAGS) -DMESHER
 mesher_CXXFLAGS = $(epic_CXXFLAGS) -DMESHER
 mesher_LDFLAGS = $(epic_LDFLAGS)

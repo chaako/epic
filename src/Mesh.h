@@ -34,7 +34,7 @@ template <class T> class Field;
 
 class Mesh {
 public:
-	Mesh(string inputMeshFile);
+	Mesh(string inputMeshFile, bool storeAdjacency=true);
 	virtual ~Mesh();
 
 	void printElementNumbers();
@@ -62,6 +62,7 @@ public:
 			int adjacentsDimension);
 	bool vertexLessThan(entHandle a, entHandle b);
 	vector<entHandle> getEntities(int dimension);
+	bool checkSameVertexOrdering();
 	entHandle getRandomVertex();
 	vector<entHandle> getFaces(entHandle element);
 	map<entHandle,vector<entHandle> >
@@ -140,10 +141,12 @@ public:
 	double minimumBasisFunction(const vect3d &position, int &regionIndex);
 
 	vtkSmartPointer<vtkUnstructuredGrid> createVtkMesh();
+	void saveVtkMesh(string outputFile);
 
 	vtkSmartPointer<vtkUnstructuredGrid> vtkMesh_ptr;
 	vtkSmartPointer<vtkCellTreeLocator> vtkCellTree_ptr;
 	vector<entHandle> vtkToIMesh;
+	map<entHandle,vtkIdType> iMeshToVtk;
 
 	iMesh_Instance meshInstance;
 	// TODO: rename vtkInputMesh something like inputMeshIsVtk

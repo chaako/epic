@@ -24,27 +24,45 @@
 //
 //#include "iMesh.h"
 //#include "Eigen/Dense"
+#include "SpatialDependence.h"
+#include "DistributionFunction.h"
 #include "Mesh.h"
+#include "Solver.h"
 
 #define CHECK(a) if (iBase_SUCCESS != ierr) printf("%s\n", a), exit(ierr)
 
+class CodeField;
 class DensityField;
+class PotentialField;
+class ShortestEdgeField;
 
 template <class T>
 class Field {
 public:
 	Field(Mesh *inputMesh_ptr, string inputName,
-			int entityDimension);
+			int entityDimension, int numberOfComponents=1);
 	// TODO: Does an empty destructor cause a memory leak?
 	virtual ~Field() {}
 
+	void copyValues(Field<T>& fieldToCopy, int targetSlot=0);
+
 	T& operator[](entHandle& entity);
 	T& operator[](int& entityIndex);
+	// TODO: operator= should probably return Field<T>&
+//	void operator=(T& value);
+	void setValues(T& value);
+	void setLabeledValues(T& value, CodeField& vertexType, int code);
+	void operator+=(T& valueToAdd);
 
 	T getField(vect3d position, entHandle *entity=NULL,
 			int interpolationOrder=INTERPOLATIONORDER);
 	T getField(entHandle node);
+	void getField(entHandle entityHandle, T *field_ptr);
+	vector<T> getFieldVector(entHandle entityHandle);
+	void getFieldVector(entHandle entityHandle, vector<T> *fieldVector_ptr);
 	T getFieldFromMeshDB(entHandle entityHandle);
+	void getFieldFromMeshDB(entHandle entityHandle, T *field_ptr,
+			int requestedNumberOfComponents=1);
 	T getAverageField(entHandle element);
 	void evalField(T *fieldValue,
 			const vect3d &position, int *entityIndex=-1,
@@ -53,7 +71,10 @@ public:
 			Eigen::Matrix<T,NDIM,1> *fieldDeriv,
 			const vect3d &position, int *entityIndex=-1,
 			int interpolationOrder=INTERPOLATIONORDER);
-	void setField(entHandle node, T field);
+	void setField(entHandle node, T field, int targetSlot=0);
+	void setField(entHandle node, T *field_ptr);
+	void setFieldVector(entHandle entityHandle, vector<T>& fieldVector);
+	void setVtkField(entHandle node, T *field_ptr);
 	Eigen::VectorXd getErrorCoefficients(entHandle element,
 			int interpolationOrder);
 	Eigen::VectorXd getErrorCoefficients(int elementIndex,
@@ -63,7 +84,19 @@ public:
 			Eigen::VectorXd *errorCoefficients);
 	void updateTagHandle();
 
+	void computeWeightedAverage(Field<T> *averageField_ptr,
+			vector<double> weights);
+
+	void print();
+
 	Mesh *mesh_ptr;
+//	// TODO: can this be done better?
+//	typedef boost::conditional<boost::is_same<T,int>::value,
+//								vtkIntArray,vtkDoubleArray>::type vtkFieldType;
+//	vtkSmartPointer<vtkFieldType> vtkField_ptr;
+	vtkSmartPointer<vtkDataArray> vtkField_ptr;
+	bool storeVtkField;
+	int numberOfComponents;
 	string name;
 	iBase_TagHandle tag;
 	vector<entHandle> &entities;
@@ -119,12 +152,33 @@ public:
 	void calcField(Field<int> faceTypeField);
 };
 
+class DerivativeField : public Field<double> {
+public:
+	DerivativeField(Mesh *inputMesh_ptr, string inputName,
+			int elementType);
+	virtual ~DerivativeField() {}
+
+	void calcField(Field<double>& numeratorValue, Field<double>& numeratorReference,
+			Field<double>& denominatorValue, Field<double>& denominatorReference);
+};
+
+class DensityDerivativeField : public DerivativeField {
+public:
+	DensityDerivativeField(Mesh *inputMesh_ptr, string inputName,
+			int elementType);
+	virtual ~DensityDerivativeField() {}
+
+	void calcField(Field<double>& numeratorValue, Field<double>& numeratorReference,
+			Field<double>& denominatorValue, Field<double>& denominatorReference);
+};
+
 class DensityField : public Field<double> {
 	// Charge density
 public:
 	DensityField(Mesh *inputMesh_ptr, string inputName,
 			Field<vect3d> *inputAverageVelocity_ptr=NULL,
-			Field<double> *inputTemperature_ptr=NULL);
+			Field<double> *inputTemperature_ptr=NULL,
+			int numberOfComponents=1);
 	virtual ~DensityField() {}
 
 	void calcField();
@@ -133,30 +187,31 @@ public:
 			SpatialDependence& referenceTemperature, double charge);
 	void calcField(DensityField ionDensity, DensityField electronDensity);
 	void calcField(ElectricField& electricField,
-			PotentialField& potentialField, DensityField& referenceDensity,
-			Field<int> faceType, CodeField vertexType,
-			ShortestEdgeField shortestEdge, double charge,
-			double potentialPerturbation, FILE *outFile=NULL);
+			PotentialField *potentialField_ptr, DensityField& referenceDensity,
+			Field<int>& faceType, CodeField& vertexType,
+			ShortestEdgeField& shortestEdge, double charge,
+			double potentialPerturbation, bool doAllNodes=false,
+			double unconvergednessThreshold=0.03, FILE *outFile=NULL);
 	// TODO: make reference density its own class?
 	void calcField(CodeField& vertexType,
 			DistributionFunction& distributionFunction, double charge);
 	void poissonCubeTest(double debyeLength);
-	double calculateDensity(int node, ElectricField& electricField,
+	void calculateDensity(int node, ElectricField& electricField,
 			PotentialField& potentialField, DensityField& referenceDensity,
-			Field<int> faceType, CodeField vertexType,
-			ShortestEdgeField shortestEdge, double charge,
-			double potentialPerturbation, double *error,
+			Field<int>& faceType, CodeField& vertexType,
+			ShortestEdgeField& shortestEdge, double charge,
+			double potentialPerturbation, double *density, double *error,
 			vect3d *averageVelocity, vect3d *averageVelocityError,
 			double *temperature, double *temperatureError);
 #ifdef HAVE_MPI
 	void requestDensityFromSlaves(ElectricField& electricField,
-			PotentialField potentialField,
+			PotentialField *potentialField_ptr, vector<int>& sortedNodes,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation, FILE *outFile);
-	MPI::Status receiveDensity(FILE *outFile);
+	MPI::Status receiveDensity(double *potential,FILE *outFile);
 	void processDensityRequests(ElectricField& electricField,
-			PotentialField& potentialField, DensityField& referenceDensity,
+			PotentialField *potentialField_ptr, DensityField& referenceDensity,
 			Field<int> faceType, CodeField vertexType,
 			ShortestEdgeField shortestEdge, double charge,
 			double potentialPerturbation);
@@ -171,7 +226,9 @@ public:
 
 class PotentialField : public Field<double> {
 public:
-	PotentialField(Mesh *inputMesh_ptr, string inputName);
+	PotentialField(Mesh *inputMesh_ptr, string inputName, double boundaryPotential=0.,
+			double sheathPotential=-0.5, bool fixSheathPotential=false,
+			int numberOfComponents=1);
 	PotentialField(PotentialField potential, string inputName);
 	virtual ~PotentialField() {}
 
@@ -180,8 +237,13 @@ public:
 			double sheathPotential);
 	void calcField(DensityField ionDensity, DensityField electronDensity,
 			CodeField vertexType, FILE *outFile);
-	void calcField(DensityField ionDensity,
-			CodeField vertexType, FILE *outFile, double boundaryPotential,
+	void calcField(DensityField& ionDensity, Field<vect3d>& ionVelocity,
+			CodeField& vertexType, FILE *outFile, double boundaryPotential,
+			double sheathPotential, bool fixSheathPotential);
+	void calcFieldAtNode(entHandle entity, double ionDensity, int vertexType,
+			double boundaryPotential, double sheathPotential, bool fixSheathPotential);
+	void calcField(DensityField& ionDensity, DerivativeField& ionDensityDerivative,
+			CodeField& vertexType, FILE *outFile, double boundaryPotential,
 			double sheathPotential, bool fixSheathPotential);
 	void calcField(DensityField ionDensity,
 			DensityField ionDensityPP, DensityField ionDensityNP,
@@ -192,8 +254,16 @@ public:
 			double negativePotentialPerturbation,
 			FILE *outFile);
 
+	// TODO: not very transparent to use inverted defaults to disable min/max
+	void computePerturbedPotentials(double negativePerturbation,
+			double positivePertubation, double minPotential=10., double maxPotential=-10.);
+
 	void setReferenceElectronDensity(DensityField& referenceElectronDensity);
 	void setReferenceElectronTemperature(SpatialDependence& referenceElectronTemperature);
+
+	double boundaryPotential;
+	double sheathPotential;
+	bool fixSheathPotential;
 
 	DensityField *referenceElectronDensity_ptr;
 	SpatialDependence *referenceElectronTemperature_ptr;
@@ -210,23 +280,32 @@ public:
 // gcc doesn't implement the export keyword, so define template functions here
 template <class T>
 Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
-		int entityDimension) : entities(
-				inputMesh_ptr->entitiesVectors[entityDimension]) {
+		int entityDimension, int numberOfComponents) : entities(
+				inputMesh_ptr->entitiesVectors[entityDimension]),
+				numberOfComponents(numberOfComponents) {
 	mesh_ptr = inputMesh_ptr;
 	name = inputName;
 	int ierr;
 	int size, type;
 //	if (is_same<T,double>::value) {
 	if (boost::is_same<T,double>::value) {
-		size = 1;
+		size = numberOfComponents;
 		type = iBase_DOUBLE;
+		vtkField_ptr = vtkSmartPointer<vtkDoubleArray>::New();
 //	} else if (is_same<T,int>::value) {
 	} else if (boost::is_same<T,int>::value) {
-		size = 1;
+		size = numberOfComponents;
 		type = iBase_INTEGER;
+		vtkField_ptr = vtkSmartPointer<vtkIntArray>::New();
+	} else if (boost::is_same<T,vect3d>::value) {
+		size = NDIM*numberOfComponents;
+		type = iBase_DOUBLE;
+		vtkField_ptr = vtkSmartPointer<vtkDoubleArray>::New();
 	} else {
-		size = (int)sizeof(T);
+		size = numberOfComponents*(int)sizeof(T);
 		type = iBase_BYTES;
+//		// TODO: figure out why this doesn't work
+//		vtkField_ptr = vtkSmartPointer<vtkDataArray>::New();
 	}
 	tag = mesh_ptr->createTagHandle(name, size, type);
 	// TODO: consider more transparent handling of exiting tag here
@@ -246,6 +325,25 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 //	cout << "The field '" << name << "' was created with " <<
 //			numberOfInitializedFields << " values set from mesh DB, and " <<
 //			numberOfUninitializedFields << " uninitialized values" << endl;
+
+	// TODO: don't assume entityDimension==0
+//	throw string("nonzero entity dimension in SurfaceField not implemented yet");
+	if (entityDimension==0) {
+		storeVtkField = true;
+		if (entities.size() != mesh_ptr->vtkMesh_ptr->GetNumberOfPoints())
+			throw string("vtkMesh and mesh don't have the same number of elements");
+		// TODO: add try/catch?
+		vtkField_ptr->SetName(name.c_str());
+		vtkField_ptr->SetNumberOfComponents(size);
+		vtkField_ptr->SetNumberOfTuples(entities.size());
+		// TODO: verify that this doens't make a copy, i.e. can use field_ptr to modify
+		mesh_ptr->vtkMesh_ptr->GetPointData()->AddArray(vtkField_ptr);
+		for (int i=0; i<entities.size(); i++) {
+			this->setVtkField(entities[i],&(values[i]));
+		}
+	} else {
+		storeVtkField = false;
+	}
 
 	// TODO: nVertices should be standardized across functions
 	int nVertices = 4;
@@ -275,6 +373,13 @@ Field<T>::Field(Mesh *inputMesh_ptr, string inputName,
 }
 
 template <class T>
+void Field<T>::copyValues(Field<T>& fieldToCopy, int targetSlot) {
+	for (int i=0; i<entities.size(); i++) {
+		this->setField(entities[i],fieldToCopy.getField(entities[i]),targetSlot);
+	}
+}
+
+template <class T>
 T& Field<T>::operator[](entHandle& entityHandle) {
 	// TODO: The pointers (handles) may be to consectutive memory,
 	//       in which case there may be a faster way (linear interpolation?)
@@ -288,6 +393,30 @@ template <class T>
 T& Field<T>::operator[](int& entityIndex) {
 //	cout << "field[" << entityIndex << "] called" << endl;
 	return this->values[entityIndex];
+}
+
+template <class T>
+//void Field<T>::operator=(T& value) {
+void Field<T>::setValues(T& value) {
+	for (int i=0; i<entities.size(); i++) {
+		this->setField(entities[i],value);
+	}
+}
+
+template <class T>
+//void Field<T>::operator=(T& value) {
+void Field<T>::setLabeledValues(T& value, CodeField& vertexType, int code) {
+	for (int i=0; i<entities.size(); i++) {
+		if (vertexType[i]==code)
+			this->setField(entities[i],value);
+	}
+}
+
+template <class T>
+void Field<T>::operator+=(T& valueToAdd) {
+	for (int i=0; i<entities.size(); i++) {
+		this->setField(entities[i],this->getField(entities[i])+valueToAdd);
+	}
 }
 
 template <class T>
@@ -618,33 +747,68 @@ void Field<T>::evalFieldAndDeriv(T *fieldValue,
 
 template <class T>
 T Field<T>::getField(entHandle node) {
-	T field;
-	T *field_ptr=&field;
-	int field_alloc = sizeof(T);
-	int field_size = sizeof(T);
-	int ierr;
-	iMesh_getData(mesh_ptr->meshInstance, node, tag, &field_ptr,
-			&field_alloc, &field_size, &ierr);
-//	CHECK("Failure getting field");
-	if (ierr != iBase_SUCCESS)
-		throw int(FAILURE_GETTING_FIELD);
-	return field;
+	try {
+		return this->getFieldFromMeshDB(node);
+	} catch (int FAILURE_GETTING_FIELD) {
+		throw string("Failure getting field.");
+	}
 //	return this->operator[](node);
+}
+
+template <class T>
+void Field<T>::getField(entHandle entityHandle, T *field_ptr) {
+	this->getFieldFromMeshDB(entityHandle, field_ptr, numberOfComponents);
 }
 
 template <class T>
 T Field<T>::getFieldFromMeshDB(entHandle entityHandle) {
 	T field;
-	T *field_ptr=&field;
-	int field_alloc = sizeof(T);
-	int field_size = sizeof(T);
+	this->getFieldFromMeshDB(entityHandle, &field, 1);
+	return field;
+}
+
+template <class T>
+vector<T> Field<T>::getFieldVector(entHandle entityHandle) {
+	vector<T> fieldVector(numberOfComponents);
+	this->getFieldVector(entityHandle, &fieldVector);
+	return fieldVector;
+}
+
+template <class T>
+void Field<T>::getFieldVector(entHandle entityHandle,
+		vector<T> *fieldVector_ptr) {
+	boost::scoped_array<T> buffer(new T[numberOfComponents]);
+	T *field_ptr = buffer.get();
+	this->getFieldFromMeshDB(entityHandle, field_ptr, numberOfComponents);
+	if (fieldVector_ptr->size()!=numberOfComponents)
+		throw string("fieldVector_ptr->size() != numberOfComponents in setFieldVector");
+	for (int i=0; i<fieldVector_ptr->size(); i++) {
+		fieldVector_ptr->operator[](i) = field_ptr[i];
+	}
+}
+
+template <class T>
+void Field<T>::getFieldFromMeshDB(entHandle entityHandle, T *fieldOutput_ptr,
+		int requestedNumberOfComponents) {
+	boost::scoped_array<T> buffer(new T[numberOfComponents]);
+	T *field_ptr = buffer.get();
+	int field_alloc;
+	int field_size;
+	if (boost::is_same<T,vect3d>::value) {
+		field_alloc = numberOfComponents*3*sizeof(double);
+	} else {
+		field_alloc = numberOfComponents*sizeof(T);
+	}
+	field_size = field_alloc;
 	int ierr;
 	iMesh_getData(mesh_ptr->meshInstance, entityHandle, tag, &field_ptr,
 			&field_alloc, &field_size, &ierr);
-//	CHECK("Failure getting field");
-	if (ierr != iBase_SUCCESS)
+	if (ierr != iBase_SUCCESS) {
 		throw int(FAILURE_GETTING_FIELD);
-	return field;
+	}
+	for (int i=0; i<min(requestedNumberOfComponents,numberOfComponents); i++) {
+		fieldOutput_ptr[i] = field_ptr[i];
+	}
 }
 
 template <class T>
@@ -663,12 +827,84 @@ T Field<T>::getAverageField(entHandle element) {
 }
 
 template <class T>
-void Field<T>::setField(entHandle node, T field) {
-	this->operator[](node) = field;
+void Field<T>::setField(entHandle node, T field, int targetSlot) {
+	if (numberOfComponents==1) {
+		this->setField(node,&field);
+	} else {
+		boost::scoped_array<T> buffer(new T[numberOfComponents]);
+		T *field_ptr = buffer.get();
+		this->getField(node,field_ptr);
+		if (targetSlot>=numberOfComponents)
+			throw string("targetSlot >= numberOfComponents in setField");
+		field_ptr[targetSlot] = field;
+		this->setField(node,field_ptr);
+	}
+}
+
+template <class T>
+void Field<T>::setField(entHandle node, T *field_ptr) {
+	this->setVtkField(node,field_ptr);
+	// TODO: cache more than first component?
+	this->operator[](node) = *field_ptr;
 	int ierr;
-	int field_size = sizeof(T);
-	iMesh_setData(mesh_ptr->meshInstance, node, tag, &field,
+	void *components_ptr;
+	int field_size;
+	boost::scoped_array<vect3d> vect3dBuffer(new vect3d[NDIM*numberOfComponents]);
+	if (boost::is_same<T,vect3d>::value) {
+		for (int k=0; k<numberOfComponents; k++) {
+			for (int i=0; i<NDIM; i++)
+				vect3dBuffer[k][i] = (((vect3d*)field_ptr)[k])[i];
+		}
+		components_ptr = (T*)(vect3dBuffer.get());
+//		// TODO: figure out why using .data() breaks in optimization
+//		//       (adding print .transpose() prevents optimization and works)
+//		vect3d vector(field);
+//		field_ptr = vector.data();
+		field_size = NDIM*numberOfComponents*sizeof(double);
+	} else {
+		components_ptr = field_ptr;
+		field_size = numberOfComponents*sizeof(T);
+	}
+	iMesh_setData(mesh_ptr->meshInstance, node, tag, components_ptr,
 			field_size, &ierr);
+	if (ierr != iBase_SUCCESS)
+		throw string("Failure setting field.");
+}
+
+template <class T>
+void Field<T>::setFieldVector(entHandle entityHandle, vector<T>& fieldVector) {
+	boost::scoped_array<T> buffer(new T[numberOfComponents]);
+	T *field_ptr = buffer.get();
+	if (fieldVector.size()!=numberOfComponents)
+		throw string("fieldVector.size() != numberOfComponents in setFieldVector");
+	for (int i=0; i<fieldVector.size(); i++) {
+		field_ptr[i] = fieldVector[i];
+	}
+	this->setField(entityHandle,field_ptr);
+}
+
+template <class T>
+void Field<T>::setVtkField(entHandle node, T *field_ptr) {
+	void *components_ptr;
+	boost::scoped_array<vect3d> vect3dBuffer(new vect3d[NDIM*numberOfComponents]);
+	if (boost::is_same<T,vect3d>::value) {
+		for (int k=0; k<numberOfComponents; k++) {
+			for (int i=0; i<NDIM; i++)
+				vect3dBuffer[k][i] = (((vect3d*)field_ptr)[k])[i];
+		}
+		components_ptr = (T*)(vect3dBuffer.get());
+	} else {
+		components_ptr = field_ptr;
+	}
+	if (storeVtkField) {
+		vtkIdType vtkNode = mesh_ptr->iMeshToVtk[node];
+		// TODO: other cases than int or double?
+		if (boost::is_same<T,int>::value) {
+			vtkIntArray::SafeDownCast(vtkField_ptr)->SetTupleValue(vtkNode, (int*)components_ptr);
+		} else {
+			vtkDoubleArray::SafeDownCast(vtkField_ptr)->SetTupleValue(vtkNode, (double*)components_ptr);
+		}
+	}
 }
 
 template <class T>
@@ -859,6 +1095,30 @@ void Field<T>::getErrorCoefficients(
 template <class T>
 void Field<T>::updateTagHandle() {
 	tag = mesh_ptr->getTagHandle(name);
+}
+
+template <class T>
+void Field<T>::computeWeightedAverage(Field<T> *averageField_ptr,
+		vector<double> weights) {
+	vector<T> fields(numberOfComponents);
+	for (int i=0; i<entities.size(); i++) {
+		fields = this->getFieldVector(entities[i]);
+		// TODO: improve initialization?
+		T weightedAverage=0;
+		weightedAverage *= 0.;
+		if (weights.size()!=numberOfComponents)
+			throw string("weights.size() != numberOfComponents in computeWeightedAverage");
+		for (int j=0; j<weights.size(); j++) {
+			weightedAverage += weights[j]*fields[j];
+		}
+		averageField_ptr->setField(entities[i],weightedAverage);
+	}
+}
+
+template <class T>
+void Field<T>::print() {
+	for (int i=0; i<entities.size(); i++)
+		cout << this->getField(entities[i]) << "..." << endl;
 }
 
 #endif /* FIELD_H_ */

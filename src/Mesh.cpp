@@ -8,7 +8,7 @@
 #include "epic.h"
 #include "Mesh.h"
 
-Mesh::Mesh(string inputMeshFile) {
+Mesh::Mesh(string inputMeshFile, bool storeAdjacency) {
 	char *options = NULL;
 	int options_len = 0;
 	int ierr;
@@ -29,13 +29,14 @@ Mesh::Mesh(string inputMeshFile) {
 		iMesh_load(mesh, root, inputMeshFile.c_str(), options, &ierr,
 				strlen(inputMeshFile.c_str()), options_len);
 		vtkInputMesh = false;
-		// recreate vector field tags and destroy component tags
-		try {
-			this->convertComponentTagsToVectorTag("eField");
-			this->convertComponentTagsToVectorTag("ionVelocity");
-		} catch (string& error) {
-			cout << error << endl;
-		}
+//		// recreate vector field tags and destroy component tags
+//		try {
+//			this->convertComponentTagsToVectorTag("eField");
+//			this->convertComponentTagsToVectorTag("ionVelocity");
+//			this->convertComponentTagsToVectorTag("NPionVelocity");
+//		} catch (string& error) {
+//			cout << error << endl;
+//		}
 	} else {
 		// FMDB's importVTK can't handle our tags, so use custom version
 		ierr = custom_importVTK((mMesh *)mesh, inputMeshFile.c_str());
@@ -45,20 +46,22 @@ Mesh::Mesh(string inputMeshFile) {
 //	// TODO: debugging
 //	cout << inputMeshFile << " " << vtkInputMesh << endl;
 
-	// store adjacency info for fast access
-	adjacentTetsMap = getAdjacentsMap(iBase_REGION, iBase_REGION,
-			iBase_VERTEX);
-	adjacentFacesMap = getAdjacentsMap(iBase_REGION, iBase_FACE);
-	adjacentVertsMap = getAdjacentsMap(iBase_REGION, iBase_VERTEX);
-	surroundingVertsMap = getSurroundingVerticesMap();
-	adjacentTetsToFaceMap = getAdjacentsMap(iBase_FACE, iBase_REGION);
+	if (storeAdjacency) {
+		// store adjacency info for fast access
+		adjacentTetsMap = getAdjacentsMap(iBase_REGION, iBase_REGION,
+				iBase_VERTEX);
+		adjacentFacesMap = getAdjacentsMap(iBase_REGION, iBase_FACE);
+		adjacentVertsMap = getAdjacentsMap(iBase_REGION, iBase_VERTEX);
+		surroundingVertsMap = getSurroundingVerticesMap();
+		adjacentTetsToFaceMap = getAdjacentsMap(iBase_FACE, iBase_REGION);
 
-	// store vertex coordinates for fast access
-	map<entHandle,vector<entHandle> >::iterator iter;
-	for (iter=adjacentVertsMap.begin(); iter!=adjacentVertsMap.end(); ++iter) {
-		vertexVectorsMap[iter->first] = Mesh::getVertexVectors(iter->first, false);
-		if (vertexVectorsMap[iter->first].size()!=4)
-			throw string("Error constructing vertexVectorsMap in Mesh.cpp");
+		// store vertex coordinates for fast access
+		map<entHandle,vector<entHandle> >::iterator iter;
+		for (iter=adjacentVertsMap.begin(); iter!=adjacentVertsMap.end(); ++iter) {
+			vertexVectorsMap[iter->first] = Mesh::getVertexVectors(iter->first, false);
+			if (vertexVectorsMap[iter->first].size()!=4)
+				throw string("Error constructing vertexVectorsMap in Mesh.cpp");
+		}
 	}
 
 	previousCoordsToBasisElement = NULL;
@@ -71,15 +74,21 @@ Mesh::Mesh(string inputMeshFile) {
 		}
 	}
 
-	// Can't combine this loop with above because getAdjacentEntitiesIndices
-	// uses indicesOfEntities
-	for (int i=0; i<=NDIM; i++) {
-		adjacentEntitiesVectors.push_back(
-				vector<vector<vector<int> > >(entitiesVectors[i].size()));
-		for (int j=0; j<entitiesVectors[i].size(); j++) {
-			for (int k=0; k<=NDIM; k++) {
-				adjacentEntitiesVectors[i][j].push_back(
-						this->getAdjacentEntitiesIndices(j,i,k));
+	if (storeAdjacency) {
+//		// TODO: this will hang the code if not all processes do it (i.e. if only one
+//		//       node is loading a file
+//		this->checkSameVertexOrdering();
+
+		// Can't combine this loop with above because getAdjacentEntitiesIndices
+		// uses indicesOfEntities
+		for (int i=0; i<=NDIM; i++) {
+			adjacentEntitiesVectors.push_back(
+					vector<vector<vector<int> > >(entitiesVectors[i].size()));
+			for (int j=0; j<entitiesVectors[i].size(); j++) {
+				for (int k=0; k<=NDIM; k++) {
+					adjacentEntitiesVectors[i][j].push_back(
+							this->getAdjacentEntitiesIndices(j,i,k));
+				}
 			}
 		}
 	}
@@ -90,55 +99,57 @@ Mesh::Mesh(string inputMeshFile) {
 		verticesPositions.push_back(position);
 	}
 
-	for (int i=0; i<entitiesVectors[iBase_REGION].size(); i++) {
-		entHandle regionHandle = entitiesVectors[iBase_REGION][i];
-		vector<entHandle> &surroundingVerts =
-				surroundingVertsMap[regionHandle];
-		vector<int> surroundingVertices(surroundingVerts.size());
-		for (int j=0; j<surroundingVerts.size(); j++) {
-			surroundingVertices[j] = indicesOfEntities[surroundingVerts[j]];
-		}
-		verticesSurroundingRegions.push_back(surroundingVertices);
+	if (storeAdjacency) {
+		for (int i=0; i<entitiesVectors[iBase_REGION].size(); i++) {
+			entHandle regionHandle = entitiesVectors[iBase_REGION][i];
+			vector<entHandle> &surroundingVerts =
+					surroundingVertsMap[regionHandle];
+			vector<int> surroundingVertices(surroundingVerts.size());
+			for (int j=0; j<surroundingVerts.size(); j++) {
+				surroundingVertices[j] = indicesOfEntities[surroundingVerts[j]];
+			}
+			verticesSurroundingRegions.push_back(surroundingVertices);
 
-		vector<entHandle> &surroundingRegs =
-				adjacentTetsMap[regionHandle];
-		vector<int> surroundingRegions(surroundingRegs.size());
-		for (int j=0; j<surroundingRegs.size(); j++) {
-			surroundingRegions[j] = indicesOfEntities[surroundingRegs[j]];
-		}
-		regionsSurroundingRegions.push_back(surroundingRegions);
+			vector<entHandle> &surroundingRegs =
+					adjacentTetsMap[regionHandle];
+			vector<int> surroundingRegions(surroundingRegs.size());
+			for (int j=0; j<surroundingRegs.size(); j++) {
+				surroundingRegions[j] = indicesOfEntities[surroundingRegs[j]];
+			}
+			regionsSurroundingRegions.push_back(surroundingRegions);
 
-		vector<int> &regionVertices =
-				adjacentEntitiesVectors[iBase_REGION][i][iBase_VERTEX];
-		vector<int> oppositeRegions(regionVertices.size());
-		vector<int> &regionFaces =
-				adjacentEntitiesVectors[iBase_REGION][i][iBase_FACE];
-		for (int k=0; k<regionVertices.size(); k++) {
-			int oppositeFace = -1;
-			for (int j=0; j<regionFaces.size(); j++) {
-				vector<int> &faceVertices =
-						adjacentEntitiesVectors[iBase_FACE][regionFaces[j]][iBase_VERTEX];
-				bool correctFace=true;
-				for (int l=0; l<faceVertices.size(); l++) {
-					if (faceVertices[l]==regionVertices[k])
-						correctFace=false;
+			vector<int> &regionVertices =
+					adjacentEntitiesVectors[iBase_REGION][i][iBase_VERTEX];
+			vector<int> oppositeRegions(regionVertices.size());
+			vector<int> &regionFaces =
+					adjacentEntitiesVectors[iBase_REGION][i][iBase_FACE];
+			for (int k=0; k<regionVertices.size(); k++) {
+				int oppositeFace = -1;
+				for (int j=0; j<regionFaces.size(); j++) {
+					vector<int> &faceVertices =
+							adjacentEntitiesVectors[iBase_FACE][regionFaces[j]][iBase_VERTEX];
+					bool correctFace=true;
+					for (int l=0; l<faceVertices.size(); l++) {
+						if (faceVertices[l]==regionVertices[k])
+							correctFace=false;
+					}
+					if (correctFace)
+						oppositeFace = regionFaces[j];
 				}
-				if (correctFace)
-					oppositeFace = regionFaces[j];
+				vector<int> &faceRegions =
+						adjacentEntitiesVectors[iBase_FACE][oppositeFace][iBase_REGION];
+				if (faceRegions.size()==2) {
+					oppositeRegions[k] = (faceRegions[0]!=i) ? faceRegions[0] : faceRegions[1];
+				} else {
+					oppositeRegions[k] = faceRegions[0];
+				}
 			}
-			vector<int> &faceRegions =
-					adjacentEntitiesVectors[iBase_FACE][oppositeFace][iBase_REGION];
-			if (faceRegions.size()==2) {
-				oppositeRegions[k] = (faceRegions[0]!=i) ? faceRegions[0] : faceRegions[1];
-			} else {
-				oppositeRegions[k] = faceRegions[0];
-			}
-		}
-		regionsOppositeVertices.push_back(oppositeRegions);
+			regionsOppositeVertices.push_back(oppositeRegions);
 
-		vector<vect3d> vVs = this->getVertexVectors(regionHandle);
-		positionsToBases.push_back(
-				this->calculatePositionToBasesMatrix(vVs));
+			vector<vect3d> vVs = this->getVertexVectors(regionHandle);
+			positionsToBases.push_back(
+					this->calculatePositionToBasesMatrix(vVs));
+		}
 	}
 
 //	cout << entitiesVectors[3][adjacentEntitiesVectors[2][15][3][1]] << " " <<
@@ -190,20 +201,25 @@ void Mesh::printElementNumbers() {
 }
 
 void Mesh::save(string outputMeshFile) {
+	int periodLocation = outputMeshFile.rfind(".");
+	this->saveVtkMesh(outputMeshFile.substr(0,periodLocation)+".vtu");
+
 	char *options = NULL;
 	int options_len = 0;
 	int ierr;
-	// destroy vector tags since VisIt doesn't understand
-	this->convertVectorTagToComponentTags("eField");
-	this->convertVectorTagToComponentTags("ionVelocity");
+//	// destroy vector tags since VisIt doesn't understand
+//	this->convertVectorTagToComponentTags("eField");
+//	this->convertVectorTagToComponentTags("ionVelocity");
+//	this->convertVectorTagToComponentTags("NPionVelocity");
 
 	iMesh_save(meshInstance, rootEntitySet, outputMeshFile.c_str(),
 			options, &ierr, outputMeshFile.length(), options_len);
 	CHECK("Save failed");
 
-	// recreate vector tags and destroy component tags
-	this->convertComponentTagsToVectorTag("eField");
-	this->convertComponentTagsToVectorTag("ionVelocity");
+//	// recreate vector tags and destroy component tags
+//	this->convertComponentTagsToVectorTag("eField");
+//	this->convertComponentTagsToVectorTag("ionVelocity");
+//	this->convertComponentTagsToVectorTag("NPionVelocity");
 }
 
 iBase_TagHandle Mesh::createTag(string tagName, int size, int type) {
@@ -212,10 +228,8 @@ iBase_TagHandle Mesh::createTag(string tagName, int size, int type) {
 
 	iMesh_createTag(meshInstance, tagName.c_str(), size, type,
 			&tag, &ierr, tagName.length());
-	// TODO: include name of tag in error
-	// TODO: maybe throw in stead of using CHECK
-	CHECK("Failure creating tag");
-
+	if (ierr != iBase_SUCCESS)
+		throw string("Failure creating tag named " + tagName);
 	return tag;
 }
 
@@ -259,6 +273,7 @@ void Mesh::convertVectorTagToComponentTags(string vectorTagName) {
 				this->getSuperCellFaces(ents0d[i]);
 		vect3d vectorData(0.,0.,0.);
 		vect3d *vectorData_ptr = &vectorData;
+		// TODO: this can't handle multiple vectors
 		int alloc = sizeof(vect3d);
 		int size = sizeof(vect3d);
 		iMesh_getData(meshInstance, ents0d[i], vectorTag, &vectorData_ptr,
@@ -289,6 +304,10 @@ void Mesh::convertComponentTagsToVectorTag(string vectorTagName) {
 	iBase_TagHandle componentTagZ=this->getTag(vectorTagName+"Z");
 
 	// TODO: clean this up, separating out into functions hiding iMesh details
+	iMesh_getEntities(meshInstance, rootEntitySet,
+			iBase_VERTEX, iMesh_ALL_TOPOLOGIES,
+			&ents0d, &ents0d_alloc, &ents0d_size, &ierr);
+	CHECK("Couldn't get vertex entities");
 	for (int i = 0; i < ents0d_size; i++) {
 		double componentX, componentY, componentZ;
 		iMesh_getDblData(meshInstance, ents0d[i], componentTagX,
@@ -660,6 +679,34 @@ vector<entHandle> Mesh::getEntities(int dimension) {
 	if (ents) free(ents);
 	ents_alloc = 0;
 	return elements;
+}
+
+bool Mesh::checkSameVertexOrdering() {
+	bool sameOrdering=false;
+#ifdef HAVE_MPI
+	int mpiId=MPI::COMM_WORLD.Get_rank();
+	vector<entHandle> vertices = this->getEntities(iBase_VERTEX);
+	sameOrdering = true;
+	boost::scoped_array<vect3d> masterCoordinates(new vect3d[vertices.size()]);
+	if (mpiId==0) {
+		for (int i=0; i<vertices.size(); i++) {
+			masterCoordinates[i] = this->getCoordinates(vertices[i]);
+		}
+	}
+	MPI::COMM_WORLD.Bcast(masterCoordinates.get(), vertices.size()*sizeof(vect3d), MPI::BYTE, 0);
+	for (int i=0; i<vertices.size(); i++) {
+		vect3d coords=this->getCoordinates(vertices[i]);
+		if (coords!=masterCoordinates[i]) {
+			cout << "Node ordering differs for " << coords.transpose() << " != " <<
+					masterCoordinates[i].transpose() << endl;
+			sameOrdering = false;
+		}
+
+	}
+#else
+	sameOrdering=true;
+#endif
+	return sameOrdering;
 }
 
 vector<entHandle> Mesh::getVertices(
@@ -1409,7 +1456,7 @@ vtkSmartPointer<vtkUnstructuredGrid> Mesh::createVtkMesh() {
 	vector<entHandle> vertices =
 			this->getEntities(iBase_VERTEX);
 	points->SetNumberOfPoints(vertices.size());
-	map<entHandle,int> indexOfVertex;
+	map<entHandle,vtkIdType>& indexOfVertex = iMeshToVtk;
 	for(int i=0; i<vertices.size(); i++) {
 		vect3d vV = this->getCoordinates(vertices[i]);
 		points->InsertPoint(i, vV[0], vV[1], vV[2]);
@@ -1436,4 +1483,13 @@ vtkSmartPointer<vtkUnstructuredGrid> Mesh::createVtkMesh() {
 	mesh->Update();
 
 	return mesh;
+}
+
+void Mesh::saveVtkMesh(string outputFile) {
+	vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
+			vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
+	stringstream outputFilename;
+	writer->SetFileName(outputFile.c_str());
+	writer->SetInput(vtkMesh_ptr);
+	writer->Write();
 }

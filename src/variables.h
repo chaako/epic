@@ -18,6 +18,13 @@ extern int extern_orbitNumber;
 
 // TODO: don't use external pointer to vector
 extern vector<vect3d> *extern_evalPositions_ptr;
+extern bool extern_onlyDoEvalPositions;
+extern bool extern_computeGlobDeriv;
+extern int extern_nodeToComputeDerivAt;
+extern vect3dMap *extern_vtkIdOfSurfacePoint_ptr;
+
+extern int extern_numberOfSurfaceEvalPoints;
+extern bool extern_saveOrbits;
 
 // TODO: sort out units of E and B (electrons vs. ions etc.)
 extern vect3d extern_B;
