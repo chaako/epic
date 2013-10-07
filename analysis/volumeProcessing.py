@@ -7,6 +7,7 @@ from vtk import *
 from math import *
 import numpy as np
 import matplotlib
+import glob
 # Save as file and display instead of %pylab inline
 #matplotlib.use('svg')
 import matplotlib.pyplot as plt
@@ -32,7 +33,14 @@ import IPython.core.display as IPdisp
 #              "/home/chaako/epic/src/runsTesting/dG22_15/spheres05_scan1000_narrow00.vtu",
 #              "/home/chaako/epic/src/runsTesting/dG22_16/spheres06_scan1000_narrow00.vtu"]
 #file_names = ["/home/chaako/meshtest/fromLoki/densityGradient40/densityGradient/spheres_iter00.vtu"]
-file_names = ["/home/chaako/meshtest/fromLoki/iterationTest23/iterationTest/spheres_iter00.vtu"]
+#file_names = ["/home/chaako/meshtest/fromLoki/iterationTest23/iterationTest/spheres_iter00.vtu"]
+folder = "/home/chaako/meshtest/fromLoki/densityGradient97/densityGradient"
+file_names = glob.glob(folder + "/*.vtu")
+file_names.sort()
+print file_names
+
+# <codecell>
+
 vtk_readers = []
 for file_name in file_names:
     reader = vtkXMLUnstructuredGridReader()
@@ -51,7 +59,8 @@ vtk_mesh = vtk_readers[0]
 #target_point = np.array([0.131742, 0.528943, -3.84111])
 #target_point = np.array([0.406818, 1.12104, 14.7508])
 #target_point = np.array([-0.109546, 0.794057, -4.72881])
-target_point = np.array([0.0501395, 1.3243, -7.43127])
+#target_point = np.array([0.0501395, 1.3243, -7.43127])
+target_point = np.array([-0.19836, 1.27436, 3.76091])
 closeness_threshold = 0.001
 
 # <codecell>
@@ -100,19 +109,68 @@ def getTupleArrayFromVtkXYZ(vtk_reader, array_name):
 # <codecell>
 
 ion_densities = []
-ion_densities_scan = []
+#ion_densities_scan = []
 potentials = []
-potentials_scan = []
+previousPotentials = []
+#potentials_scan = []
 ion_velocities = []
 for vtk_reader in vtk_readers:
     ion_densities.append(getTupleArrayFromVtk(vtk_reader, "ionDensity"))
-    ion_densities_scan.append(getTupleArrayFromVtk(vtk_reader, "ionDensityScan"))
-    #potentials.append(getTupleArrayFromVtk(vtk_reader, "previousPotential"))
-    potentials_scan.append(getTupleArrayFromVtk(vtk_reader, "potentialScan"))
-    ion_velocities.append(getTupleArrayFromVtk(vtk_reader, "ionVelocityScan"))
-ion_densities_np = np.array(ion_densities)
-potentials_np = np.array(potentials)
-ion_velocities_np = np.array(ion_velocities)
+#    ion_densities_scan.append(getTupleArrayFromVtk(vtk_reader, "ionDensityScan"))
+    potentials.append(getTupleArrayFromVtk(vtk_reader, "potential"))
+    previousPotentials.append(getTupleArrayFromVtk(vtk_reader, "previousPotential"))
+#    potentials_scan.append(getTupleArrayFromVtk(vtk_reader, "potentialScan"))
+    ion_velocities.append(getTupleArrayFromVtk(vtk_reader, "ionVelocity"))
+ion_densities_np = np.squeeze(np.array(ion_densities))
+potentials_np = np.squeeze(np.array(potentials))
+previousPotentials_np = np.squeeze(np.array(previousPotentials))
+ion_velocities_np = np.squeeze(np.array(ion_velocities))
+
+# <codecell>
+
+plt.clf()
+
+fig, axes = plt.subplots(nrows=1, ncols=7, figsize=(24,4))
+i=0
+j=0
+startIter = 0
+endIter = len(file_names)
+for ax in axes:
+    #x = range(0,len(file_names))
+    x = range(startIter,endIter)
+    y = potentials_np.T[target_point_index+j][startIter:endIter]
+    sct = ax.scatter(x,y)
+    j = j+100
+
+#plt.savefig("data.svg")
+#IPdisp.SVG(filename="data.svg")
+plt.savefig("data.png")
+IPdisp.Image(filename="data.png")
+
+# <codecell>
+
+plt.clf()
+
+fig, axes = plt.subplots(nrows=1, ncols=7, figsize=(24,4))
+i=0
+j=0
+for ax in axes:
+    #x = range(0,len(file_names))
+    x = range(startIter,endIter)
+    y = ion_densities_np.T[target_point_index+j][startIter:endIter]
+    sct = ax.scatter(x,y)
+    #y = np.exp(previousPotentials_np.T[target_point_index+j][startIter:endIter])
+    #sct = ax.scatter(x,y,color='yellow')
+    y = np.exp(potentials_np.T[target_point_index+j][startIter:endIter])
+    sct = ax.scatter(x,y,color='green')
+    #y = np.exp(3./4.*previousPotentials_np.T[target_point_index+j][startIter:endIter] + 1./4.*np.log(ion_densities_np.T[target_point_index+j][startIter-1:endIter-1]))
+    #sct = ax.scatter(x,y,color='red')
+    j = j+100
+
+#plt.savefig("data.svg")
+#IPdisp.SVG(filename="data.svg")
+plt.savefig("data.png")
+IPdisp.Image(filename="data.png")
 
 # <codecell>
 
