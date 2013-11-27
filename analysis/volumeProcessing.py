@@ -34,7 +34,7 @@ import IPython.core.display as IPdisp
 #              "/home/chaako/epic/src/runsTesting/dG22_16/spheres06_scan1000_narrow00.vtu"]
 #file_names = ["/home/chaako/meshtest/fromLoki/densityGradient40/densityGradient/spheres_iter00.vtu"]
 #file_names = ["/home/chaako/meshtest/fromLoki/iterationTest23/iterationTest/spheres_iter00.vtu"]
-folder = "/home/chaako/meshtest/fromLoki/densityGradient97/densityGradient"
+folder = "/home/chaako/meshtest/fromLoki/densityGradient108/densityGradient"
 file_names = glob.glob(folder + "/*.vtu")
 file_names.sort()
 print file_names
@@ -60,7 +60,8 @@ vtk_mesh = vtk_readers[0]
 #target_point = np.array([0.406818, 1.12104, 14.7508])
 #target_point = np.array([-0.109546, 0.794057, -4.72881])
 #target_point = np.array([0.0501395, 1.3243, -7.43127])
-target_point = np.array([-0.19836, 1.27436, 3.76091])
+#target_point = np.array([-0.19836, 1.27436, 3.76091])
+target_point = np.array([-0.0313725, 1.00855, 3.62836])
 closeness_threshold = 0.001
 
 # <codecell>
