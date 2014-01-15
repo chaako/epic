@@ -1,3 +1,0 @@
-execfile("smsToSilo.py")
-exit()
-
